@@ -1,6 +1,6 @@
 import massey
 import numpy
-
+ 
 # This main takes some lines and runs the Massey algorithm on it
 
 # trivial cases
