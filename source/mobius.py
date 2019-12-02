@@ -41,15 +41,19 @@ class MobiusTransform(object):
         self.normalize()
         return self
 
-    def __call__(self, x):
+    def __call__(self, x=None):
         """
         apply transformation on X.
         :param x (for our project it will always be 1):
         :return: result of mobius transformation
         """
         a, b, c, d = self.__values()
-        numerator = dec(a*x + b)
-        denominator = dec(c*x + d)
+        if x is not None:
+            numerator = dec(a*x + b)
+            denominator = dec(c*x + d)
+        else:
+            numerator = dec(b)
+            denominator = dec(d)
         return numerator / denominator
 
     def normalize(self):
@@ -87,13 +91,13 @@ class GeneralizedContinuedFraction(object):
         if (a_ is not None) and (b_ is not None):
             self.extend(a_, b_)
 
-    def evaluate(self):
-        return self.mobius(1) + self.a_[0]
+    def evaluate(self, x=None):
+        return self.mobius(x) + self.a_[0]
 
     def extend(self, a_, b_):
-    	"""
-    	add depth to existing GCF
-    	"""
+        """
+        add depth to existing GCF
+        """
         self.a_ = (self.a_ + a_).copy()
         self.b_ = (self.b_ + b_).copy()
         for i in range(min(len(a_)-1, len(b_))):

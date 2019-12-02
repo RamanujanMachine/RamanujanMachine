@@ -124,3 +124,16 @@ def create_series_from_shift_reg(poly_a, initials, n):
             a_i -= poly_a[j] * a_[i - j]
         a_.append(a_i)
     return a_
+
+
+def massey_check(a_, p=199):
+    """
+    sample function.
+    :param p: prime base
+    :param a_: series
+    """
+    shift_reg = slow_massey(a_, p)
+    print("\tmassey shift register: {}\n\twith length: {}".format(shift_reg, len(shift_reg)))
+    if len(shift_reg < len(a_)//20):
+        print('found something interesting!')
+

@@ -6,6 +6,7 @@ from massey import create_series_from_shift_reg
 from massey import create_series_from_polynomial
 import massey
 import mpmath
+import data.data
 
 
 class TestContinuedFracture(TestCase):
@@ -72,8 +73,8 @@ class TestContinuedFracture(TestCase):
                     lhs = rcf_constants[c]()
                     rhs = SimpleContinuedFraction(rcf_constants[c], self.precision // 5)
                     shift_reg = massey.slow_massey(rhs.a_, 199)
-                    print("\tsimple continued fraction of {}:{}".format(c, rhs))           # TODO - optional logging!
-                    print("\tmassey shift register:{}".format(shift_reg, len(shift_reg)))  # TODO - optional logging!
+                    # print("\tsimple continued fraction of {}:{}".format(c, rhs))           # TODO - optional logging!
+                    # print("\tmassey shift register:{}".format(shift_reg, len(shift_reg)))  # TODO - optional logging!
                     self.assertLessEqual(len(shift_reg), 20)
                     lhs_val = mpmath.nstr(lhs, self.precision//20)
                     rhs_val = mpmath.nstr(rhs.evaluate(), self.precision//20)
@@ -92,3 +93,25 @@ class TestContinuedFracture(TestCase):
             # print("\tmassey shift register len: {}".format(shift_reg, len(shift_reg)))    # TODO - optional logging!
             self.assertEqual(lhs_val, rhs_val)
             self.assertTrue(len(shift_reg) > 999)
+
+    def known_data_test(self, cf_data):
+        with mpmath.workdps(2000):
+            for t in cf_data:
+                with self.subTest(test_constant=t):
+                    d = cf_data[t]
+                    lhs = d.lhs()
+                    rhs_an = massey.create_series_from_shift_reg(d.rhs_an.shift_reg, d.rhs_an.initials, 400)
+                    rhs_bn = massey.create_series_from_shift_reg(d.rhs_bn.shift_reg, d.rhs_bn.initials, 400)
+                    rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
+                    rhs_val = mpmath.nstr(rhs.evaluate(), 100)
+                    lhs_val = mpmath.nstr(lhs, 100)
+                    self.assertEqual(lhs_val, rhs_val)
+
+    def test_known_pi_cf(self):
+        self.known_data_test(data.data.pi_cf)
+
+    def test_known_e_cf(self):
+        self.known_data_test(data.data.e_cf)
+
+    def test_known_zeta_cf(self):
+        self.known_data_test(data.data.zeta_cf)
