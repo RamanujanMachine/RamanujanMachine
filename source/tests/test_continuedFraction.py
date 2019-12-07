@@ -30,7 +30,7 @@ class TestContinuedFracture(TestCase):
 
     def compare(self, lhs, rhs, n, print_result=True):
         """
-
+        compare LHS and RHS.
         :param print_result: True will pretty print the comparision
         :param n: number of decimal digits to compare
         :type lhs: sym equation
@@ -109,6 +109,11 @@ class TestContinuedFracture(TestCase):
             self.assertTrue(len(shift_reg) > 99)
 
     def known_data_test(self, cf_data):
+        """
+        test all "known data" that is in data.py
+        :param cf_data: a database defined in data.py
+        :type cf_data: CFData
+        """
         with mpmath.workdps(2000):
             for t in cf_data:
                 with self.subTest(test_constant=t):
@@ -119,10 +124,19 @@ class TestContinuedFracture(TestCase):
                     self.compare(d.lhs, rhs, 100)
 
     def test_known_pi_cf(self):
+        """
+        test known pi CFs
+        """
         self.known_data_test(data.data.pi_cf)
 
     def test_known_e_cf(self):
+        """
+        test known e CFs
+        """
         self.known_data_test(data.data.e_cf)
 
     def test_known_zeta_cf(self):
+        """
+        test known CFs of the zeta function
+        """
         self.known_data_test(data.data.zeta_cf)

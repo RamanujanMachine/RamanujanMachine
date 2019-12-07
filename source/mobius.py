@@ -92,8 +92,12 @@ class GeneralizedContinuedFraction(object):
         if (a_ is not None) and (b_ is not None):
             self.extend(a_, b_)
 
-    def evaluate(self, x=None):
-        return self.mobius(x) + self.a_[0]
+    def evaluate(self):
+        """
+        evaluate numerically the convergent of the the GCF
+        :return: mpmath decimal.
+        """
+        return self.mobius(None) + self.a_[0]
 
     def extend(self, a_, b_):
         """
@@ -109,6 +113,12 @@ class GeneralizedContinuedFraction(object):
         return len(self.a_)
 
     def sym_expression(self, n):
+        """
+        convert convergent no. n into a sympy expression (non simplified)
+        this is used to pretty print the GCF
+        :param n: depth of convergent
+        :return: sym expression
+        """
         x = symbols('..')
         eq = x
         for i in reversed(range(n)):
@@ -116,6 +126,10 @@ class GeneralizedContinuedFraction(object):
         return eq
 
     def print(self, n=3):
+        """
+        pretty print the GCF
+        :param n: depth to print
+        """
         pprint(self.sym_expression(n))
 
 

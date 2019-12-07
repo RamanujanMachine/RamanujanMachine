@@ -106,6 +106,7 @@ def create_series_from_polynomial(poly_a, n):
 
 def create_series_from_shift_reg(poly_a, initials, n):
     """
+    this is the reversed action to the massey algorithm.
     given a polynomial P as shift register, generate a series.
     series follows the following rule: A[n] = sum i=1 to deg(P): -(P[i] * A[n-i])
     :param poly_a: P(x) : same format as the massey algorithm output (expects poly_a[0] = 1)
