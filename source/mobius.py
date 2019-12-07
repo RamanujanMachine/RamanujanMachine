@@ -2,6 +2,7 @@ import numpy as np
 from math import gcd, floor
 from mpmath import mpf as dec
 import mpmath
+from sympy import symbols, pprint
 
 
 class MobiusTransform(object):
@@ -106,6 +107,16 @@ class GeneralizedContinuedFraction(object):
 
     def __len__(self, item):
         return len(self.a_)
+
+    def sym_expression(self, n):
+        x = symbols('..')
+        eq = x
+        for i in reversed(range(n)):
+            eq = self.a_[i] + self.b_[i] / eq
+        return eq
+
+    def print(self, n=3):
+        pprint(self.sym_expression(n))
 
 
 class SimpleContinuedFraction(GeneralizedContinuedFraction):

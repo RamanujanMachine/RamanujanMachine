@@ -136,4 +136,3 @@ def massey_check(a_, p=199):
     print("\tmassey shift register: {}\n\twith length: {}".format(shift_reg, len(shift_reg)))
     if len(shift_reg < len(a_)//20):
         print('found something interesting!')
-
