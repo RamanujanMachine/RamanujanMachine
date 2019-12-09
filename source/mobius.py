@@ -165,7 +165,12 @@ def create_simple_continued_fraction(const_gen, n):
     const = const_gen() - a_[0]    # could be useful to have better precision along the way
     for i in range(1, n):
         k_rcp = MobiusTransform(np.array([[0, 1], [1, 0]], dtype=object)) * k     # 1) calculate floor(1/x)
-        rcp = k_rcp(const)                                          # 1) (**)
+        try:
+            rcp = k_rcp(const)                                          # 1) (**)
+        except ZeroDivisionError:
+            print("create simple continued fraction finished sooner than expected resulting in finite fraction\n"
+                  "this may be due to a rational number given as input, or insufficient precision")
+            return a_
         a_.append(floor(rcp))                                       # 2) find a_i
         arr = np.array([[-a_[i], 1], [1, 0]], dtype=object)         # 3) x = 1/x - a_i
         k = MobiusTransform(arr) * k                                # 3) in fact, x = [[1, -a_i], [1, 0]] on
