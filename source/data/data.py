@@ -57,10 +57,12 @@ zeta_cf = {
                     MasseySeries([1, -5, 10, -10, 5, -1], [1 ** 4, 2 ** 4, 3 ** 4, 4 ** 4, 5 ** 4])),
 }
 
-# TODO: 1) are all LSFR binom coefficients with alternating signs (X-Y)^d?
-# TODO: 2) notice all shift register are symmetric!
-# TODO: 3) shift register -> recursion -> generating functions -> ???
-# TODO: 4) all of pi are the same?
-# TODO: 5) does every representation of e fit in a RFC?
-# TODO: 6) all rhs are mobius transforms on the constant? maybe implicit graph search will find us the correct one?
-# TODO: 7) write function to determine convergence rate.
+# TODO: Q1) are all LSFR binomial coefficients with alternating signs (X-Y)^d?
+#       Answer - the solution of these recurrence equations are polynomials (of degree d-1).
+#       since the ramanujan project looked for polynomials, of course the recurrence equations are of this form.
+# TODO: Q2) maybe some connection between the generating function of the recurrence equation to the the LHS?
+#          (probably not...)
+# TODO: Q3) all of pi formulas are of the same LSFR?
+# TODO: Q4) does every representation of e fit in a RFC?
+# TODO: Q5) are all rhs are mobius transforms on the constant? maybe implicit graph search will find us the correct one?
+# TODO: 6) write function to determine convergence rate.
