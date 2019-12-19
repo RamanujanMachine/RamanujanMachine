@@ -44,7 +44,7 @@ class TestContinuedFracture(TestCase):
             print("Comparing:")
             pprint(sympy.Eq(lhs_sym, lhs))
             print("With:")
-            pprint(sympy.Eq(rhs_sym, rhs.sym_expression(4)))
+            pprint(sympy.Eq(rhs_sym, rhs.sym_expression(5)))
             if rhs_val == lhs_val:
                 print("They Are Equal!\n")
         self.assertEqual(rhs_val, lhs_val)
@@ -94,7 +94,8 @@ class TestContinuedFracture(TestCase):
             for c in rcf_constants:
                 with self.subTest(test_constant=c):
                     lhs = rcf_constants[c]
-                    rhs = SimpleContinuedFraction(lambdify((), lhs, modules="mpmath"), self.precision // 5)
+                    rhs = SimpleContinuedFraction.from_irrational_constant(lambdify((), lhs, modules="mpmath"),
+                                                                           self.precision // 5)
                     shift_reg = massey.slow_massey(rhs.a_, 199)
                     self.assertLessEqual(len(shift_reg), 20)
                     self.compare(lhs, rhs, self.precision//20)
@@ -104,7 +105,7 @@ class TestContinuedFracture(TestCase):
         negative test - there is no polynomial logic behind the pi CF sequence.
         """
         with mpmath.workdps(1000):
-            rhs = SimpleContinuedFraction(mpmath.pi, 200)
+            rhs = SimpleContinuedFraction.from_irrational_constant(mpmath.pi, 200)
             shift_reg = massey.slow_massey(rhs.a_, 5657)
             self.assertTrue(len(shift_reg) > 99)
 
@@ -140,3 +141,6 @@ class TestContinuedFracture(TestCase):
         test known CFs of the zeta function
         """
         self.known_data_test(data.data.zeta_cf)
+
+    def test_weird_stuff(self):
+        self.known_data_test(data.data.weird_stuff)

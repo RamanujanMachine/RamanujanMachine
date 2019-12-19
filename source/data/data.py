@@ -57,6 +57,10 @@ zeta_cf = {
                     MasseySeries([1, -5, 10, -10, 5, -1], [1 ** 4, 2 ** 4, 3 ** 4, 4 ** 4, 5 ** 4])),
 }
 
+weird_stuff = {
+    'one': CFData(-1.0, MasseySeries([1, -2, 1], [-4, -7]), MasseySeries([1, -3, 3, -1], [-9, -20, -35])),
+}
+
 # TODO: Q1) are all LSFR binomial coefficients with alternating signs (X-Y)^d?
 #       Answer - the solution of these recurrence equations are polynomials (of degree d-1).
 #       since the ramanujan project looked for polynomials, of course the recurrence equations are of this form.

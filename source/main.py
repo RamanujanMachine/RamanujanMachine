@@ -2,43 +2,58 @@ import mobius
 import massey
 import mpmath
 import time
+import sympy
+import itertools
+
+def find_transform_slow(x, y, limit):
+    def sort_l(l):
+        return sum([abs(s) for s in l])
+
+    vals = [i for i in range(-limit, limit)]
+    options = [vals, vals, vals, vals]
+    values = [e for e in itertools.product(*options)]
+    values_sorted = sorted(values, key=sort_l)
+    iters = 0
+    for v in values_sorted:
+        iters += 1
+        try:
+            res = (v[0] * x + v[1]) / (v[2] * x + v[3])
+        except ZeroDivisionError:
+            continue
+        if abs(res - y) < 1e-10:
+            return v, iters
+    return [], iters
+
+def f1():
+    with mpmath.workdps(100):
+        x = mpmath.pi()
+        an = massey.create_series_from_shift_reg([1, -2, 1], [-1, -4], 200)
+        bn = massey.create_series_from_shift_reg([1, -3, 3, -1], [-2, -7, -9], 200)
+        #an = massey.create_series_from_shift_reg([1, -2, 1], [-4, -7], 200)
+        #bn = massey.create_series_from_shift_reg([1, -3, 3, -1], [-9, -20, -35], 200)
+        gcf = mobius.GeneralizedContinuedFraction(an, bn)
+        # gcf.print(5)
+        y = gcf.evaluate()
+        t = mobius.find_transform(x, y, 20)
+        if t is not None:
+            t.pprint()
+        else:
+            print("no solution found")
 
 
-def find_cn(b_):
-    c_ = [1]
-    for i in range(1, len(b_)):
-        c_.append(1/(b_[i] * c_[i-1]))
-    return c_
+def check_const(f):
+    with mpmath.workdps(20000):
+        cf = mobius.SimpleContinuedFraction.from_irrational_constant(f, 200)
+        cf.print(8)
+        massey.massey_check(cf.a_)
 
-
-def create_simple_from_generalized(a_, b_):
-    c_ = find_cn(b_)
-    a_new_ = [a_[0]]
-    for i in range(1, len(a_)):
-        a_new_.append(a_[i] * c_[i])
-    return a_new_
-
-
-with mpmath.workdps(10000):
-    f = lambda: mpmath.e / (mpmath.e - 2)
-    CF = mobius.GeneralizedContinuedFraction(massey.create_series_from_polynomial([4, 1], 200),
-                                             massey.create_series_from_polynomial([-1, -1], 200))
-    RCF = mobius.SimpleContinuedFraction(f, 2000)
-    #print(mpmath.nstr(CF.evaluate(), 50))
-    #print(mpmath.nstr(RCF.evaluate(20000), 50))
-    print(mpmath.nstr(RCF.evaluate(0), 50))
-    #print(CF.mobius)
-    #print(RCF.mobius)
-    print(RCF.a_)
-    #print(CF.a_)
-    #print(CF.b_)
-    #print(create_simple_from_generalized(CF.a_, CF.b_))
-    assert mpmath.nstr(CF.evaluate(), 100) == mpmath.nstr(f(), 100)
-    massey.massey_check(RCF.a_)
-    print(CF.a_)
-    massey.massey_check(CF.a_)
-    print(CF.b_)
-    massey.massey_check(CF.b_)
-
-    a_ = []
-
+f1()
+#res = mobius.find_transform(mpmath.pi, (mpmath.pi*2)/3, 20)
+#if res is not None:
+#    print('Found a Solution:')
+#    res.pprint(sympy.pi)
+#pi = sympy.pi
+#e = sympy.E
+#f_sym = ((pi + 1) / 2) + (pi / (e**(2*pi)-1))
+#sympy.pprint(f_sym)
+#check_const(sympy.lambdify((), f_sym, modules="mpmath"))
