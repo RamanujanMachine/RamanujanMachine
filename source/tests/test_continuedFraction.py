@@ -1,6 +1,7 @@
 from unittest import TestCase
 from mobius import GeneralizedContinuedFraction
 from mobius import SimpleContinuedFraction
+from mobius import find_transform
 from collections import namedtuple
 from massey import create_series_from_shift_reg
 from massey import create_series_from_polynomial
@@ -12,6 +13,7 @@ from sympy import pi
 from sympy import E as e
 from sympy import besseli
 from sympy import lambdify
+from sympy import zeta
 import sympy
 import data.data
 phi = (1+sympy.sqrt(5))/2
@@ -44,7 +46,7 @@ class TestContinuedFracture(TestCase):
             print("Comparing:")
             pprint(sympy.Eq(lhs_sym, lhs))
             print("With:")
-            pprint(sympy.Eq(rhs_sym, rhs.sym_expression(5)))
+            pprint(sympy.Eq(rhs_sym, rhs.sym_expression(8)))
             if rhs_val == lhs_val:
                 print("They Are Equal!\n")
         self.assertEqual(rhs_val, lhs_val)
@@ -144,3 +146,14 @@ class TestContinuedFracture(TestCase):
 
     def test_weird_stuff(self):
         self.known_data_test(data.data.weird_stuff)
+
+    def test_find_transform(self):
+        cases = [(2*pi/3, pi), (1/zeta(3), zeta(3)), ((8*e + 21) / (7 - 5*e), e), (25 + besseli(1, 2), besseli(1, 2))]
+        with mpmath.workdps(100):
+            for t in cases:
+                with self.subTest(find_transform=sympy.pretty(t[0])):
+                    y_value = lambdify((), t[0], modules="mpmath")()
+                    x_value = lambdify((), t[1], modules="mpmath")()
+                    transformation = find_transform(x_value, y_value, 30)
+                    sym_transform = transformation.sym_expression(t[1])
+                    self.assertEqual(sym_transform, t[0])

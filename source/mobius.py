@@ -22,15 +22,22 @@ class MobiusTransform(object):
     def __str__(self) -> str:
         return str(self.data)
 
+    def sym_expression(self, x):
+        """
+        get the symbolic expression of the transformation.
+        :param x: expression to use as the operand of the transformation
+        """
+        a, b, c, d = self.__values()
+        return (a*x + b) / (c*x + d)
+
     def pprint(self, x=None):
         """
         pretty print the mobius transform.
         :param x: (optional) expression to print as the operand of the transformation
         """
-        a, b, c, d = self.__values()
         if x is None:
             x = symbols('x')
-        sym = (a*x + b) / (c*x + d)
+        sym = self.sym_expression(x)
         pprint(sym)
 
     def __mul__(self, other):
@@ -243,7 +250,7 @@ def find_transform(x, y, limit):
     :return MobiusTransform in case of success or None.
     """
     x1 = x
-    x2 = 1
+    x2 = dec(1.0)
     x3 = -x*y
     x4 = -y
     solver = Solver('mobius', Solver.CBC_MIXED_INTEGER_PROGRAMMING)
@@ -253,7 +260,7 @@ def find_transform(x, y, limit):
     d = solver.IntVar(-limit, limit, 'd')
     f = solver.NumVar(0, 1, 'f')
     solver.Add(f == (a*x1 + b*x2 + c*x3 + d*x4))
-    solver.Add((a >= 1) or (b >= 1) or (a <= -1) or (b <= -1))
+    solver.Add(a*x1 + b >= 1)   # don't except trivial solutions and remove some redundancy
     solver.Minimize(f)
     status = solver.Solve()
     if status == Solver.OPTIMAL:
