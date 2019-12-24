@@ -30,14 +30,13 @@ class MobiusTransform(object):
         a, b, c, d = self.__values()
         return (a*x + b) / (c*x + d)
 
-    def pprint(self, x=None):
+    def pprint(self, x='x'):
         """
         pretty print the mobius transform.
         :param x: (optional) expression to print as the operand of the transformation
         """
-        if x is None:
-            x = symbols('x')
-        sym = self.sym_expression(x)
+        _x = symbols(x)
+        sym = self.sym_expression(_x)
         pprint(sym)
 
     def __mul__(self, other):
@@ -184,7 +183,7 @@ class GeneralizedContinuedFraction(object):
         :param b_: series of nominators for the generalized continued fraction
         """
         const = const_gen()  # could be useful to have better precision along the way
-        a_ = [floor(const)]
+        a_ = [floor(const) if b_[0] > 0 else ceil(const)]
         k = MobiusTransform(np.array([[1, -a_[0]], [0, 1]]))  # x = x - a[0]
         for i in range(1, len(b_)):
             k_rcp = MobiusTransform(np.array([[0, b_[i - 1]], [1, 0]], dtype=object)) * k  # 1) calculate floor(b[i]/x)
@@ -194,8 +193,8 @@ class GeneralizedContinuedFraction(object):
                 print("create simple continued fraction finished sooner than expected resulting in finite fraction\n"
                       "this may be due to a rational number given as input, or insufficient precision")
                 return cls(a_, b_)
-            a_.append(floor(rcp))  # 2) find a_i
-            next_transform = MobiusTransform(np.array([[0, b_[i]], [1, a_[i]]], dtype=object))  # 3) x = b[i]/x - a[i]
+            a_.append(floor(rcp) if b_[i] > 0 else ceil(rcp))  # 2) find a_i
+            next_transform = MobiusTransform(np.array([[0, b_[i-1]], [1, a_[i]]], dtype=object))  # 3) x = b[i]/x - a[i]
             k = next_transform.inverse() * k
         return cls(a_, b_)
 

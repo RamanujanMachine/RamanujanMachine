@@ -102,6 +102,19 @@ class TestContinuedFracture(TestCase):
                     self.assertLessEqual(len(shift_reg), 20)
                     self.compare(lhs, rhs, self.precision//20)
 
+    def test_alternating_sign_simple_cf(self):
+        f_sym = e / (e - 1)
+        shift_reg_cmp = [1, 0, -2, 0, 1]
+        f_const = lambdify((), f_sym, modules="mpmath")
+        with mpmath.workdps(self.precision):
+            lhs = f_sym
+            rhs = GeneralizedContinuedFraction.from_irrational_constant(f_const, [1, -1]*(self.precision//10))
+            self.compare(lhs, rhs, self.precision//20)
+            shift_reg = massey.slow_massey(rhs.a_, 199)
+            self.assertEqual(len(shift_reg), len(shift_reg_cmp))
+            for i in range(len(shift_reg)):
+                self.assertEqual(shift_reg[i], shift_reg_cmp[i])
+
     def test_negative_massey_and_cf(self):
         """
         negative test - there is no polynomial logic behind the pi CF sequence.
