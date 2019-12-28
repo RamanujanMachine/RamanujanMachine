@@ -127,6 +127,17 @@ def create_series_from_shift_reg(poly_a, initials, n):
     return a_
 
 
+def create_series_from_compact_poly(poly_a, n):
+    ret = []
+    for i in range(n):
+        tmp = 0
+        for c in poly_a:
+            tmp *= i
+            tmp += c
+        ret.append(tmp)
+    return ret
+
+
 def massey_check(a_, p=199):
     """
     sample function.

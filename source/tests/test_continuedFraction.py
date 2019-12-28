@@ -2,9 +2,11 @@ from unittest import TestCase
 from mobius import GeneralizedContinuedFraction
 from mobius import SimpleContinuedFraction
 from mobius import find_transform
+from mobius import MobiusTransform
 from collections import namedtuple
 from massey import create_series_from_shift_reg
 from massey import create_series_from_polynomial
+from massey import create_series_from_compact_poly
 import massey
 import mpmath
 from sympy import pprint
@@ -16,6 +18,7 @@ from sympy import lambdify
 from sympy import zeta
 import sympy
 import data.data
+from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
 phi = (1+sympy.sqrt(5))/2
 
 
@@ -170,3 +173,24 @@ class TestContinuedFracture(TestCase):
                     transformation = find_transform(x_value, y_value, 30)
                     sym_transform = transformation.sym_expression(t[1])
                     self.assertEqual(sym_transform, t[0])
+
+    def test_enumeration_over_gcf_hashtable(self):
+        hashtable = LHSHashTable(2, mpmath.pi, 1e-7)
+        hashtable.save('tmp_test.p')
+        hashtable_load = hashtable.load_from('tmp_test.p')
+        self.assertEqual(hashtable, hashtable_load)
+
+    def test_enumeration_over_gcf(self):
+        enumerator = EnumerateOverGCF(sympy.pi, 4, 2)
+        results = enumerator.find_hits(2, 3, print_results=False)
+        self.assertEqual(len(results), 2)
+        r = results[0]
+        an = create_series_from_compact_poly(r.rhs_an_poly, 1000)
+        bn = create_series_from_compact_poly(r.rhs_bn_poly, 1000)
+        gcf = GeneralizedContinuedFraction(an, bn)
+        t = MobiusTransform(r.lhs_coefs)
+        with mpmath.workdps(100):
+            lhs_val = mpmath.nstr(gcf.evaluate(), 50)
+            rhs_val = mpmath.nstr(t(mpmath.pi), 50)
+            self.assertEqual(lhs_val, rhs_val)
+            self.assertTrue((t.sym_expression(pi) == 4/pi) or (t.sym_expression(pi) == (-4/pi)))

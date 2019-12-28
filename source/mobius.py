@@ -2,7 +2,7 @@ import numpy as np
 from math import gcd, floor, ceil
 from mpmath import mpf as dec
 import mpmath
-from sympy import symbols, pprint
+from sympy import Symbol, pprint
 from ortools.linear_solver.pywraplp import Solver
 
 
@@ -30,13 +30,12 @@ class MobiusTransform(object):
         a, b, c, d = self.__values()
         return (a*x + b) / (c*x + d)
 
-    def pprint(self, x='x'):
+    def pprint(self, x=Symbol('x')):
         """
         pretty print the mobius transform.
         :param x: (optional) expression to print as the operand of the transformation
         """
-        _x = symbols(x)
-        sym = self.sym_expression(_x)
+        sym = self.sym_expression(x)
         pprint(sym)
 
     def __mul__(self, other):
@@ -156,7 +155,7 @@ class GeneralizedContinuedFraction(object):
         :param n: depth of convergent
         :return: sym expression
         """
-        x = symbols('..')
+        x = Symbol('..')
         eq = x
         for i in reversed(range(n)):
             eq = self.a_[i] + self.b_[i] / eq
@@ -239,7 +238,7 @@ class SimpleContinuedFraction(GeneralizedContinuedFraction):
         return cls(gcf.a_)
 
 
-def find_transform(x, y, limit):
+def find_transform(x, y, limit, threshold=1e-7):
     """
     find a integer solution to ax +b -cxy -dy = 0
     this will give us the mobius transform: T(x) = y
@@ -263,7 +262,7 @@ def find_transform(x, y, limit):
     solver.Minimize(f)
     status = solver.Solve()
     if status == Solver.OPTIMAL:
-        if abs(solver.Objective().Value()) <= 1e-7:
+        if abs(solver.Objective().Value()) <= threshold:
             res_a, res_b, res_c, res_d = int(a.solution_value()), int(b.solution_value()),\
                                          int(c.solution_value()), int(d.solution_value())
             ret = MobiusTransform(np.array([[res_a, res_b], [res_c, res_d]], dtype=object))
