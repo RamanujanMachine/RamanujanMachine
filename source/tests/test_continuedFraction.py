@@ -19,6 +19,8 @@ from sympy import zeta
 import sympy
 import data.data
 from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
+from enumerate_over_signed_rcf import SignedRcfEnumeration
+
 phi = (1+sympy.sqrt(5))/2
 
 
@@ -194,6 +196,18 @@ class TestContinuedFracture(TestCase):
             rhs_val = mpmath.nstr(t(mpmath.pi), 50)
             self.assertEqual(lhs_val, rhs_val)
             self.assertTrue(t.sym_expression(pi) == 4/pi)
+
+    def test_enumerate_signed_RCF(self):
+        enumerator = SignedRcfEnumeration(e, 1, [2,2], 100, 1)
+        with mpmath.workdps(self.precision):
+            results = enumerator.find_signed_rcf_conj()
+            results, duplicates = enumerator.verify_results(results)
+            dups = []
+            for key in duplicates.keys():
+                for dup in duplicates[key]:
+                    dups.append(dup)
+            adjusted = [[res[0], res[1], list(res[3])] for res in results+dups]
+            self.assertTrue([(e/(e-1)), [1,-1], [1, 0, -2, 0, 1]] in adjusted)
 
     def test_efficient_gcf(self):
         with mpmath.workdps(100):

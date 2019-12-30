@@ -74,6 +74,21 @@ class MobiusTransform(object):
             denominator = dec(d)
         return numerator / denominator
 
+
+    def __eq__(self, other):
+        """
+        Compare with another mobius.
+        :param other: another mobius object.
+          :return: True if equal. Else False.
+        """
+        if not isinstance(other, MobiusTransform):
+            raise TypeError("Comparision of wrong types")
+        if np.array_equal(self.data, other.data):
+            return True
+        else:
+            return False
+
+
     def normalize(self):
         """
         to be called after every operation. this should prevent coefficients from exploding.
@@ -268,7 +283,7 @@ class EfficientGCF(object):
 
 def find_transform(x, y, limit, threshold=1e-7):
     """
-    find a integer solution to ax +b -cxy -dy = 0
+    find a integer solution to ax + b - cxy - dy = 0
     this will give us the mobius transform: T(x) = y
     :param x: numeric constant to check
     :param y: numeric manipulation of constant
