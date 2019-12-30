@@ -4,6 +4,7 @@ from mpmath import mpf as dec
 import mpmath
 from sympy import Symbol, pprint
 from ortools.linear_solver.pywraplp import Solver
+from sympy import lambdify
 
 
 class MobiusTransform(object):
@@ -73,6 +74,21 @@ class MobiusTransform(object):
             numerator = dec(b)
             denominator = dec(d)
         return numerator / denominator
+
+
+    def __eq__(self, other):
+        """
+        Compare with another mobius.
+        :param other: another mobius object.
+          :return: True if equal. Else False.
+        """
+        if not isinstance(other, MobiusTransform):
+            raise TypeError("Comparision of wrong types")
+        if np.array_equal(self.data, other.data):
+            return True
+        else:
+            return False
+
 
     def normalize(self):
         """
@@ -240,7 +256,7 @@ class SimpleContinuedFraction(GeneralizedContinuedFraction):
 
 def find_transform(x, y, limit, threshold=1e-7):
     """
-    find a integer solution to ax +b -cxy -dy = 0
+    find a integer solution to ax + b - cxy - dy = 0
     this will give us the mobius transform: T(x) = y
     :param x: numeric constant to check
     :param y: numeric manipulation of constant
@@ -293,3 +309,24 @@ def check_and_modify_precision(const, transform, const_gen, offset):
             return next_d, const_work
         mpmath.mp.prec += 100
         const_work = const_gen() + offset
+
+
+def is_good_gcf(a_, b_, integer_limit, constants):
+    """
+    Finds conjectures between a GCF and mobius transforms of math constants.
+    :param a_: sequence
+    :param b_: sequence
+    :param integer_limit: maximum allowed value for mobius integers.
+    :param constants: list of math fundemental constants.
+    :return: polynomial coefficients of P field.
+    """
+    with mpmath.workdps(1000):
+        y = GeneralizedContinuedFraction(a_, b_).evaluate()
+        good_results = []
+        for x in constants:
+            xx = lambdify((), x, modules="mpmath")()
+            yy = lambdify((), y, modules="mpmath")()
+            result = find_transform(xx, yy, integer_limit)
+            if result is not None:
+                good_results.append([a_, b_, x, result])
+        return good_results

@@ -3,6 +3,7 @@ from mobius import GeneralizedContinuedFraction
 from mobius import SimpleContinuedFraction
 from mobius import find_transform
 from mobius import MobiusTransform
+from mobius import is_good_gcf
 from collections import namedtuple
 from massey import create_series_from_shift_reg
 from massey import create_series_from_polynomial
@@ -19,6 +20,7 @@ from sympy import zeta
 import sympy
 import data.data
 from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
+import numpy as np
 phi = (1+sympy.sqrt(5))/2
 
 
@@ -194,3 +196,29 @@ class TestContinuedFracture(TestCase):
             rhs_val = mpmath.nstr(t(mpmath.pi), 50)
             self.assertEqual(lhs_val, rhs_val)
             self.assertTrue((t.sym_expression(pi) == 4/pi) or (t.sym_expression(pi) == (-4/pi)))
+	
+	
+	def test_is_good_gcf(self):
+        cases = [( (e-1)/(e-2) , 'poly', [1], [None], 'reg', [1, 0, -2, 0, 1], [1, -1, 2, -1], 4, [[1, -1], [1, -2]], self.depth )]
+        with mpmath.workdps(100):
+            for t in cases:
+                with self.subTest(is_good_gcf=sympy.pretty(t[0])):
+                    if t[1] == 'poly':
+                        a_ = create_series_from_polynomial(t[2], t[-1])
+                    elif t[1] == 'reg':
+                        a_ = create_series_from_shift_reg(t[2], t[3], t[-1])
+                    if t[4] == 'poly':
+                        b_ = create_series_from_polynomial(t[5], t[-1])
+                    elif t[4] == 'reg':
+                        b_ = create_series_from_shift_reg(t[5], t[6], t[-1])
+                    results = is_good_gcf(a_, b_, t[7], [e, pi])
+                    t_mobius = mobius.MobiusTransform(np.array(t[8]))
+                    results_mob = [res[3] for res in results]
+                    self.assertTrue(t_mobius in results_mob)
+
+
+
+
+
+
+

@@ -17,8 +17,8 @@ TODO - unittests
 """
 
 from numpy import array, int64, concatenate
-
-
+import sympy
+import math
 def _inv_mod(a, p):  # get inverted modulo of prime-field p.
     b = p
     caa, cba = 1, 0
@@ -148,3 +148,14 @@ def massey_check(a_, p=199):
     print("\tmassey shift register: {}\n\twith length: {}".format(shift_reg, len(shift_reg)))
     if len(shift_reg < len(a_)//20):
         print('found something interesting!')
+
+def get_prime_greater(x):
+    """
+    Method returns the smallest prime greater than input argument x.
+    Should be pretty quick because log2 and 2** are cheap and the search domain shrinks logarithmically,
+    :param x: Some real number.
+    :return: Some prime larger than x.
+    """
+    temp = math.log(x, 2.0)
+    prime = sympy.prime(math.ceil(temp))
+    return (2**prime)-1# Marsen
