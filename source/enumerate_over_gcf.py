@@ -75,13 +75,23 @@ class EnumerateOverGCF(object):
         else:
             self.hash_table = LHSHashTable.load_from(saved_hash)
 
-    def create_enumeration(self, poly_deg_a, poly_deg_b):
+    def create_poly_enumeration(self, poly_deg_a, poly_deg_b):
         coefs = [[i for i in range(-self.rhs_limit, self.rhs_limit+1)]]
         a = coefs*poly_deg_a
         b = coefs*poly_deg_b
         a_polynomials = list(itertools.product(*a))
         b_polynomials = list(itertools.product(*b))
         return a_polynomials, b_polynomials
+
+    def create_SR_enumeration(self, SR_len_a, SR_len_b, reg_size):
+        rng = range(-self.rhs_limit, self.rhs_limit+1)
+        cart_prod = list(itertools.product(rng, repeat=reg_size))  # list of tuples
+        polynoms = [list(prod) for prod in cart_prod]  # lists of lists
+        registers = [list(prod) for prod in cart_prod]  # lists of lists
+        for poly in polynoms:
+            poly.insert(0, 1)
+        domain = list(itertools.product(polynoms, polynoms, registers, registers))  # list of tuples
+        return domain
 
     def first_enumeration(self, poly_deg_a, poly_deg_b, print_results=True):
         results = []

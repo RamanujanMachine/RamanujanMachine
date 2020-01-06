@@ -3,7 +3,7 @@ from mobius import GeneralizedContinuedFraction
 from mobius import SimpleContinuedFraction
 from mobius import find_transform
 from mobius import MobiusTransform
-from mobius import is_good_gcf
+from wrap_and_search import is_good_gcf, SignedRcfEnumeration
 from collections import namedtuple
 from massey import create_series_from_shift_reg
 from massey import create_series_from_polynomial
@@ -196,9 +196,15 @@ class TestContinuedFracture(TestCase):
             rhs_val = mpmath.nstr(t(mpmath.pi), 50)
             self.assertEqual(lhs_val, rhs_val)
             self.assertTrue((t.sym_expression(pi) == 4/pi) or (t.sym_expression(pi) == (-4/pi)))
-	
-	
-	def test_is_good_gcf(self):
+
+    def test_enumerate_signed_RCF(self):
+        enumerator = SignedRcfEnumeration(e, 1, 100, 199)
+        with mpmath.workdps(self.precision):
+            results = enumerator.find_signed_rcf_conjs(1,2)
+            adjusted_results = [[res[0], res[1], res[2], list(massey.slow_massey(res[3], 199))] for res in results]
+            self.assertTrue([[0, 1, 0, 0, 0, 0], [-1, 1, 0, 0, 0, 0], [1, -1], [1, 0, -2, 0, 1]] in adjusted_results)
+
+    def test_is_good_gcf(self):
         cases = [( (e-1)/(e-2) , 'poly', [1], [None], 'reg', [1, 0, -2, 0, 1], [1, -1, 2, -1], 4, [[1, -1], [1, -2]], self.depth )]
         with mpmath.workdps(100):
             for t in cases:
@@ -212,7 +218,7 @@ class TestContinuedFracture(TestCase):
                     elif t[4] == 'reg':
                         b_ = create_series_from_shift_reg(t[5], t[6], t[-1])
                     results = is_good_gcf(a_, b_, t[7], [e, pi])
-                    t_mobius = mobius.MobiusTransform(np.array(t[8]))
+                    t_mobius = MobiusTransform(np.array(t[8]))
                     results_mob = [res[3] for res in results]
                     self.assertTrue(t_mobius in results_mob)
 
