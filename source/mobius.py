@@ -340,22 +340,4 @@ def check_and_modify_precision(const, transform, const_gen, offset):
         const_work = const_gen() + offset
 
 
-def is_good_gcf(a_, b_, integer_limit, constants):
-    """
-    Finds conjectures between a GCF and mobius transforms of math constants.
-    :param a_: sequence
-    :param b_: sequence
-    :param integer_limit: maximum allowed value for mobius integers.
-    :param constants: list of math fundemental constants.
-    :return: polynomial coefficients of P field.
-    """
-    with mpmath.workdps(1000):
-        y = GeneralizedContinuedFraction(a_, b_).evaluate()
-        good_results = []
-        for x in constants:
-            xx = lambdify((), x, modules="mpmath")()
-            yy = lambdify((), y, modules="mpmath")()
-            result = find_transform(xx, yy, integer_limit)
-            if result is not None:
-                good_results.append([a_, b_, x, result])
-        return good_results
+
