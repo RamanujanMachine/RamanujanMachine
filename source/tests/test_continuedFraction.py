@@ -3,6 +3,7 @@ from mobius import GeneralizedContinuedFraction
 from mobius import SimpleContinuedFraction
 from mobius import find_transform
 from mobius import MobiusTransform
+from mobius import EfficientGCF
 from collections import namedtuple
 from massey import create_series_from_shift_reg
 from massey import create_series_from_polynomial
@@ -175,15 +176,15 @@ class TestContinuedFracture(TestCase):
                     self.assertEqual(sym_transform, t[0])
 
     def test_enumeration_over_gcf_hashtable(self):
-        hashtable = LHSHashTable(2, mpmath.pi, 1e-7)
+        hashtable = LHSHashTable(range(3), range(3), mpmath.pi, 1e-7)
         hashtable.save('tmp_test.p')
         hashtable_load = hashtable.load_from('tmp_test.p')
         self.assertEqual(hashtable, hashtable_load)
 
     def test_enumeration_over_gcf(self):
-        enumerator = EnumerateOverGCF(sympy.pi, 4, 2)
-        results = enumerator.find_hits(2, 3, print_results=False)
-        self.assertEqual(len(results), 2)
+        enumerator = EnumerateOverGCF(sympy.pi, 4)
+        results = enumerator.find_hits([[0, 1, 2]]*2, [[0, 1, 2]]*3, print_results=False)
+        self.assertEqual(len(results), 1)
         r = results[0]
         an = create_series_from_compact_poly(r.rhs_an_poly, 1000)
         bn = create_series_from_compact_poly(r.rhs_bn_poly, 1000)
@@ -193,4 +194,11 @@ class TestContinuedFracture(TestCase):
             lhs_val = mpmath.nstr(gcf.evaluate(), 50)
             rhs_val = mpmath.nstr(t(mpmath.pi), 50)
             self.assertEqual(lhs_val, rhs_val)
-            self.assertTrue((t.sym_expression(pi) == 4/pi) or (t.sym_expression(pi) == (-4/pi)))
+            self.assertTrue(t.sym_expression(pi) == 4/pi)
+
+    def test_efficient_gcf(self):
+        with mpmath.workdps(100):
+            gcf_ref = SimpleContinuedFraction.from_irrational_constant(mpmath.pi, 50)
+            val = EfficientGCF(gcf_ref.a_, gcf_ref.b_).evaluate()
+            val_ref = gcf_ref.evaluate()
+            self.assertEqual(val, val_ref)

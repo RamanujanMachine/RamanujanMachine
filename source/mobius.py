@@ -238,6 +238,34 @@ class SimpleContinuedFraction(GeneralizedContinuedFraction):
         return cls(gcf.a_)
 
 
+class EfficientGCF(object):
+    def __init__(self, a_, b_):
+        """
+        efficient calculation of general continued fraction - only build and evaluate.
+        the calculation is done with the recursive formula of the gcf convergent.
+        ref: https://en.wikipedia.org/wiki/Generalized_continued_fraction (switch names between a and b in ref)
+        :param a_: an series
+        :param b_: bn series
+        """
+        self.prev_A = 0
+        self.A = 1
+        self.prev_B = 1
+        self.B = a_[0]
+
+        for i in range(1, len(a_)):
+            tmp_a = self.A
+            tmp_b = self.B
+            self.A = a_[i] * self.A + b_[i - 1] * self.prev_A
+            self.B = a_[i] * self.B + b_[i - 1] * self.prev_B
+            self.prev_A = tmp_a
+            self.prev_B = tmp_b
+
+    def evaluate(self):
+        if self.A == 0:
+            return dec(0)
+        return dec(self.B) / dec(self.A)
+
+
 def find_transform(x, y, limit, threshold=1e-7):
     """
     find a integer solution to ax +b -cxy -dy = 0
@@ -245,6 +273,7 @@ def find_transform(x, y, limit, threshold=1e-7):
     :param x: numeric constant to check
     :param y: numeric manipulation of constant
     :param limit: range to look at
+    :param threshold: optimal solution threshold.
     :return MobiusTransform in case of success or None.
     """
     x1 = x
