@@ -156,7 +156,7 @@ class EnumerateOverGCF(object):
         """
         self.threshold = 1e-10  # key length
         self.enum_dps = 50      # working decimal precision for first enumeration
-        self.verify_dps = 200   # working decimal precision for validating results.
+        self.verify_dps = 2000   # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constant
         self.const_val = lambdify((), sym_constant, modules="mpmath")
@@ -398,14 +398,14 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 
 # TODO - create api for this.
 if __name__ == "__main__":
-    final_results = multi_core_enumeration_wrapper(sympy.E,     # constant to run on
+    final_results = multi_core_enumeration_wrapper(sympy.zeta(2),     # constant to run on
                                                    20,          # lhs limit
-                                                   [[i for i in range(30)]]*2,  # a_n polynomial coefficients
-                                                   [[i for i in range(30)]]*2,  # b_n polynomial coefficients
+                                                   [[i for i in range(16)]]*3,  # a_n polynomial coefficients
+                                                   [[i for i in range(10)]]*5,  # b_n polynomial coefficients
                                                    4,           # number of cores to run on
                                                    None,        # use naive tiling
-                                                   os.path.join('hash_tables', 'e_20_hash.p')  # existing hash table
+                                                   os.path.join('hash_tables', 'zeta2_20_hash.p')  # existing hash table
                                                    )
 
-    with open('results_of_e_30', 'wb') as file:
-        pickle.dump(final_results, file)
+    #with open('results_of_e_30', 'wb') as file:
+    #    pickle.dump(final_results, file)
