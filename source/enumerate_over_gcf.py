@@ -281,6 +281,7 @@ class EnumerateOverGCF(object):
         for r in results:
             an = create_series_from_compact_poly(r.rhs_an_poly, 1000)
             bn = create_series_from_compact_poly(r.rhs_bn_poly, 1000)
+            print_length = max(max(len(r.rhs_an_poly), len(r.rhs_bn_poly)), 5)
             gcf = GeneralizedContinuedFraction(an, bn)
             t = MobiusTransform(r.lhs_coefs)
             sym_lhs = sympy.simplify(t.sym_expression(self.const_sym))
@@ -288,11 +289,11 @@ class EnumerateOverGCF(object):
                 print('lhs: ')
                 sympy.pprint(sym_lhs)
                 print('rhs: ')
-                gcf.print(5)
+                gcf.print(print_length)
                 print('lhs value: ' + mpmath.nstr(t(self.const_val()), 50))
                 print('rhs value: ' + mpmath.nstr(gcf.evaluate(), 50))
             else:
-                result = sympy.Eq(sym_lhs, gcf.sym_expression(5))
+                result = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
                 print('$$ ' + sympy.latex(result) + ' $$')
 
     def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
