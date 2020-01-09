@@ -103,10 +103,10 @@ class SignedRcfEnumeration(object):
         denominators = [list(denom) for denom in list(itertools.product(coeffs, repeat=poly_deg+1))]
         return [list(var) for var in list(itertools.product(numerators,denominators))]
 
-    def find_signed_rcf_conjs(self, poly_deg, max_cycle_len):
+    def find_signed_rcf_conj(self, poly_deg, max_cycle_len):
         results = []
         rational_variations = self.create_rational_variations_enum(poly_deg)
-        for seq_len in range(2,max_cycle_len+1):
+        for seq_len in range(2, max_cycle_len+1):
             sign_cycles = self.create_sign_seq_enumeration(seq_len)
             for rat_var in rational_variations:
                 numer, denom = [], []
@@ -128,36 +128,30 @@ class SignedRcfEnumeration(object):
 
                 var_gen = lambdify((), var_sym, modules="mpmath")
                 for sign_cyc in sign_cycles:
+                    temp = 2
+                    new_cyc = True
+                    while temp < len(sign_cyc) and new_cyc:
+                        if len(sign_cyc) % temp == 0:
+                            short_cyc = sign_cyc[temp:]
+                            if sign_cyc == short_cyc * (len(sign_cyc) // temp):
+                                new_cyc = False
+                            temp *= 2
+                        else:
+                            temp *= 2
+                    if not new_cyc:
+                        continue
+
                     b_ = (sign_cyc * (self.depth//seq_len))[:self.depth]
-                    srcf = GeneralizedContinuedFraction.from_irrational_constant(const_gen=var_gen, b_=b_)
-                    a_ = srcf.a_
+                    signed_rcf = GeneralizedContinuedFraction.from_irrational_constant(const_gen=var_gen, b_=b_)
+                    a_ = signed_rcf.a_
+                    if 0 in a_:
+                        continue
                     if len(a_) < self.depth:
                         continue
                     leo = slow_massey(a_, self.prime)
                     if len(leo) < self.beauty_standard:
                         results.append([numer, denom, sign_cyc, a_])
         return results
-
-
-
-
-
-
-
-
-def find_signed_rcfs(const_gen, cycle_len):
-    signed_seq_domain = itertools.product([-1,1], repeat=cycle_len)
-    for seq in signed_seq_domain:
-        b_ = list(seq)*depth//cycle_len
-#                 set lhs
-#                 extract a_
-#                 check beauty
-#                 save if nice
-#             SimpleContinuedFraction.from_irrational_constant()
-#
-
-
-
 
 
 def find_gcf_conj(gen_pol_lim, int_lim, constants, reg_size, seq_depth):
