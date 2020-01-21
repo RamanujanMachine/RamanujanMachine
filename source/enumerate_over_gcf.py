@@ -56,14 +56,14 @@ class LHSHashTable(object):
                     for d in search_range_bottom:
                         if gcd(gcd(a, b), gcd(c, d)) != 1:  # don't store values that already exist
                             continue
-                        denominator = c*const_val + d
-                        numerator = a*const_val + b
+                        denominator = c * const_val + d
+                        numerator = a * const_val + b
                         if denominator == 0 or numerator == 0:  # don't store nan or 0.
                             continue
                         val = numerator / denominator
                         if mpmath.isnan(val) or mpmath.isinf(val):  # safety check
                             continue
-                        if ((c + d) != 0) and mpmath.almosteq(val, ((mpmath.mpf(a)+mpmath.mpf(b))/(c+d))):
+                        if ((c + d) != 0) and mpmath.almosteq(val, ((mpmath.mpf(a) + mpmath.mpf(b)) / (c + d))):
                             # don't store values that are independent of the constant (e.g. rational numbers)
                             continue
                         key = int(val / self.threshold)
@@ -119,17 +119,17 @@ class LHSHashTable(object):
         """
         if hash_instance.name == name:
             print('loading instance')
-            return hash_instance.hash   # hopefully on linux this will not make a copy.
+            return hash_instance.hash  # hopefully on linux this will not make a copy.
         else:
             with open(name, 'rb') as f:
                 print('not loading instance')
                 ret = pickle.load(f)
-                hash_instance.hash = ret    # save in instance
+                hash_instance.hash = ret  # save in instance
                 hash_instance.name = name
         return ret
 
 
-T = TypeVar('T')    # template
+T = TypeVar('T')  # template
 
 
 def chunks(iterator: Iterator[T], n: int) -> Iterator[Iterator[T]]:
@@ -155,8 +155,8 @@ class EnumerateOverGCF(object):
         :param saved_hash: path to saved hash.
         """
         self.threshold = 1e-10  # key length
-        self.enum_dps = 50      # working decimal precision for first enumeration
-        self.verify_dps = 2000   # working decimal precision for validating results.
+        self.enum_dps = 50  # working decimal precision for first enumeration
+        self.verify_dps = 2000  # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constant
         self.const_val = lambdify((), sym_constant, modules="mpmath")
@@ -165,12 +165,12 @@ class EnumerateOverGCF(object):
             with mpmath.workdps(self.enum_dps):
                 start = time()
                 self.hash_table = LHSHashTable(
-                    range(self.lhs_limit+1),    # a,b range (allow only non-negative)
-                    range(-self.lhs_limit, self.lhs_limit+1),   # c,d range
-                    self.const_val(),   # constant
-                    self.threshold)     # length of key
+                    range(self.lhs_limit + 1),  # a,b range (allow only non-negative)
+                    range(-self.lhs_limit, self.lhs_limit + 1),  # c,d range
+                    self.const_val(),  # constant
+                    self.threshold)  # length of key
                 end = time()
-                print('that took {}s'.format(end-start))
+                print('that took {}s'.format(end - start))
         else:
             self.hash_table = LHSHashTable.load_from(saved_hash)
 
@@ -192,8 +192,8 @@ class EnumerateOverGCF(object):
         :return: intermediate results (list of 'Match')
         """
         start = time()
-        neg_poly_b = [[-i for i in b] for b in poly_b]      # for b_n include negative terms
-        a_coef_list = list(itertools.product(*poly_a))      # all coefficients possibilities for 'a_n'
+        neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
+        a_coef_list = list(itertools.product(*poly_a))  # all coefficients possibilities for 'a_n'
         b_coef_list = list(itertools.product(*poly_b)) + list(itertools.product(*neg_poly_b))
         num_iterations = len(a_coef_list) * len(b_coef_list)  # total number of permutations
 
@@ -217,21 +217,60 @@ class EnumerateOverGCF(object):
         if print_results:
             print('created final enumerations filters after {} s'.format(time() - start))
 
-        counter = 0     # number of permutations passed
-        results = []    # list of intermediate results
+        counter = 0  # number of permutations passed
+        results = []  # list of intermediate results
         batch_size = 10000  # chosen empirically, balance memory usage and cpu performance.
         start = time()
-        for an_bn in zip(chunks(an_bn_list, batch_size), chunks(a_b_coefs, batch_size)):    # enumerate in batches.
-            gcf_list = [EfficientGCF(an, bn) for (an, bn) in an_bn[0]]               # create gcf from a_n and b_n
-            keys = [int(gcf.evaluate() / self.threshold) for gcf in gcf_list]        # calculate hash key of gcf value
-            hits = [k in self.hash_table for k in keys]                              # find hits in hash table
-            key_hits = list(itertools.compress(keys, hits))                          # filter by hits.
-            a_b_coefs_hits = list(itertools.compress(an_bn[1], hits))                # and save them.
+        for an_bn in zip(chunks(an_bn_list, batch_size), chunks(a_b_coefs, batch_size)):  # enumerate in batches.
+            gcf_list = [EfficientGCF(an, bn) for (an, bn) in an_bn[0]]  # create gcf from a_n and b_n
+            keys = [int(gcf.evaluate() / self.threshold) for gcf in gcf_list]  # calculate hash key of gcf value
+            hits = [k in self.hash_table for k in keys]  # find hits in hash table
+            key_hits = list(itertools.compress(keys, hits))  # filter by hits.
+            a_b_coefs_hits = list(itertools.compress(an_bn[1], hits))  # and save them.
             results.extend([Match(self.hash_table[m[0]], m[1][0], m[1][1]) for m in zip(key_hits, a_b_coefs_hits)])
             if print_results:
                 counter += batch_size
-                if counter % 100000 == 0:   # print status.
+                if counter % 100000 == 0:  # print status.
                     print('passed {} out of {}. found so far {} results'.format(counter, num_iterations, len(results)))
+        if print_results:
+            print('created results after {} s'.format(time() - start))
+        return results
+
+    def __first_enumeration_low_mem(self, poly_a: List[List], poly_b: List[List], print_results: bool):
+        """
+        see __first_enumeration docstring
+        """
+        start = time()
+        a_coef_list = list(itertools.product(*poly_a))  # all coefficients possibilities for 'a_n'
+        neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
+        b_coef_iter = itertools.chain(itertools.product(*poly_b), itertools.product(*neg_poly_b))
+        num_iterations = 2 * np.prod([len(b) for b in poly_b]) * np.prod([len(a) for a in poly_a])
+        # create a_n and b_n series fro coefficients.
+        an_list = [create_series_from_compact_poly(a_coef_list[i], 32) for i in range(len(a_coef_list))]
+        # filter out all options resulting in '0' in any series term.
+        an_filter = [0 not in an for an in an_list]
+        an_list = list(itertools.compress(an_list, an_filter))
+        a_coef_list = list(itertools.compress(a_coef_list, an_filter))
+        if print_results:
+            print('created final enumerations filters after {} s'.format(time() - start))
+
+        counter = 0  # number of permutations passed
+        results = []  # list of intermediate results
+        start = time()
+        for b_coef in b_coef_iter:
+            bn = create_series_from_compact_poly(b_coef, 32)
+            if 0 in bn:
+                continue
+            for an_coef in zip(an_list, a_coef_list):
+                gcf = EfficientGCF(an_coef[0], bn)  # create gcf from a_n and b_n
+                key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
+                if key in self.hash_table:  # find hits in hash table
+                    results.append(Match(self.hash_table[key], an_coef[1], b_coef))
+                if print_results:
+                    counter += 1
+                    if counter % 100000 == 0:  # print status.
+                        print('passed {} out of {}. found so far {} results'.format(counter, num_iterations,
+                                                                                    len(results)))
         if print_results:
             print('created results after {} s'.format(time() - start))
         return results
@@ -256,7 +295,7 @@ class EnumerateOverGCF(object):
                 val = t(self.const_val())
                 if mpmath.isinf(val) or mpmath.isnan(val):  # safety
                     continue
-                if mpmath.almosteq(val, t(1), 1/(self.verify_dps//20)):
+                if mpmath.almosteq(val, t(1), 1 / (self.verify_dps // 20)):
                     # don't keep results that are independent of the constant
                     continue
             except ZeroDivisionError:
@@ -296,22 +335,25 @@ class EnumerateOverGCF(object):
                 result = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
                 print('$$ ' + sympy.latex(result) + ' $$')
 
-    def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
+    def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True, save_mem=True):
         """
         use search engine to find results (steps (2) and (3) explained in __init__ docstring)
         :param poly_a: explained in docstring of __first_enumeration
         :param poly_b: explained in docstring of __first_enumeration
         :param print_results: if true, pretty print results at the end.
+        :param save_mem: if true, use low memory usage implementation
         :return: final results.
         """
         with mpmath.workdps(self.enum_dps):
             if print_results:
                 print('starting preliminary search...')
             start = time()
-            results = self.__first_enumeration(poly_a, poly_b, print_results)   # step (2)
+            # step (2)
+            results = self.__first_enumeration_low_mem(poly_a, poly_b, print_results) if save_mem else \
+                self.__first_enumeration(poly_a, poly_b, print_results)
             end = time()
             if print_results:
-                print('that took {}s'.format(end-start))
+                print('that took {}s'.format(end - start))
         with mpmath.workdps(self.verify_dps):
             if print_results:
                 print('starting to verify results...')
@@ -319,7 +361,7 @@ class EnumerateOverGCF(object):
             refined_results = self.__refine_results(results, print_results)  # step (3)
             end = time()
             if print_results:
-                print('that took {}s'.format(end-start))
+                print('that took {}s'.format(end - start))
             if print_results:
                 self.print_results(refined_results)
         return refined_results
@@ -344,10 +386,10 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
     :return: results
     """
     for s in range(len(splits_size)):
-        if index == (num_cores-1):
+        if index == (num_cores - 1):
             poly_a[s] = poly_a[s][index * splits_size[s]:]
         else:
-            poly_a[s] = poly_a[s][index * splits_size[s]:(index+1) * splits_size[s]]
+            poly_a[s] = poly_a[s][index * splits_size[s]:(index + 1) * splits_size[s]]
     enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash)
     results = enumerator.find_hits(poly_a, poly_b, index == 0)
     enumerator.print_results(results, True)
@@ -374,9 +416,9 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
         if saved_hash is None:  # if no hash table given, build it here.
             saved_hash = 'tmp_hash.p'
         enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit)
-        enumerator.hash_table.save(saved_hash)   # and save it to file (and global instance)
+        enumerator.hash_table.save(saved_hash)  # and save it to file (and global instance)
     else:
-        if os.name != 'nt':     # if creation of process uses 'Copy On Write' we can benefit from it by
+        if os.name != 'nt':  # if creation of process uses 'Copy On Write' we can benefit from it by
             # loading the hash table to memory here.
             EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash)
 
@@ -399,14 +441,14 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 
 # TODO - create api for this.
 if __name__ == "__main__":
-    final_results = multi_core_enumeration_wrapper(sympy.zeta(2),     # constant to run on
-                                                   20,          # lhs limit
-                                                   [[i for i in range(16)]]*3,  # a_n polynomial coefficients
-                                                   [[i for i in range(10)]]*5,  # b_n polynomial coefficients
-                                                   4,           # number of cores to run on
-                                                   None,        # use naive tiling
-                                                   os.path.join('hash_tables', 'zeta2_20_hash.p')  # existing hash table
+    final_results = multi_core_enumeration_wrapper(sympy.pi,  # constant to run on
+                                                   20,  # lhs limit
+                                                   [[i for i in range(15)]] * 2,  # a_n polynomial coefficients
+                                                   [[i for i in range(15)]] * 3,  # b_n polynomial coefficients
+                                                   1,  # number of cores to run on
+                                                   None,  # use naive tiling
+                                                   os.path.join('hash_tables', 'pi_20_hash.p')  # existing hash table
                                                    )
 
-    #with open('results_of_e_30', 'wb') as file:
+    # with open('results_of_e_30', 'wb') as file:
     #    pickle.dump(final_results, file)
