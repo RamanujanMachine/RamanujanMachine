@@ -5,7 +5,7 @@ from sympy import lambdify
 import sympy
 from time import time
 import itertools
-from massey import create_series_from_compact_poly
+from series_generators import create_series_from_compact_poly, create_zeta_bn_series
 from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
 import os
 from collections import namedtuple
@@ -14,6 +14,7 @@ from math import gcd
 from typing import TypeVar, Iterator
 import multiprocessing
 from functools import partial
+
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_coefs rhs_an_poly rhs_bn_poly')
@@ -160,6 +161,8 @@ class EnumerateOverGCF(object):
         self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constant
         self.const_val = lambdify((), sym_constant, modules="mpmath")
+        self.create_an_series = create_series_from_compact_poly
+        self.create_bn_series = create_series_from_compact_poly
         if saved_hash == '':
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
@@ -192,61 +195,12 @@ class EnumerateOverGCF(object):
         :return: intermediate results (list of 'Match')
         """
         start = time()
-        neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
-        a_coef_list = list(itertools.product(*poly_a))  # all coefficients possibilities for 'a_n'
-        b_coef_list = list(itertools.product(*poly_b)) + list(itertools.product(*neg_poly_b))
-        num_iterations = len(a_coef_list) * len(b_coef_list)  # total number of permutations
-
-        # create a_n and b_n series fro coefficients.
-        an_list = [create_series_from_compact_poly(a_coef_list[i], 32) for i in range(len(a_coef_list))]
-        bn_list = [create_series_from_compact_poly(b_coef_list[i], 32) for i in range(len(b_coef_list))]
-        if print_results:
-            print('created series after {} s'.format(time() - start))
-
-        # filter out all options resulting in '0' in any series term.
-        an_filter = [0 not in an for an in an_list]
-        bn_filter = [0 not in bn for bn in bn_list]
-        an_list = list(itertools.compress(an_list, an_filter))
-        a_coef_list = list(itertools.compress(a_coef_list, an_filter))
-        bn_list = list(itertools.compress(bn_list, bn_filter))
-        b_coef_list = list(itertools.compress(b_coef_list, bn_filter))
-
-        # create another product of a_n options and b_n options
-        an_bn_list = itertools.product(*[an_list, bn_list])
-        a_b_coefs = itertools.product(*[a_coef_list, b_coef_list])
-        if print_results:
-            print('created final enumerations filters after {} s'.format(time() - start))
-
-        counter = 0  # number of permutations passed
-        results = []  # list of intermediate results
-        batch_size = 10000  # chosen empirically, balance memory usage and cpu performance.
-        start = time()
-        for an_bn in zip(chunks(an_bn_list, batch_size), chunks(a_b_coefs, batch_size)):  # enumerate in batches.
-            gcf_list = [EfficientGCF(an, bn) for (an, bn) in an_bn[0]]  # create gcf from a_n and b_n
-            keys = [int(gcf.evaluate() / self.threshold) for gcf in gcf_list]  # calculate hash key of gcf value
-            hits = [k in self.hash_table for k in keys]  # find hits in hash table
-            key_hits = list(itertools.compress(keys, hits))  # filter by hits.
-            a_b_coefs_hits = list(itertools.compress(an_bn[1], hits))  # and save them.
-            results.extend([Match(self.hash_table[m[0]], m[1][0], m[1][1]) for m in zip(key_hits, a_b_coefs_hits)])
-            if print_results:
-                counter += batch_size
-                if counter % 100000 == 0:  # print status.
-                    print('passed {} out of {}. found so far {} results'.format(counter, num_iterations, len(results)))
-        if print_results:
-            print('created results after {} s'.format(time() - start))
-        return results
-
-    def __first_enumeration_low_mem(self, poly_a: List[List], poly_b: List[List], print_results: bool):
-        """
-        see __first_enumeration docstring
-        """
-        start = time()
         a_coef_list = list(itertools.product(*poly_a))  # all coefficients possibilities for 'a_n'
         neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
         b_coef_iter = itertools.chain(itertools.product(*poly_b), itertools.product(*neg_poly_b))
         num_iterations = 2 * np.prod([len(b) for b in poly_b]) * np.prod([len(a) for a in poly_a])
         # create a_n and b_n series fro coefficients.
-        an_list = [create_series_from_compact_poly(a_coef_list[i], 32) for i in range(len(a_coef_list))]
+        an_list = [self.create_an_series(a_coef_list[i], 32) for i in range(len(a_coef_list))]
         # filter out all options resulting in '0' in any series term.
         an_filter = [0 not in an for an in an_list]
         an_list = list(itertools.compress(an_list, an_filter))
@@ -258,7 +212,7 @@ class EnumerateOverGCF(object):
         results = []  # list of intermediate results
         start = time()
         for b_coef in b_coef_iter:
-            bn = create_series_from_compact_poly(b_coef, 32)
+            bn = self.create_bn_series(b_coef, 32)
             if 0 in bn:
                 continue
             for an_coef in zip(an_list, a_coef_list):
@@ -302,8 +256,8 @@ class EnumerateOverGCF(object):
                 continue
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
-            an = create_series_from_compact_poly(r.rhs_an_poly, 1000)
-            bn = create_series_from_compact_poly(r.rhs_bn_poly, 1000)
+            an = self.create_an_series(r.rhs_an_poly, 1000)
+            bn = self.create_bn_series(r.rhs_bn_poly, 1000)
             gcf = EfficientGCF(an, bn)
             val_str = mpmath.nstr(val, 100)
             rhs_str = mpmath.nstr(gcf.evaluate(), 100)
@@ -318,12 +272,13 @@ class EnumerateOverGCF(object):
         :param latex: if True print in latex form, otherwise pretty print in unicode.
         """
         for r in results:
-            an = create_series_from_compact_poly(r.rhs_an_poly, 1000)
-            bn = create_series_from_compact_poly(r.rhs_bn_poly, 1000)
+            an = self.create_an_series(r.rhs_an_poly, 1000)
+            bn = self.create_bn_series(r.rhs_bn_poly, 1000)
             print_length = max(max(len(r.rhs_an_poly), len(r.rhs_bn_poly)), 5)
             gcf = GeneralizedContinuedFraction(an, bn)
             t = MobiusTransform(r.lhs_coefs)
             sym_lhs = sympy.simplify(t.sym_expression(self.const_sym))
+            #print('lhs: {}, an_poly: {}, bn_poly: {}'.format(sym_lhs, r.rhs_an_poly, r.rhs_bn_poly))
             if not latex:
                 print('lhs: ')
                 sympy.pprint(sym_lhs)
@@ -335,13 +290,12 @@ class EnumerateOverGCF(object):
                 result = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
                 print('$$ ' + sympy.latex(result) + ' $$')
 
-    def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True, save_mem=True):
+    def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
         """
         use search engine to find results (steps (2) and (3) explained in __init__ docstring)
         :param poly_a: explained in docstring of __first_enumeration
         :param poly_b: explained in docstring of __first_enumeration
         :param print_results: if true, pretty print results at the end.
-        :param save_mem: if true, use low memory usage implementation
         :return: final results.
         """
         with mpmath.workdps(self.enum_dps):
@@ -349,8 +303,7 @@ class EnumerateOverGCF(object):
                 print('starting preliminary search...')
             start = time()
             # step (2)
-            results = self.__first_enumeration_low_mem(poly_a, poly_b, print_results) if save_mem else \
-                self.__first_enumeration(poly_a, poly_b, print_results)
+            results = self.__first_enumeration(poly_a, poly_b, print_results)
             end = time()
             if print_results:
                 print('that took {}s'.format(end - start))
@@ -367,7 +320,8 @@ class EnumerateOverGCF(object):
         return refined_results
 
 
-def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores, splits_size, index):
+def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores, splits_size,
+                           create_an_series=None, create_bn_series=None, index=0):
     """
     function to run for each process. this also divides the work to tiles/
     :param sym_constant: sympy constant for search
@@ -383,6 +337,10 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
     2 dimensions of the search domain to tiles of size [4,5].
     NOTICE - we do not verify that the tile size make sense to the number of cores used.
     :param index: index of core used.
+    :param create_an_series: a custom function for creating a_n series with poly_a coefficients
+    (default is create_series_from_compact_poly)
+    :param create_bn_series: a custom function for creating b_n series with poly_b coefficients
+    (default is create_series_from_compact_poly)
     :return: results
     """
     for s in range(len(splits_size)):
@@ -391,15 +349,21 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
         else:
             poly_a[s] = poly_a[s][index * splits_size[s]:(index + 1) * splits_size[s]]
     enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash)
+
+    if create_an_series is not None:
+        enumerator.create_an_series = create_an_series
+    if create_bn_series is not None:
+        enumerator.create_bn_series = create_bn_series
+
     results = enumerator.find_hits(poly_a, poly_b, index == 0)
     enumerator.print_results(results, True)
     return results
 
 
 def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_b, num_cores, manual_splits_size=None,
-                                   saved_hash=None):
+                                   saved_hash=None, create_an_series=None, create_bn_series=None):
     """
-
+    a wrapper for enumerating using multi proccessing.
     :param sym_constant: sympy constant for search
     :param lhs_search_limit: limit for hash table
     :param poly_a: explained in docstring of __first_enumeration
@@ -410,6 +374,10 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
     [dim0 / n_cores, . , . , . , rest of dimensions].
     passing this manually can be useful for a large number of cores.
     :param saved_hash: path to saved hash table file if exists.
+    :param create_an_series: a custom function for creating a_n series with poly_a coefficients
+    (default is create_series_from_compact_poly)
+    :param create_bn_series: a custom function for creating b_n series with poly_b coefficients
+    (default is create_series_from_compact_poly)
     :return: results.
     """
     if (saved_hash is None) or (not os.path.isfile(saved_hash)):
@@ -427,7 +395,7 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 
     # built function for processes
     func = partial(multi_core_enumeration, sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores,
-                   manual_splits_size)
+                   manual_splits_size, create_an_series, create_bn_series)
 
     if num_cores == 1:  # don't open child processes
         results = func(0)
@@ -441,13 +409,15 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 
 # TODO - create api for this.
 if __name__ == "__main__":
-    final_results = multi_core_enumeration_wrapper(sympy.pi,  # constant to run on
+    final_results = multi_core_enumeration_wrapper(sympy.zeta(2),  # constant to run on
                                                    20,  # lhs limit
-                                                   [[i for i in range(15)]] * 2,  # a_n polynomial coefficients
-                                                   [[i for i in range(15)]] * 3,  # b_n polynomial coefficients
-                                                   1,  # number of cores to run on
+                                                   [[i for i in range(12)]] * 3,  # a_n polynomial coefficients
+                                                   [[i for i in range(10)]] * 2,  # b_n polynomial coefficients
+                                                   2,  # number of cores to run on
                                                    None,  # use naive tiling
-                                                   os.path.join('hash_tables', 'pi_20_hash.p')  # existing hash table
+                                                   os.path.join('hash_tables', 'zeta2_20_hash.p'),  # if existing
+                                                   create_an_series=None,  # use default
+                                                   create_bn_series=partial(create_zeta_bn_series, 4)
                                                    )
 
     # with open('results_of_e_30', 'wb') as file:

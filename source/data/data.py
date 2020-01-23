@@ -66,6 +66,15 @@ weird_stuff = {
     'one': CFData(-1.0, MasseySeries([1, -2, 1], [-4, -7]), MasseySeries([1, -3, 3, -1], [-9, -20, -35])),
 }
 
+new_zeta_findings = {
+    'zeta2_0': CFData(4 / (3*zeta(2)), lambda n: n*(3*n+3)+1, lambda n: -2*(n+1)**4 + (n+1)**3),
+    'zeta2_1': CFData(4 / zeta(2), lambda n: n*(7*n+7)+2, lambda n: 8*(n+1)**4),
+    'zeta2_2': CFData(3 / zeta(2), lambda n: n*(5*n+6)+2, lambda n: -4*(n+1)**4 + 2*(n+1)**3),
+    'zeta2_3': CFData(8 / (2 + 3*zeta(2)), lambda n: n*(3*n+3)+1, lambda n: -2*(n+1)**4 + 3*(n+1)**3),
+
+    'zeta3_0': CFData(8 / (7*zeta(3)), lambda n: n*(n*(6*n+9)+5)+1, lambda n: -(n+1)**6)
+}
+
 # TODO: Q1) are all LSFR binomial coefficients with alternating signs (X-Y)^d?
 #       Answer - the solution of these recurrence equations are polynomials (of degree d-1).
 #       since the ramanujan project looked for polynomials, of course the recurrence equations are of this form.

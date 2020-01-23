@@ -5,9 +5,8 @@ from mobius import find_transform
 from mobius import MobiusTransform
 from mobius import EfficientGCF
 from collections import namedtuple
-from massey import create_series_from_shift_reg
-from massey import create_series_from_polynomial
-from massey import create_series_from_compact_poly
+from series_generators import create_series_from_polynomial, create_series_from_compact_poly
+from series_generators import create_series_from_shift_reg
 import massey
 import mpmath
 from sympy import pprint
@@ -138,8 +137,8 @@ class TestContinuedFracture(TestCase):
             for t in cf_data:
                 with self.subTest(test_constant=t):
                     d = cf_data[t]
-                    rhs_an = massey.create_series_from_shift_reg(d.rhs_an.shift_reg, d.rhs_an.initials, 400)
-                    rhs_bn = massey.create_series_from_shift_reg(d.rhs_bn.shift_reg, d.rhs_bn.initials, 400)
+                    rhs_an = create_series_from_shift_reg(d.rhs_an.shift_reg, d.rhs_an.initials, 400)
+                    rhs_bn = create_series_from_shift_reg(d.rhs_bn.shift_reg, d.rhs_bn.initials, 400)
                     rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
                     self.compare(d.lhs, rhs, 100)
 
@@ -202,3 +201,16 @@ class TestContinuedFracture(TestCase):
             val = EfficientGCF(gcf_ref.a_, gcf_ref.b_).evaluate()
             val_ref = gcf_ref.evaluate()
             self.assertEqual(val, val_ref)
+
+    def test_known_new_zeta_values(self):
+        """
+        test new findings of zeta values in data.py
+        """
+        with mpmath.workdps(2000):
+            for t in data.data.new_zeta_findings:
+                with self.subTest(test_constant=t):
+                    d = data.data.new_zeta_findings[t]
+                    rhs_an = [d.rhs_an(i) for i in range(400)]
+                    rhs_bn = [d.rhs_bn(i) for i in range(400)]
+                    rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
+                    self.compare(d.lhs, rhs, 100)
