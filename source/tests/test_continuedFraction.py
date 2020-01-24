@@ -18,7 +18,8 @@ from sympy import lambdify
 from sympy import zeta
 import sympy
 import data.data
-from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable, SignedRcfEnumeration
+from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
+from enumerate_over_signed_rcf import SignedRcfEnumeration
 
 phi = (1+sympy.sqrt(5))/2
 
