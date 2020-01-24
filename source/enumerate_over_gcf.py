@@ -5,7 +5,8 @@ from sympy import lambdify, floor
 import sympy
 from time import time
 import itertools
-from series_generators import create_series_from_compact_poly, create_zeta_bn_series
+from series_generators import create_series_from_compact_poly, create_zeta_bn_series, create_series_from_shift_reg
+from massey import slow_massey
 from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
 import os
 from collections import namedtuple
@@ -14,6 +15,7 @@ from math import gcd
 from typing import TypeVar, Iterator
 import multiprocessing
 from functools import partial
+from constants import redundant_cycles
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_coefs rhs_an_poly rhs_bn_poly')

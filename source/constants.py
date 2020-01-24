@@ -1,3 +1,7 @@
+"""
+Inteneded to quickly drop signed-periods that are in fact a repitition of a shorter period.
+Quite cumbersome, but it's quick.
+"""
 redundant_cycles = {
                     '-1-1':False,'-11':False,'1-1':False,'11':False,'-1-1-1':False,'-1-11':False,
                     '-11':False,'1-1':False,'11':False,'-1-1-1':False,'-1-11':False,'-11-1':False,
