@@ -52,9 +52,9 @@ def slow_massey(line, p):
     :return: polynomial coefficients of P field.
     """
     assert p < 2 ** 32
-    s_ = array(line, dtype=int64)  # input series
-    c_ = array([1], dtype=int64)  # current polynomial
-    b_ = array([1], dtype=int64)  # previous error polynomial
+    s_ = array(line, dtype=object)  # input series
+    c_ = array([1], dtype=object)  # current polynomial
+    b_ = array([1], dtype=object)  # previous error polynomial
     poly_deg = 0  # current polynomial degree
     m = 1  # number of iterations since last error
     b = 1  # copy of the last discrepancy d
