@@ -177,6 +177,13 @@ class EnumerateOverGCF(object):
         else:
             self.hash_table = LHSHashTable.load_from(saved_hash)
 
+    @staticmethod
+    def __number_of_elements(permutation_options: List[List]):
+        res = 1
+        for l in permutation_options:
+            res *= len(l)
+        return res
+
     def __first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
         """
         this is usually the bottleneck of the search.
@@ -198,7 +205,7 @@ class EnumerateOverGCF(object):
         a_coef_list = list(itertools.product(*poly_a))  # all coefficients possibilities for 'a_n'
         neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
         b_coef_iter = itertools.chain(itertools.product(*poly_b), itertools.product(*neg_poly_b))
-        num_iterations = 2 * np.prod([len(b) for b in poly_b]) * np.prod([len(a) for a in poly_a])
+        num_iterations = 2 * self.__number_of_elements(poly_b) * self.__number_of_elements(poly_a)
         # create a_n and b_n series fro coefficients.
         an_list = [self.create_an_series(a_coef_list[i], 32) for i in range(len(a_coef_list))]
         # filter out all options resulting in '0' in any series term.
