@@ -1,0 +1,6 @@
+mpmath==1.1.0
+numpy==1.18.1
+ortools==7.5.7466
+protobuf==3.11.3
+six==1.14.0
+sympy==1.5.1
