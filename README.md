@@ -20,5 +20,5 @@ runs the code.
 
 The code let's you control the equation space scanned by the algorithm. To get more information about what you can control and tweak, run
 ```python
-python enumerate_over_gcf.py --help
+python enumerate_over_gcf.py -h
 ```
