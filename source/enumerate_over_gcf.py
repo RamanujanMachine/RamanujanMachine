@@ -1,20 +1,20 @@
-import pickle
-import mpmath
-import numpy as np
-from sympy import lambdify
-import sympy
-from time import time
-import itertools
 from series_generators import create_series_from_compact_poly, create_zeta_bn_series
 from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
-import os
-from collections import namedtuple
-from typing import List
-from math import gcd
 from typing import TypeVar, Iterator
-import multiprocessing
+from collections import namedtuple
 from functools import partial
-
+from sympy import lambdify
+from typing import List
+import multiprocessing
+from time import time
+from math import gcd
+import numpy as np
+import itertools
+import argparse
+import pickle
+import mpmath
+import sympy
+import os
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_coefs rhs_an_poly rhs_bn_poly')
@@ -401,18 +401,28 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
     return results
 
 
-# TODO - create api for this.
-if __name__ == "__main__":
-    final_results = multi_core_enumeration_wrapper(sympy.zeta(2),  # constant to run on
-                                                   20,  # lhs limit
-                                                   [[i for i in range(12)]] * 3,  # a_n polynomial coefficients
-                                                   [[i for i in range(10)]] * 2,  # b_n polynomial coefficients
-                                                   2,  # number of cores to run on
-                                                   None,  # use naive tiling
-                                                   os.path.join('hash_tables', 'zeta2_20_hash.p'),  # if existing
-                                                   create_an_series=None,  # use default
-                                                   create_bn_series=partial(create_zeta_bn_series, 4)
-                                                   )
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-lhs_search_limit", type=int, help="The max number of digits for the LHS", default=20)
+    parser.add_argument("-num_of_cores", type=int, help="The number of cores to run on", default=2)
+    args = parser.parse_args()
+
+    final_results = multi_core_enumeration_wrapper(
+                        sym_constant=sympy.zeta(2),  # constant to run on
+                        lhs_search_limit=args.lhs_search_limit,
+                        poly_a=[[i for i in range(12)]] * 3,  # a_n polynomial coefficients
+                        poly_b=[[i for i in range(10)]] * 2,  # b_n polynomial coefficients
+                        num_cores=args.num_of_cores,  # number of cores to run on
+                        manual_splits_size=None,  # use naive tiling
+                        saved_hash=os.path.join('hash_tables', 'zeta2_20_hash.p'),  # if existing
+                        create_an_series=None,  # use default
+                        create_bn_series=partial(create_zeta_bn_series, 4)
+                    )
 
     # with open('results_of_e_30', 'wb') as file:
     #    pickle.dump(final_results, file)
+
+
+# TODO - create api for this.
+if __name__ == "__main__":
+    main()
