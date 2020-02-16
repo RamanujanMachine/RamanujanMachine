@@ -405,13 +405,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-lhs_search_limit", type=int, help="The max number of digits for the LHS", default=20)
     parser.add_argument("-num_of_cores", type=int, help="The number of cores to run on", default=2)
+    parser.add_argument("-poly_a_order", type=int, help="The order of the a_n polynomial", default=3)
+    parser.add_argument("-poly_a_coefficient_max", type=int, help="The maximum value for the coefficients of the a_n polynomial", default=12)
+    parser.add_argument("-poly_b_order", type=int, help="The order of the b_n polynomial", default=2)
+    parser.add_argument("-poly_b_coefficient_max", type=int, help="The maximum value for the coefficients of the a_n polynomial", default=10)
     args = parser.parse_args()
 
     final_results = multi_core_enumeration_wrapper(
                         sym_constant=sympy.zeta(2),  # constant to run on
                         lhs_search_limit=args.lhs_search_limit,
-                        poly_a=[[i for i in range(12)]] * 3,  # a_n polynomial coefficients
-                        poly_b=[[i for i in range(10)]] * 2,  # b_n polynomial coefficients
+                        poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * args.poly_a_order,  # a_n polynomial coefficients
+                        poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * args.poly_b_order,  # b_n polynomial coefficients
                         num_cores=args.num_of_cores,  # number of cores to run on
                         manual_splits_size=None,  # use naive tiling
                         saved_hash=os.path.join('hash_tables', 'zeta2_20_hash.p'),  # if existing
