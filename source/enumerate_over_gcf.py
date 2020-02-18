@@ -2,7 +2,9 @@ from series_generators import create_series_from_compact_poly, create_zeta_bn_se
 from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
 from typing import TypeVar, Iterator
 from collections import namedtuple
+from latex import generate_latex
 from functools import partial
+from datetime import datetime
 from sympy import lambdify
 from typing import List
 import multiprocessing
@@ -284,6 +286,22 @@ class EnumerateOverGCF(object):
                 result = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
                 print(f'$$ {sympy.latex(result)} $$')
 
+    def convert_results_to_latex(self, results: List[Match]):
+        results_in_latex = []
+
+        for result in results:
+            an = self.create_an_series(result.rhs_an_poly, 1000)
+            bn = self.create_bn_series(result.rhs_bn_poly, 1000)
+            print_length = max(max(len(result.rhs_an_poly), len(result.rhs_bn_poly)), 5)
+            gcf = GeneralizedContinuedFraction(an, bn)
+            t = MobiusTransform(result.lhs_coefs)
+            sym_lhs = sympy.simplify(t.sym_expression(self.const_sym))
+
+            equation = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
+            results_in_latex.append(sympy.latex(equation))
+
+        return results_in_latex
+
     def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
         """
         use search engine to find results (steps (2) and (3) explained in __init__ docstring)
@@ -351,6 +369,10 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
 
     results = enumerator.find_hits(poly_a, poly_b, index == 0)
     enumerator.print_results(results, latex=True)
+    
+    results_in_latex = enumerator.convert_results_to_latex(results)
+    generate_latex(file_name=f'results/{datetime.now().strftime("%m-%d-%Y--%H-%M-%S")}', eqns=results_in_latex)
+
     return results
 
 
@@ -406,6 +428,7 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 def init_parser():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-function_value", type=int, help="Which value of the function are we assessing (assuming work with the zeta function)", default=2)
     parser.add_argument("-lhs_search_limit", type=int, help="The max number of digits for the LHS", default=20)
     parser.add_argument("-num_of_cores", type=int, help="The number of cores to run on", default=2)
     parser.add_argument("-poly_a_order", type=int, help="The order of the a_n polynomial", default=3)
@@ -423,13 +446,13 @@ def main():
 
     # Runs the enumeration wrapper
     final_results = multi_core_enumeration_wrapper(
-                        sym_constant=sympy.zeta(2),  # constant to run on
+                        sym_constant=sympy.zeta(args.function_value),  # constant to run on
                         lhs_search_limit=args.lhs_search_limit,
                         poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * args.poly_a_order,  # a_n polynomial coefficients
                         poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * args.poly_b_order,  # b_n polynomial coefficients
                         num_cores=args.num_of_cores,  # number of cores to run on
                         manual_splits_size=None,  # use naive tiling
-                        saved_hash=os.path.join('hash_tables', 'zeta2_20_hash.p'),  # if existing
+                        saved_hash=os.path.join('hash_tables', f'zeta{args.function_value}_20_hash.p'),  # if existing
                         create_an_series=None,  # use default
                         create_bn_series=partial(create_zeta_bn_series, 4)
                     )
