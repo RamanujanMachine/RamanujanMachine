@@ -1,6 +1,9 @@
 mpmath==1.1.0
 numpy==1.18.1
 ortools==7.5.7466
+pandas==1.0.1
 protobuf==3.11.3
+python-dateutil==2.8.1
+pytz==2019.3
 six==1.14.0
 sympy==1.5.1

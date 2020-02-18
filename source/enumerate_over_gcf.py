@@ -8,6 +8,7 @@ from typing import List
 import multiprocessing
 from time import time
 from math import gcd
+import pandas as pd
 import numpy as np
 import itertools
 import argparse
@@ -160,7 +161,7 @@ class EnumerateOverGCF(object):
                     self.const_val(),  # constant
                     self.threshold)  # length of key
                 end = time()
-                print('that took {}s'.format(end - start))
+                print(f'that took {end-start}s')
         else:
             self.hash_table = LHSHashTable.load_from(saved_hash)
 
@@ -200,7 +201,7 @@ class EnumerateOverGCF(object):
         an_list = list(itertools.compress(an_list, an_filter))
         a_coef_list = list(itertools.compress(a_coef_list, an_filter))
         if print_results:
-            print('created final enumerations filters after {} s'.format(time() - start))
+            print(f'created final enumerations filters after {time() - start}s')
 
         counter = 0  # number of permutations passed
         results = []  # list of intermediate results
@@ -217,10 +218,9 @@ class EnumerateOverGCF(object):
                 if print_results:
                     counter += 1
                     if counter % 100000 == 0:  # print status.
-                        print('passed {} out of {}. found so far {} results'.format(counter, num_iterations,
-                                                                                    len(results)))
+                        print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
         if print_results:
-            print('created results after {} s'.format(time() - start))
+            print(f'created results after {time() - start}s')
         return results
 
     def __refine_results(self, intermediate_results: List[Match], print_results=True):
@@ -282,7 +282,7 @@ class EnumerateOverGCF(object):
                 print('rhs value: ' + mpmath.nstr(gcf.evaluate(), 50))
             else:
                 result = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
-                print('$$ ' + sympy.latex(result) + ' $$')
+                print(f'$$ {sympy.latex(result)} $$')
 
     def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
         """
@@ -300,7 +300,7 @@ class EnumerateOverGCF(object):
             results = self.__first_enumeration(poly_a, poly_b, print_results)
             end = time()
             if print_results:
-                print('that took {}s'.format(end - start))
+                print(f'that took {end - start}s')
         with mpmath.workdps(self.verify_dps):
             if print_results:
                 print('starting to verify results...')
@@ -308,7 +308,7 @@ class EnumerateOverGCF(object):
             refined_results = self.__refine_results(results, print_results)  # step (3)
             end = time()
             if print_results:
-                print('that took {}s'.format(end - start))
+                print(f'that took {end - start}s')
             if print_results:
                 self.print_results(refined_results)
         return refined_results
@@ -350,7 +350,7 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
         enumerator.create_bn_series = create_bn_series
 
     results = enumerator.find_hits(poly_a, poly_b, index == 0)
-    enumerator.print_results(results, True)
+    enumerator.print_results(results, latex=True)
     return results
 
 
@@ -393,24 +393,35 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 
     if num_cores == 1:  # don't open child processes
         results = func(0)
-        print('found {} results!'.format(len(results)))
+        print(f'found {len(results)} results!')
     else:
         pool = multiprocessing.Pool(num_cores)
         results = pool.map(func, range(num_cores))
-        print('found {} results!'.format(sum([len(results[i]) for i in range(num_cores)])))
+        print(f'found {sum([len(results[i]) for i in range(num_cores)])} results!')
+
     return results
 
 
-def main():
+# Initialize the argument parser that accepts inputs from the end user
+def init_parser():
     parser = argparse.ArgumentParser()
+
     parser.add_argument("-lhs_search_limit", type=int, help="The max number of digits for the LHS", default=20)
     parser.add_argument("-num_of_cores", type=int, help="The number of cores to run on", default=2)
     parser.add_argument("-poly_a_order", type=int, help="The order of the a_n polynomial", default=3)
     parser.add_argument("-poly_a_coefficient_max", type=int, help="The maximum value for the coefficients of the a_n polynomial", default=12)
     parser.add_argument("-poly_b_order", type=int, help="The order of the b_n polynomial", default=2)
     parser.add_argument("-poly_b_coefficient_max", type=int, help="The maximum value for the coefficients of the a_n polynomial", default=10)
+
+    return parser
+
+
+def main():
+    # Initializes the argument parser to receive inputs from the user
+    parser = init_parser()
     args = parser.parse_args()
 
+    # Runs the enumeration wrapper
     final_results = multi_core_enumeration_wrapper(
                         sym_constant=sympy.zeta(2),  # constant to run on
                         lhs_search_limit=args.lhs_search_limit,
@@ -427,6 +438,5 @@ def main():
     #    pickle.dump(final_results, file)
 
 
-# TODO - create api for this.
 if __name__ == "__main__":
     main()
