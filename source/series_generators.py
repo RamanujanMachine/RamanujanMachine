@@ -72,3 +72,30 @@ def create_zeta_bn_series(deg, poly_a, n):
         res = poly_a[0]*((i+1)**deg) - poly_a[1]*((i+1)**(deg-1))
         ret.append(res)
     return ret
+
+
+def zeta3_an_generator(x_, n):
+    """
+    Generator3[x3_, x0_] := {x0, 2 *x0 + x3, 3*x3, 2*x3}
+    :param x_:
+    :param n:
+    """
+    ret = []
+    for i in range(n):
+        res = x_[0] + (2*x_[0] + x_[1])*i + 3*x_[1]*(i**2) + 2*x_[1]*(i**3)
+        ret.append(res)
+    return ret
+
+
+def zeta5_an_generator(x_, n):
+    """
+    Generator5[x5_, x3_, x0_] := {x0, 2 *x0 + x3 - 2 *x5, 3*x3 - 5*x5, 2*x3, 5*x5, 2*x5}
+    :param x_:
+    :param n:
+    """
+    ret = []
+    for i in range(n):
+        res = x_[0] + (2*x_[0] + x_[1] - 2*x_[2])*i + (3*x_[1] - 5*x_[2])*(i**2) +\
+              2*x_[1]*(i**3) + 5*x_[2]*(i**4) + 2*x_[2]*(i**5)
+        ret.append(res)
+    return ret

@@ -72,7 +72,8 @@ new_zeta_findings = {
     'zeta2_2': CFData(3 / zeta(2), lambda n: n*(5*n+6)+2, lambda n: -4*(n+1)**4 + 2*(n+1)**3),
     'zeta2_3': CFData(8 / (2 + 3*zeta(2)), lambda n: n*(3*n+3)+1, lambda n: -2*(n+1)**4 + 3*(n+1)**3),
 
-    'zeta3_0': CFData(8 / (7*zeta(3)), lambda n: n*(n*(6*n+9)+5)+1, lambda n: -(n+1)**6)
+    'zeta3_0': CFData(8 / (7*zeta(3)), lambda n: n*(n*(6*n+9)+5)+1, lambda n: -(n+1)**6),
+    'zeta3_1': CFData(12 / (7*zeta(3)), lambda n: n*(n*(10*n+15)+9)+2, lambda n: -16*(n+1)**6)
 }
 
 # TODO: Q1) are all LSFR binomial coefficients with alternating signs (X-Y)^d?

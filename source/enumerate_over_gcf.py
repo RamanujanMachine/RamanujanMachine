@@ -1,26 +1,28 @@
-from series_generators import create_series_from_compact_poly, create_zeta_bn_series
-from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
-from typing import TypeVar, Iterator
-from collections import namedtuple
-from latex import generate_latex
-from functools import partial
-from datetime import datetime
-from sympy import lambdify
-from typing import List
-import multiprocessing
-from time import time
-from math import gcd
-import pandas as pd
-import numpy as np
+import os
+import pickle
 import itertools
 import argparse
-import pickle
+import multiprocessing
+from functools import partial
+from datetime import datetime
+from time import time
+from math import gcd
+from typing import List
+from collections import namedtuple
 import mpmath
 import sympy
-import os
+from sympy import lambdify
+import numpy as np
+from latex import generate_latex
+from series_generators import create_series_from_compact_poly, create_zeta_bn_series
+from series_generators import zeta3_an_generator, zeta5_an_generator
+from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
+from convergence_rate import calculate_convergence
+
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_coefs rhs_an_poly rhs_bn_poly')
+FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 
 
 class GlobalHashTableInstance:
@@ -261,12 +263,8 @@ class EnumerateOverGCF(object):
                 results.append(r)
         return results
 
-    def print_results(self, results: List[Match], latex=False):
-        """
-        pretty print the the results.
-        :param results: list of final results as received from refine_results.
-        :param latex: if True print in latex form, otherwise pretty print in unicode.
-        """
+    def __get_formatted_results(self, results: List[Match]) -> List[FormattedResult]:
+        ret = []
         for r in results:
             an = self.create_an_series(r.rhs_an_poly, 1000)
             bn = self.create_bn_series(r.rhs_bn_poly, 1000)
@@ -274,32 +272,35 @@ class EnumerateOverGCF(object):
             gcf = GeneralizedContinuedFraction(an, bn)
             t = MobiusTransform(r.lhs_coefs)
             sym_lhs = sympy.simplify(t.sym_expression(self.const_sym))
-            #print('lhs: {}, an_poly: {}, bn_poly: {}'.format(sym_lhs, r.rhs_an_poly, r.rhs_bn_poly))
-            if not latex:
-                print('lhs: ')
-                sympy.pprint(sym_lhs)
-                print('rhs: ')
-                gcf.print(print_length)
-                print('lhs value: ' + mpmath.nstr(t(self.const_val()), 50))
-                print('rhs value: ' + mpmath.nstr(gcf.evaluate(), 50))
-            else:
-                result = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
+            ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
+        return ret
+
+    def print_results(self, results: List[Match], latex=False):
+        """
+        pretty print the the results.
+        :param results: list of final results as received from refine_results.
+        :param latex: if True print in latex form, otherwise pretty print in unicode.
+        """
+        formatted_results = self.__get_formatted_results(results)
+        for r in formatted_results:
+            with mpmath.workdps(self.verify_dps):
+                rate = calculate_convergence(r.GCF, lambdify((), r.LHS, 'mpmath')())
+            if latex:
+                result = sympy.Eq(r.LHS, r.RHS)
                 print(f'$$ {sympy.latex(result)} $$')
+            else:
+                print('lhs: ')
+                sympy.pprint(r.LHS)
+                print('rhs: ')
+                sympy.pprint(r.RHS)
+            print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
 
     def convert_results_to_latex(self, results: List[Match]):
         results_in_latex = []
-
-        for result in results:
-            an = self.create_an_series(result.rhs_an_poly, 1000)
-            bn = self.create_bn_series(result.rhs_bn_poly, 1000)
-            print_length = max(max(len(result.rhs_an_poly), len(result.rhs_bn_poly)), 5)
-            gcf = GeneralizedContinuedFraction(an, bn)
-            t = MobiusTransform(result.lhs_coefs)
-            sym_lhs = sympy.simplify(t.sym_expression(self.const_sym))
-
-            equation = sympy.Eq(sym_lhs, gcf.sym_expression(print_length))
+        formatted_results = self.__get_formatted_results(results)
+        for r in formatted_results:
+            equation = sympy.Eq(r.LHS, r.RHS)
             results_in_latex.append(sympy.latex(equation))
-
         return results_in_latex
 
     def find_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
@@ -319,7 +320,7 @@ class EnumerateOverGCF(object):
             end = time()
             if print_results:
                 print(f'that took {end - start}s')
-        with mpmath.workdps(self.verify_dps):
+        with mpmath.workdps(self.verify_dps*2):
             if print_results:
                 print('starting to verify results...')
             start = time()
@@ -327,8 +328,6 @@ class EnumerateOverGCF(object):
             end = time()
             if print_results:
                 print(f'that took {end - start}s')
-            if print_results:
-                self.print_results(refined_results)
         return refined_results
 
 
@@ -379,7 +378,7 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
 def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_b, num_cores, manual_splits_size=None,
                                    saved_hash=None, create_an_series=None, create_bn_series=None):
     """
-    a wrapper for enumerating using multi proccessing.
+    a wrapper for enumerating using multi processing.
     :param sym_constant: sympy constant for search
     :param lhs_search_limit: limit for hash table
     :param poly_a: explained in docstring of __first_enumeration
@@ -428,13 +427,21 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
 def init_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-function_value", type=int, help="Which value of the function are we assessing (assuming work with the zeta function)", default=2)
-    parser.add_argument("-lhs_search_limit", type=int, help="The max number of digits for the LHS", default=20)
-    parser.add_argument("-num_of_cores", type=int, help="The number of cores to run on", default=2)
-    parser.add_argument("-poly_a_order", type=int, help="The order of the a_n polynomial", default=3)
-    parser.add_argument("-poly_a_coefficient_max", type=int, help="The maximum value for the coefficients of the a_n polynomial", default=12)
-    parser.add_argument("-poly_b_order", type=int, help="The order of the b_n polynomial", default=2)
-    parser.add_argument("-poly_b_coefficient_max", type=int, help="The maximum value for the coefficients of the a_n polynomial", default=10)
+    parser.add_argument("-function_value", type=int,
+                        help="Which value of the function are we assessing (assuming work with the zeta function)",
+                        default=3)
+    parser.add_argument("-lhs_search_limit", type=int,
+                        help="The limit for the LHS coefficients", default=20)
+    parser.add_argument("-num_of_cores", type=int,
+                        help="The number of cores to run on", default=2)
+    parser.add_argument("-poly_a_order", type=int,
+                        help="The order of the a_n polynomial", default=2)
+    parser.add_argument("-poly_a_coefficient_max", type=int,
+                        help="The maximum value for the coefficients of the a_n polynomial", default=20)
+    parser.add_argument("-poly_b_order", type=int,
+                        help="The order of the b_n polynomial", default=2)
+    parser.add_argument("-poly_b_coefficient_max", type=int,
+                        help="The maximum value for the coefficients of the b_n polynomial", default=20)
 
     return parser
 
@@ -446,19 +453,19 @@ def main():
 
     # Runs the enumeration wrapper
     final_results = multi_core_enumeration_wrapper(
-                        sym_constant=sympy.zeta(args.function_value),  # constant to run on
-                        lhs_search_limit=args.lhs_search_limit,
-                        poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * args.poly_a_order,  # a_n polynomial coefficients
-                        poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * args.poly_b_order,  # b_n polynomial coefficients
-                        num_cores=args.num_of_cores,  # number of cores to run on
-                        manual_splits_size=None,  # use naive tiling
-                        saved_hash=os.path.join('hash_tables', f'zeta{args.function_value}_20_hash.p'),  # if existing
-                        create_an_series=None,  # use default
-                        create_bn_series=partial(create_zeta_bn_series, 4)
-                    )
+        sym_constant=sympy.zeta(args.function_value),  # constant to run on
+        lhs_search_limit=args.lhs_search_limit,
+        poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * args.poly_a_order,  # a_n polynomial coefficients
+        poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * args.poly_b_order,  # b_n polynomial coefficients
+        num_cores=args.num_of_cores,  # number of cores to run on
+        manual_splits_size=None,  # use naive tiling
+        saved_hash=os.path.join('hash_tables', f'zeta{args.function_value}_{args.lhs_search_limit}_hash.p'),  # if existing
+        create_an_series=zeta3_an_generator,  # use default
+        create_bn_series=partial(create_zeta_bn_series, args.function_value * 2)
+        )
 
-    # with open('results_of_e_30', 'wb') as file:
-    #    pickle.dump(final_results, file)
+    with open('tmp_results', 'wb') as file:
+        pickle.dump(final_results, file)
 
 
 if __name__ == "__main__":

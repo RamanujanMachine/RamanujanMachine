@@ -20,6 +20,7 @@ import sympy
 import data.data
 from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
 from enumerate_over_signed_rcf import SignedRcfEnumeration
+from convergence_rate import calculate_convergence
 
 phi = (1+sympy.sqrt(5))/2
 
@@ -198,7 +199,7 @@ class TestContinuedFracture(TestCase):
             self.assertTrue(t.sym_expression(pi) == 4/pi)
 
     def test_enumerate_signed_RCF(self):
-        enumerator = SignedRcfEnumeration(e, 1, [2,2], 100, 1)
+        enumerator = SignedRcfEnumeration(e, 1, [2, 2], 100, 1)
         with mpmath.workdps(self.precision):
             results = enumerator.find_signed_rcf_conj()
             results, duplicates = enumerator.verify_results(results)
@@ -207,7 +208,7 @@ class TestContinuedFracture(TestCase):
                 for dup in duplicates[key]:
                     dups.append(dup)
             adjusted = [[res[0], res[1], list(res[3])] for res in results+dups]
-            self.assertTrue([(e/(e-1)), [1,-1], [1, 0, -2, 0, 1]] in adjusted)
+            self.assertTrue([(e/(e-1)), [1, -1], [1, 0, -2, 0, 1]] in adjusted)
 
     def test_efficient_gcf(self):
         with mpmath.workdps(100):
@@ -228,3 +229,5 @@ class TestContinuedFracture(TestCase):
                     rhs_bn = [d.rhs_bn(i) for i in range(400)]
                     rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
                     self.compare(d.lhs, rhs, 100)
+                    rate = calculate_convergence(rhs, lambdify((), d.lhs, 'mpmath')())
+                    print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))

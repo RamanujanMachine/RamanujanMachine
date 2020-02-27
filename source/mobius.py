@@ -74,7 +74,6 @@ class MobiusTransform(object):
             denominator = dec(d)
         return numerator / denominator
 
-
     def __eq__(self, other):
         """
         Compare with another mobius.
@@ -87,7 +86,6 @@ class MobiusTransform(object):
             return True
         else:
             return False
-
 
     def normalize(self):
         """
