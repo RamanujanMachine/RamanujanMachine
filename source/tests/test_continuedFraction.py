@@ -10,7 +10,7 @@ from series_generators import create_series_from_shift_reg
 import massey
 import mpmath
 from sympy import pprint
-# from sympy import GoldenRatio as phi # Commented out due to problems in lambdify.
+from sympy import GoldenRatio as phi
 from sympy import pi
 from sympy import E as e
 from sympy import besseli
@@ -21,8 +21,6 @@ import data.data
 from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
 from enumerate_over_signed_rcf import SignedRcfEnumeration
 from convergence_rate import calculate_convergence
-
-phi = (1+sympy.sqrt(5))/2
 
 
 class TestContinuedFracture(TestCase):
@@ -88,6 +86,8 @@ class TestContinuedFracture(TestCase):
                 with self.subTest(test_constant=t.name):
                     rhs = GeneralizedContinuedFraction(t.rhs_an, t.rhs_bn)
                     self.compare(t.lhs, rhs, self.precision)
+                    rate = calculate_convergence(rhs, lambdify((), t.lhs, 'mpmath')())
+                    print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
 
     def test_massey_and_creation_of_simple_continued_fractions(self):
         """

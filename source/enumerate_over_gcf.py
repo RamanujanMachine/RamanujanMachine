@@ -1,21 +1,19 @@
 import os
 import pickle
 import itertools
-import argparse
 import multiprocessing
 from functools import partial
 from datetime import datetime
 from time import time
 from math import gcd
-from typing import List
+from typing import List, Iterator, Callable
 from collections import namedtuple
 import mpmath
 import sympy
 from sympy import lambdify
 import numpy as np
 from latex import generate_latex
-from series_generators import create_series_from_compact_poly, create_zeta_bn_series
-from series_generators import zeta3_an_generator, zeta5_an_generator
+from series_generators import create_series_from_compact_poly
 from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
 from convergence_rate import calculate_convergence
 
@@ -152,7 +150,10 @@ class EnumerateOverGCF(object):
         self.verify_dps = 2000  # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constant
-        self.const_val = lambdify((), sym_constant, modules="mpmath")
+        try:
+            self.const_val = lambdify((), sym_constant, modules="mpmath")
+        except AttributeError:      # Hackish constant
+            self.const_val = sym_constant.mpf_val
         self.create_an_series = create_series_from_compact_poly
         self.create_bn_series = create_series_from_compact_poly
         if saved_hash == '':
@@ -176,6 +177,18 @@ class EnumerateOverGCF(object):
             res *= len(l)
         return res
 
+    @staticmethod
+    def __create_series_list(coefficient_iter: Iterator,
+                             series_generator: Callable[[List[int], int], List[int]]) -> [List[int], List[int]]:
+        coef_list = list(coefficient_iter)
+        # create a_n and b_n series fro coefficients.
+        series_list = [series_generator(coef_list[i], 32) for i in range(len(coef_list))]
+        # filter out all options resulting in '0' in any series term.
+        series_filter = [0 not in an for an in series_list]
+        series_list = list(itertools.compress(series_list, series_filter))
+        coef_list = list(itertools.compress(coef_list, series_filter))
+        return coef_list, series_list
+
     def __first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
         """
         this is usually the bottleneck of the search.
@@ -194,35 +207,54 @@ class EnumerateOverGCF(object):
         :return: intermediate results (list of 'Match')
         """
         start = time()
-        a_coef_list = list(itertools.product(*poly_a))  # all coefficients possibilities for 'a_n'
+        a_coef_iter = itertools.product(*poly_a)  # all coefficients possibilities for 'a_n'
         neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
         b_coef_iter = itertools.chain(itertools.product(*poly_b), itertools.product(*neg_poly_b))
         num_iterations = 2 * self.__number_of_elements(poly_b) * self.__number_of_elements(poly_a)
-        # create a_n and b_n series fro coefficients.
-        an_list = [self.create_an_series(a_coef_list[i], 32) for i in range(len(a_coef_list))]
-        # filter out all options resulting in '0' in any series term.
-        an_filter = [0 not in an for an in an_list]
-        an_list = list(itertools.compress(an_list, an_filter))
-        a_coef_list = list(itertools.compress(a_coef_list, an_filter))
-        if print_results:
-            print(f'created final enumerations filters after {time() - start}s')
+        size_b = 2 * self.__number_of_elements(poly_b)
+        size_a = self.__number_of_elements(poly_a)
 
         counter = 0  # number of permutations passed
         results = []  # list of intermediate results
-        start = time()
-        for b_coef in b_coef_iter:
-            bn = self.create_bn_series(b_coef, 32)
-            if 0 in bn:
-                continue
-            for an_coef in zip(an_list, a_coef_list):
-                gcf = EfficientGCF(an_coef[0], bn)  # create gcf from a_n and b_n
-                key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
-                if key in self.hash_table:  # find hits in hash table
-                    results.append(Match(self.hash_table[key], an_coef[1], b_coef))
-                if print_results:
-                    counter += 1
-                    if counter % 100000 == 0:  # print status.
-                        print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
+
+        if size_a > size_b:     # cache {bn} in RAM, iterate over an
+            b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
+            if print_results:
+                print(f'created final enumerations filters after {time() - start}s')
+            start = time()
+            for a_coef in a_coef_iter:
+                an = self.create_an_series(a_coef, 32)
+                if 0 in an:
+                    continue
+                for bn_coef in zip(bn_list, b_coef_list):
+                    gcf = EfficientGCF(an, bn_coef[0])  # create gcf from a_n and b_n
+                    key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
+                    if key in self.hash_table:  # find hits in hash table
+                        results.append(Match(self.hash_table[key], a_coef, bn_coef[1]))
+                    if print_results:
+                        counter += 1
+                        if counter % 100000 == 0:  # print status.
+                            print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
+
+        else:   # cache {an} in RAM, iterate over bn
+            a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series)
+            if print_results:
+                print(f'created final enumerations filters after {time() - start}s')
+            start = time()
+            for b_coef in b_coef_iter:
+                bn = self.create_bn_series(b_coef, 32)
+                if 0 in bn:
+                    continue
+                for an_coef in zip(an_list, a_coef_list):
+                    gcf = EfficientGCF(an_coef[0], bn)  # create gcf from a_n and b_n
+                    key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
+                    if key in self.hash_table:  # find hits in hash table
+                        results.append(Match(self.hash_table[key], an_coef[1], b_coef))
+                    if print_results:
+                        counter += 1
+                        if counter % 100000 == 0:  # print status.
+                            print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
+
         if print_results:
             print(f'created results after {time() - start}s')
         return results
@@ -395,6 +427,7 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
     (default is create_series_from_compact_poly)
     :return: results.
     """
+    print(locals())
     if (saved_hash is None) or (not os.path.isfile(saved_hash)):
         if saved_hash is None:  # if no hash table given, build it here.
             saved_hash = 'tmp_hash.p'
@@ -421,52 +454,3 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
         print(f'found {sum([len(results[i]) for i in range(num_cores)])} results!')
 
     return results
-
-
-# Initialize the argument parser that accepts inputs from the end user
-def init_parser():
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("-function_value", type=int,
-                        help="Which value of the function are we assessing (assuming work with the zeta function)",
-                        default=3)
-    parser.add_argument("-lhs_search_limit", type=int,
-                        help="The limit for the LHS coefficients", default=20)
-    parser.add_argument("-num_of_cores", type=int,
-                        help="The number of cores to run on", default=2)
-    parser.add_argument("-poly_a_order", type=int,
-                        help="The order of the a_n polynomial", default=2)
-    parser.add_argument("-poly_a_coefficient_max", type=int,
-                        help="The maximum value for the coefficients of the a_n polynomial", default=20)
-    parser.add_argument("-poly_b_order", type=int,
-                        help="The order of the b_n polynomial", default=2)
-    parser.add_argument("-poly_b_coefficient_max", type=int,
-                        help="The maximum value for the coefficients of the b_n polynomial", default=20)
-
-    return parser
-
-
-def main():
-    # Initializes the argument parser to receive inputs from the user
-    parser = init_parser()
-    args = parser.parse_args()
-
-    # Runs the enumeration wrapper
-    final_results = multi_core_enumeration_wrapper(
-        sym_constant=sympy.zeta(args.function_value),  # constant to run on
-        lhs_search_limit=args.lhs_search_limit,
-        poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * args.poly_a_order,  # a_n polynomial coefficients
-        poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * args.poly_b_order,  # b_n polynomial coefficients
-        num_cores=args.num_of_cores,  # number of cores to run on
-        manual_splits_size=None,  # use naive tiling
-        saved_hash=os.path.join('hash_tables', f'zeta{args.function_value}_{args.lhs_search_limit}_hash.p'),  # if existing
-        create_an_series=zeta3_an_generator,  # use default
-        create_bn_series=partial(create_zeta_bn_series, args.function_value * 2)
-        )
-
-    with open('tmp_results', 'wb') as file:
-        pickle.dump(final_results, file)
-
-
-if __name__ == "__main__":
-    main()

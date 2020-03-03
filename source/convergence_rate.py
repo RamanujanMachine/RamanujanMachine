@@ -20,7 +20,10 @@ def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=Fal
     for i in range(1, length):
         _A.append(gcf.a_[i] * _A[i] + gcf.b_[i - 1] * _A[i - 1])
         _B.append(gcf.a_[i] * _B[i] + gcf.b_[i - 1] * _B[i - 1])
-        part_convergent = dec(_B[i + 1]) / dec(_A[i + 1])
+        if _A[i + 1] == 0:
+            part_convergent = 0
+        else:
+            part_convergent = dec(_B[i + 1]) / dec(_A[i + 1])
         if not mpmath.isfinite(part_convergent):
             length = i
             break
@@ -29,5 +32,5 @@ def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=Fal
         plt.plot(range(length), log_diff)
         plt.title(title)
         plt.show()
-    log_slope = log_diff[length-1] / length
+    log_slope = 2 * (log_diff[length-1] - log_diff[length//2]) / length
     return -log_slope
