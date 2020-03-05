@@ -46,6 +46,14 @@ def get_constant(const_name, args):
         return g_const_dict[const_name]
 
 
+def get_hash_filename(sympy_const, args):
+    name = f'{str(sympy_const)}_{args.lhs_search_limit}_hash.p'
+    name = name.replace('*', '_mul_')
+    name = name.replace('/', '_div_')
+    name = name.replace(' ', '')
+    return name
+
+
 # Initialize the argument parser that accepts inputs from the end user
 def init_parser():
     parser = argparse.ArgumentParser(
@@ -99,9 +107,11 @@ def main():
 
     bn_generator, poly_b_order = get_custom_generator(args.custom_generator_bn, args)
     if bn_generator is None:
-        poly_b_order = args.poly_a_order
+        poly_b_order = args.poly_b_order
 
     sympy_const = get_constant(args.LHS_constant, args)
+
+    hash_table_filename = get_hash_filename(sympy_const, args)
 
     # Runs the enumeration wrapper
     final_results = multi_core_enumeration_wrapper(
@@ -111,7 +121,7 @@ def main():
         poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * poly_b_order,  # b_n polynomial coefficients
         num_cores=args.num_of_cores,  # number of cores to run on
         manual_splits_size=None,  # use naive tiling
-        saved_hash=os.path.join('hash_tables', f'{str(sympy_const)}_{args.lhs_search_limit}_hash.p'),  # if existing
+        saved_hash=os.path.join('hash_tables', hash_table_filename),  # if existing
         create_an_series=an_generator,  # use default
         create_bn_series=bn_generator
     )

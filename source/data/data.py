@@ -2,6 +2,7 @@ from collections import namedtuple
 from sympy import pi as pi
 from sympy import E as e
 from sympy import zeta
+import sympy
 
 MasseySeries = namedtuple('MasseySeries', 'shift_reg initials')
 CFData = namedtuple('CFData', 'lhs rhs_an rhs_bn')
@@ -65,6 +66,13 @@ zeta_cf = {
 weird_stuff = {
     'one': CFData(-1.0, MasseySeries([1, -2, 1], [-4, -7]), MasseySeries([1, -3, 3, -1], [-9, -20, -35])),
 }
+
+catalan = {
+    'catalan': CFData(6 / (8*sympy.Catalan - sympy.pi*sympy.acosh(2)),
+                      lambda n: (10*n**2 + 7*n + 2),
+                      lambda n: -(2*n + 1)**4 - (2*n + 1)**3)
+}
+
 
 new_zeta_findings = {
     'zeta2_0': CFData(4 / (3*zeta(2)), lambda n: n*(3*n+3)+1, lambda n: -2*(n+1)**4 + (n+1)**3),

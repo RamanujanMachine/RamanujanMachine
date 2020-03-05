@@ -231,3 +231,19 @@ class TestContinuedFracture(TestCase):
                     self.compare(d.lhs, rhs, 100)
                     rate = calculate_convergence(rhs, lambdify((), d.lhs, 'mpmath')())
                     print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
+
+    def test_known_catalan(self):
+        """
+        test new findings of zeta values in data.py
+        """
+        with mpmath.workdps(2000):
+            for t in data.data.catalan:
+                with self.subTest(test_constant=t):
+                    d = data.data.catalan[t]
+                    rhs_an = [d.rhs_an(i) for i in range(400)]
+                    rhs_bn = [d.rhs_bn(i) for i in range(400)]
+                    rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
+                    self.compare(d.lhs, rhs, 100)
+                    rate = calculate_convergence(rhs, lambdify((), d.lhs, 'mpmath')())
+                    print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
+
