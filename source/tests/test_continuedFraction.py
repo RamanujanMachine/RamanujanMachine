@@ -133,6 +133,7 @@ class TestContinuedFracture(TestCase):
     def known_data_test(self, cf_data, print_convergence=False):
         """
         test all "known data" that is in data.py
+        :param print_convergence:
         :param cf_data: a database defined in data.py
         :type cf_data: CFData
         """

@@ -74,38 +74,34 @@ Currently the optional enumeration types are:
     subparsers = parser.add_subparsers(help='enumeration type to run')
 
     gcf_parser = subparsers.add_parser('enumerate_over_gcf')
-    gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), nargs='+', default=['zeta'],
+    gcf_parser.set_defaults(which='enumerate_over_gcf')
+    gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), nargs='+',
                             help='constants to search for - initializing the LHS hash table')
-    gcf_parser.add_argument('-function_value', type=int,
+    gcf_parser.add_argument('--function_value', type=int,
                             help='Which value of the function are we assessing \
-                                 (assuming LHS constant takes an arguments)',
-                            default=3)
+                                 (assuming LHS constant takes an arguments)')
     gcf_parser.add_argument('-lhs_search_limit', type=int,
-                            help='The limit for the LHS coefficients', default=20)
+                            help='The limit for the LHS coefficients')
     gcf_parser.add_argument('-num_of_cores', type=int,
-                            help='The number of cores to run on', default=4)
+                            help='The number of cores to run on', default=1)
     gcf_parser.add_argument('-poly_a_order', type=int,
-                            help='the number of free coefficients for {a_n} series', default=3)
+                            help='the number of free coefficients for {a_n} series')
     gcf_parser.add_argument('-poly_a_coefficient_max', type=int,
-                            help='The maximum value for the coefficients of the {a_n} polynomial', default=20)
+                            help='The maximum value for the coefficients of the {a_n} polynomial')
     gcf_parser.add_argument('-poly_b_order', type=int,
-                            help='the number of free coefficients for {b_n} series', default=3)
+                            help='the number of free coefficients for {b_n} series')
     gcf_parser.add_argument('-poly_b_coefficient_max', type=int,
-                            help='The maximum value for the coefficients of the {b_n} polynomial', default=20)
-    gcf_parser.add_argument('--custom_generator_an', type=str, default='zeta3_an',
+                            help='The maximum value for the coefficients of the {b_n} polynomial')
+    gcf_parser.add_argument('--custom_generator_an', type=str,
                             help='(optional) custom generator for {a_n} series. if defined, poly_a_order is ignored')
-    gcf_parser.add_argument('--custom_generator_bn', type=str, default='zeta_bn',
+    gcf_parser.add_argument('--custom_generator_bn', type=str,
                             help='(optional) custom generator for {a_n} series. if defined, poly_b_order is ignored')
     return parser
 
 
-def main():
-    # Initializes the argument parser to receive inputs from the user
-    parser = init_parser()
-    if len(sys.argv) == 1:  # run from editor
-        args = parser.parse_args(['enumerate_over_gcf'])
-    else:
-        args = parser.parse_args()
+def enumerate_over_gcf_main(args):
+    # same path to hash_tables no matter what
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
     # {an} series generator
     an_generator, poly_a_order = get_custom_generator(args.custom_generator_an, args)
@@ -138,6 +134,18 @@ def main():
 
     with open('tmp_results', 'wb') as file:
         pickle.dump(final_results, file)
+    return final_results
+
+
+def main():
+    # Initializes the argument parser to receive inputs from the user
+    parser = init_parser()
+    if len(sys.argv) == 1:  # run from editor
+        args = parser.parse_args(['enumerate_over_gcf'])
+    else:
+        args = parser.parse_args()
+    if args.which == 'enumerate_over_gcf':
+        enumerate_over_gcf_main(args)
 
 
 if __name__ == '__main__':

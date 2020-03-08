@@ -446,7 +446,7 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
     results_in_latex = enumerator.convert_results_to_latex(results)
     generate_latex(file_name=f'results/{datetime.now().strftime("%m-%d-%Y--%H-%M-%S")}', eqns=results_in_latex)
 
-    return results
+    return results_in_latex
 
 
 def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_b, num_cores, manual_splits_size=None,
@@ -492,7 +492,10 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
         print(f'found {len(results)} results!')
     else:
         pool = multiprocessing.Pool(num_cores)
-        results = pool.map(func, range(num_cores))
-        print(f'found {sum([len(results[i]) for i in range(num_cores)])} results!')
+        partial_results = pool.map(func, range(num_cores))
+        results = []
+        for r in partial_results:
+            results += r
+        print(f'found {len(results)} results!')
 
     return results
