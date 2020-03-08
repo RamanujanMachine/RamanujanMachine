@@ -58,6 +58,24 @@ def create_series_from_compact_poly(poly_a, n):
     return ret
 
 
+def create_series_from_compact_poly_with_shift1(poly_a, n):
+    """
+    create a series of type m(m(...(a[1]*m + a[0]) + a[2]) + ...) + a[k],
+    where m=n+1
+    :param poly_a: a[k] coefficients
+    :param n: length of series
+    :return: a list of numbers in series
+    """
+    ret = []
+    for m in range(1, n+1):
+        tmp = 0
+        for c in poly_a:
+            tmp *= m
+            tmp += c
+        ret.append(tmp)
+    return ret
+
+
 def create_zeta_bn_series(deg, poly_a, n):
     """
     create a series of type: a[0]*(n+1)^d - a[1]*(n+1)^(d-1)

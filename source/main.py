@@ -37,6 +37,11 @@ def get_custom_generator(generator_name, args):
         return series_generators.zeta5_an_generator, 3
     elif generator_name == 'catalan_bn':
         return series_generators.catalan_bn_generator, 2
+    elif generator_name == 'polynomial_shift1':
+        return series_generators.create_series_from_compact_poly_with_shift1, None
+    else:
+        print("unknown custom series generator!")
+        sys.exit(1)
 
 
 def get_constant(const_name, args):
@@ -105,12 +110,12 @@ def enumerate_over_gcf_main(args):
 
     # {an} series generator
     an_generator, poly_a_order = get_custom_generator(args.custom_generator_an, args)
-    if an_generator is None:
+    if (an_generator is None) or (poly_a_order is None):
         poly_a_order = args.poly_a_order
 
     # {bn} series generator
     bn_generator, poly_b_order = get_custom_generator(args.custom_generator_bn, args)
-    if bn_generator is None:
+    if (bn_generator is None) or (poly_b_order is None):
         poly_b_order = args.poly_b_order
 
     # constants for LHS
