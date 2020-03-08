@@ -2,12 +2,13 @@ import os
 import pickle
 import itertools
 import multiprocessing
-from functools import partial
+from functools import partial, reduce
 from datetime import datetime
 from time import time
 from math import gcd
 from typing import List, Iterator, Callable
 from collections import namedtuple
+from operator import mul
 import mpmath
 import sympy
 from sympy import lambdify
@@ -19,7 +20,7 @@ from convergence_rate import calculate_convergence
 
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
-Match = namedtuple('Match', 'lhs_coefs rhs_an_poly rhs_bn_poly')
+Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 
 
@@ -42,38 +43,80 @@ hash_instance = GlobalHashTableInstance()
 
 class LHSHashTable(object):
 
-    def __init__(self, search_range_top, search_range_bottom, const_val, threshold) -> None:
+    @staticmethod
+    def are_co_prime(integers):
+        common = integers[-1]
+        for x in integers:
+            common = gcd(x, common)
+            if common == 1:
+                return True
+        return False
+
+    @staticmethod
+    def prod(coefs, consts):
+        ret = coefs[0]
+        for i in range(len(consts)):
+            ret += consts[i] * coefs[i+1]
+        return ret
+
+    def evaluate(self, key, constant_values):
+        c_top, c_bottom = self.s[key]
+        numerator = self.prod(c_top, constant_values)
+        denominator = self.prod(c_bottom, constant_values)
+        return mpmath.mpf(numerator) / mpmath.mpf(denominator)
+
+    def evaluate_sym(self, key, symbols):
+        c_top, c_bottom = self.s[key]
+        numerator = self.prod(c_top, symbols)
+        denominator = self.prod(c_bottom, symbols)
+        return numerator / denominator
+
+    def __init__(self, search_range, const_vals, threshold) -> None:
         """
-        hash table for LHS. storing values in the form of (ax + b)/(cx + d)
-        :param search_range_top: range for values a,b.
-        :param search_range_bottom: range for value c,d.
-        :param const_val: constant for x.
+        hash table for LHS. storing values in the form of (a + b*x_1 + c*x_2 + ...)/(d + e*x_1 + f*x_2 + ...)
+        :param search_range: range for value coefficient values
+        :param const_vals: constants for x.
         :param threshold: decimal threshold for comparison. in fact, the keys for hashing will be the first
                             -log_{10}(threshold) digits of the value. for example, if threshold is 1e-10 - then the
                             first 10 digits will be used as the hash key.
         """
         self.s = {}
         self.threshold = threshold
-        for a in search_range_top:
-            for b in search_range_top:
-                for c in search_range_bottom:
-                    for d in search_range_bottom:
-                        if gcd(gcd(a, b), gcd(c, d)) != 1:  # don't store values that already exist
-                            continue
-                        denominator = c * const_val + d
-                        numerator = a * const_val + b
-                        if denominator == 0 or numerator == 0:  # don't store nan or 0.
-                            continue
-                        val = numerator / denominator
-                        if mpmath.isnan(val) or mpmath.isinf(val):  # safety check
-                            continue
-                        if ((c + d) != 0) and mpmath.almosteq(val, ((mpmath.mpf(a) + mpmath.mpf(b)) / (c + d))):
-                            # don't store values that are independent of the constant (e.g. rational numbers)
-                            continue
-                        key = int(val / self.threshold)
-                        if key in self.s:
-                            continue
-                        self.s[key] = np.array([[a, b], [c, d]], dtype=object)  # store key and transformation
+        key_factor = 1 / threshold
+
+        # create blacklist of rational numbers
+        coef_possibilities = [i for i in range(-search_range, search_range+1)]
+        coef_possibilities.remove(0)
+        rational_options = itertools.product(*[coef_possibilities, coef_possibilities])
+        rational_keys = [int((mpmath.mpf(ratio[0]) / ratio[1]) * key_factor) for ratio in rational_options]
+        # +-1 for numeric errors in keys.
+        rational_blacklist = set(rational_keys + [x+1 for x in rational_keys] + [x-1 for x in rational_keys])
+
+        # create enumeration lists
+        constants = [mpmath.mpf(1)] + const_vals
+        coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
+        coefs_bottom = [range(-search_range, search_range + 1)] * len(constants)  # denominator range
+        coef_top_list = itertools.product(*coefs_top)
+        coef_bottom_list = list(itertools.product(*coefs_bottom))
+        denominator_list = [sum(i*j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
+
+        # start enumerating
+        for c_top in coef_top_list:
+            numerator = sum(i * j for (i, j) in zip(c_top, constants))
+            if numerator <= 0:  # allow only positive values to avoid duplication
+                continue
+            numerator = mpmath.mpf(numerator)
+            for c_bottom, denominator in zip(coef_bottom_list, denominator_list):
+                if reduce(gcd, c_top + c_bottom) != 1:  # avoid expressions that can be simplified easily
+                    continue
+                if denominator == 0:  # don't store inf or nan.
+                    continue
+                val = numerator / denominator
+                key = int(val * key_factor)
+                if key in rational_blacklist:
+                    # don't store values that are independent of the constant (e.g. rational numbers)
+                    continue
+                self.s[key] = c_top, c_bottom  # store key and transformation
 
     def __contains__(self, item):
         """
@@ -134,14 +177,14 @@ class LHSHashTable(object):
 
 
 class EnumerateOverGCF(object):
-    def __init__(self, sym_constant, lhs_search_limit, saved_hash=''):
+    def __init__(self, sym_constants, lhs_search_limit, saved_hash=''):
         """
         initialize search engine.
         basically, this is a 3 step procedure:
         1) load / initialize lhs hash table.
         2) first enumeration - enumerate over all rhs combinations, find hits in lhs hash table.
         3) refine results - take results from (2) and validate them to 100 decimal digits.
-        :param sym_constant: sympy constant
+        :param sym_constants: sympy constants
         :param lhs_search_limit: range of coefficients for left hand side.
         :param saved_hash: path to saved hash.
         """
@@ -149,21 +192,23 @@ class EnumerateOverGCF(object):
         self.enum_dps = 50  # working decimal precision for first enumeration
         self.verify_dps = 2000  # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
-        self.const_sym = sym_constant
-        try:
-            self.const_val = lambdify((), sym_constant, modules="mpmath")
-        except AttributeError:      # Hackish constant
-            self.const_val = sym_constant.mpf_val
+        self.const_sym = sym_constants
+        self.constants_generator = []
+        for i in range(len(sym_constants)):
+            try:
+                self.constants_generator.append(lambdify((), sym_constants[i], modules="mpmath"))
+            except AttributeError:      # Hackish constant
+                self.constants_generator.append(sym_constants[i].mpf_val)
         self.create_an_series = create_series_from_compact_poly
         self.create_bn_series = create_series_from_compact_poly
         if saved_hash == '':
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
+                constants = [const() for const in self.constants_generator]
                 start = time()
                 self.hash_table = LHSHashTable(
-                    range(self.lhs_limit + 1),  # a,b range (allow only non-negative)
-                    range(-self.lhs_limit, self.lhs_limit + 1),  # c,d range
-                    self.const_val(),  # constant
+                    self.lhs_limit,
+                    constants,  # constant
                     self.threshold)  # length of key
                 end = time()
                 print(f'that took {end-start}s')
@@ -230,7 +275,7 @@ class EnumerateOverGCF(object):
                     gcf = EfficientGCF(an, bn_coef[0])  # create gcf from a_n and b_n
                     key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
                     if key in self.hash_table:  # find hits in hash table
-                        results.append(Match(self.hash_table[key], a_coef, bn_coef[1]))
+                        results.append(Match(key, a_coef, bn_coef[1]))
                     if print_results:
                         counter += 1
                         if counter % 100000 == 0:  # print status.
@@ -249,7 +294,7 @@ class EnumerateOverGCF(object):
                     gcf = EfficientGCF(an_coef[0], bn)  # create gcf from a_n and b_n
                     key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
                     if key in self.hash_table:  # find hits in hash table
-                        results.append(Match(self.hash_table[key], an_coef[1], b_coef))
+                        results.append(Match(key, an_coef[1], b_coef))
                     if print_results:
                         counter += 1
                         if counter % 100000 == 0:  # print status.
@@ -269,18 +314,15 @@ class EnumerateOverGCF(object):
         results = []
         counter = 0
         n_iterations = len(intermediate_results)
+        constant_vals = [const() for const in self.constants_generator]
         for r in intermediate_results:
             counter += 1
             if (counter % 10) == 0 and print_results:
                 print('passed {} permutations out of {}. found so far {} matches'.format(
                     counter, n_iterations, len(results)))
-            t = MobiusTransform(r.lhs_coefs)
             try:
-                val = t(self.const_val())
+                val = self.hash_table.evaluate(r.lhs_key, constant_vals)
                 if mpmath.isinf(val) or mpmath.isnan(val):  # safety
-                    continue
-                if mpmath.almosteq(val, t(1), 1 / (self.verify_dps // 20)):
-                    # don't keep results that are independent of the constant
                     continue
             except ZeroDivisionError:
                 continue
@@ -298,12 +340,12 @@ class EnumerateOverGCF(object):
     def __get_formatted_results(self, results: List[Match]) -> List[FormattedResult]:
         ret = []
         for r in results:
-            an = self.create_an_series(r.rhs_an_poly, 1000)
-            bn = self.create_bn_series(r.rhs_bn_poly, 1000)
+            an = self.create_an_series(r.rhs_an_poly, 250)
+            bn = self.create_bn_series(r.rhs_bn_poly, 250)
             print_length = max(max(len(r.rhs_an_poly), len(r.rhs_bn_poly)), 5)
             gcf = GeneralizedContinuedFraction(an, bn)
-            t = MobiusTransform(r.lhs_coefs)
-            sym_lhs = sympy.simplify(t.sym_expression(self.const_sym))
+            sym_lhs = self.hash_table.evaluate_sym(r.lhs_key, self.const_sym)
+            # sym_lhs = sympy.simplify(sym_lhs)
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
         return ret
 

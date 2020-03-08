@@ -130,7 +130,7 @@ class TestContinuedFracture(TestCase):
             shift_reg = massey.slow_massey(rhs.a_, 5657)
             self.assertTrue(len(shift_reg) > 99)
 
-    def known_data_test(self, cf_data):
+    def known_data_test(self, cf_data, print_convergence=False):
         """
         test all "known data" that is in data.py
         :param cf_data: a database defined in data.py
@@ -144,6 +144,9 @@ class TestContinuedFracture(TestCase):
                     rhs_bn = create_series_from_shift_reg(d.rhs_bn.shift_reg, d.rhs_bn.initials, 400)
                     rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
                     self.compare(d.lhs, rhs, 100)
+                    if print_convergence:
+                        rate = calculate_convergence(rhs, lambdify((), d.lhs, 'mpmath')(), False, t)
+                        print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
 
     def test_known_pi_cf(self):
         """
@@ -155,7 +158,7 @@ class TestContinuedFracture(TestCase):
         """
         test known e CFs
         """
-        self.known_data_test(data.data.e_cf)
+        self.known_data_test(data.data.e_cf, True)
 
     def test_known_zeta_cf(self):
         """
@@ -178,25 +181,26 @@ class TestContinuedFracture(TestCase):
                     self.assertEqual(sym_transform, t[0])
 
     def test_enumeration_over_gcf_hashtable(self):
-        hashtable = LHSHashTable(range(3), range(3), mpmath.pi, 1e-7)
+        hashtable = LHSHashTable(3, [mpmath.pi], 1e-7)
         hashtable.save('tmp_test.p')
         hashtable_load = hashtable.load_from('tmp_test.p')
         self.assertEqual(hashtable, hashtable_load)
 
     def test_enumeration_over_gcf(self):
-        enumerator = EnumerateOverGCF(sympy.pi, 4)
+        enumerator = EnumerateOverGCF([sympy.pi], 4)
         results = enumerator.find_hits([[0, 1, 2]]*2, [[0, 1, 2]]*3, print_results=False)
         self.assertEqual(len(results), 1)
         r = results[0]
         an = create_series_from_compact_poly(r.rhs_an_poly, 1000)
         bn = create_series_from_compact_poly(r.rhs_bn_poly, 1000)
         gcf = GeneralizedContinuedFraction(an, bn)
-        t = MobiusTransform(r.lhs_coefs)
         with mpmath.workdps(100):
             lhs_val = mpmath.nstr(gcf.evaluate(), 50)
-            rhs_val = mpmath.nstr(t(mpmath.pi), 50)
+            rhs_val = enumerator.hash_table.evaluate(r.lhs_key, [mpmath.pi])
+            rhs_val = mpmath.nstr(rhs_val, 50)
+            rhs_sym = enumerator.hash_table.evaluate_sym(r.lhs_key, [sympy.pi])
             self.assertEqual(lhs_val, rhs_val)
-            self.assertTrue(t.sym_expression(pi) == 4/pi)
+            self.assertTrue(rhs_sym == 4/pi)
 
     def test_enumerate_signed_RCF(self):
         enumerator = SignedRcfEnumeration(e, 1, [2, 2], 100, 1)

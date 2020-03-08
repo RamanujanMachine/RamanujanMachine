@@ -15,7 +15,8 @@ g_const_dict = {
     'catalan': sympy.Catalan,
     'golden_ratio': sympy.GoldenRatio,
     'khinchin': sympy.S.Khinchin,
-    'euler-mascheroni': sympy.gamma
+    'euler-mascheroni': sympy.gamma,
+    'pi-acosh_2': sympy.pi * sympy.acosh(2)
 }
 
 
@@ -34,6 +35,8 @@ def get_custom_generator(generator_name, args):
         return series_generators.zeta3_an_generator, 2
     elif generator_name == 'zeta5_an':
         return series_generators.zeta5_an_generator, 3
+    elif generator_name == 'catalan_bn':
+        return series_generators.catalan_bn_generator, 2
 
 
 def get_constant(const_name, args):
@@ -41,13 +44,16 @@ def get_constant(const_name, args):
     for function constants
     """
     if const_name == 'zeta':
-        return g_const_dict['zeta'](args.function_value)
+        return g_const_dict[const_name](args.function_value)
     else:
         return g_const_dict[const_name]
 
 
-def get_hash_filename(sympy_const, args):
-    name = f'{str(sympy_const)}_{args.lhs_search_limit}_hash.p'
+def get_hash_filename(sympy_consts, args):
+    name = ''
+    for sym_const in sympy_consts:
+        name += f'{str(sym_const)}_'
+    name += f'{args.lhs_search_limit}_hash.p'
     name = name.replace('*', '_mul_')
     name = name.replace('/', '_div_')
     name = name.replace(' ', '')
@@ -68,7 +74,7 @@ Currently the optional enumeration types are:
     subparsers = parser.add_subparsers(help='enumeration type to run')
 
     gcf_parser = subparsers.add_parser('enumerate_over_gcf')
-    gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), default='zeta',
+    gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), nargs='+', default=['zeta'],
                             help='constants to search for - initializing the LHS hash table')
     gcf_parser.add_argument('-function_value', type=int,
                             help='Which value of the function are we assessing \
@@ -101,21 +107,25 @@ def main():
     else:
         args = parser.parse_args()
 
+    # {an} series generator
     an_generator, poly_a_order = get_custom_generator(args.custom_generator_an, args)
     if an_generator is None:
         poly_a_order = args.poly_a_order
 
+    # {bn} series generator
     bn_generator, poly_b_order = get_custom_generator(args.custom_generator_bn, args)
     if bn_generator is None:
         poly_b_order = args.poly_b_order
 
-    sympy_const = get_constant(args.LHS_constant, args)
-
-    hash_table_filename = get_hash_filename(sympy_const, args)
+    # constants for LHS
+    sympy_consts = []
+    for const in args.LHS_constant:
+        sympy_consts.append(get_constant(const, args))
+    hash_table_filename = get_hash_filename(sympy_consts, args)
 
     # Runs the enumeration wrapper
     final_results = multi_core_enumeration_wrapper(
-        sym_constant=sympy_const,  # constant to run on
+        sym_constant=sympy_consts,  # constant to run on
         lhs_search_limit=args.lhs_search_limit,
         poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * poly_a_order,  # a_n polynomial coefficients
         poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * poly_b_order,  # b_n polynomial coefficients

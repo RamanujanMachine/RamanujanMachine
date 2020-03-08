@@ -99,3 +99,11 @@ def zeta5_an_generator(x_, n):
               2*x_[1]*(i**3) + 5*x_[2]*(i**4) + 2*x_[2]*(i**5)
         ret.append(res)
     return ret
+
+
+def catalan_bn_generator(x_, n):
+    ret = []
+    for i in range(n):
+        res = x_[0]*(2*i+1)**4 + x_[1]*(2*i+1)**3
+        ret.append(res)
+    return ret

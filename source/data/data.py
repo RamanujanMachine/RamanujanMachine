@@ -28,6 +28,8 @@ e_cf = {
     'e2': CFData(e / (e - 2), MasseySeries([1, -2, 1], [4, 5]), MasseySeries([1, -2, 1], [-1, -2])),
     'e3': CFData(e, MasseySeries([1, -2, 1], [3, 4]), MasseySeries([1, -2, 1], [-1, -2])),
     'e4': CFData(e - 1, MasseySeries([1, 0, 0, -2, 0, 0, 1], [1, 1, 2, 1, 1, 4]), MasseySeries([1, -1], [1])),
+    'e_fast': CFData(3 / (3 - e), MasseySeries([1, -3, 3, -1], [11, 29, 55]), MasseySeries([1, -3, 3, -1], [-10, -28, -54])),
+    'e_faster': CFData((1 + e) / (-1 + e), MasseySeries([1, -2, 1], [2, 6]), MasseySeries([1, -1], [1])),
 }
 
 zeta_cf = {
@@ -83,13 +85,3 @@ new_zeta_findings = {
     'zeta3_0': CFData(8 / (7*zeta(3)), lambda n: n*(n*(6*n+9)+5)+1, lambda n: -(n+1)**6),
     'zeta3_1': CFData(12 / (7*zeta(3)), lambda n: n*(n*(10*n+15)+9)+2, lambda n: -16*(n+1)**6)
 }
-
-# TODO: Q1) are all LSFR binomial coefficients with alternating signs (X-Y)^d?
-#       Answer - the solution of these recurrence equations are polynomials (of degree d-1).
-#       since the ramanujan project looked for polynomials, of course the recurrence equations are of this form.
-# TODO: Q2) maybe some connection between the generating function of the recurrence equation to the the LHS?
-#          (probably not...)
-# TODO: Q3) all of pi formulas are of the same LSFR?
-# TODO: Q4) does every representation of e fit in a RFC?
-# TODO: Q5) are all rhs are mobius transforms on the constant? maybe implicit graph search will find us the correct one?
-# TODO: 6) write function to determine convergence rate.
