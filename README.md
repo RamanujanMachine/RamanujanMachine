@@ -52,22 +52,14 @@ python main.py enumerate_over_gcf -h
 ```
 
 Parameters that you can currently control without changing the code itself include:
-  -lhs_constant {zeta,e,pi,catalan,golden_ratio,khinchin,euler-mascheroni,pi-acosh_2} [{zeta,e,pi,catalan,golden_ratio,khinchin,euler-mascheroni,pi-acosh_2} ...] constants to search for - initializing the left-hand-side hash table
 
-  -function_value FUNCTION_VALUE Which value of the function are we assessing (assuming LHS constant takes an arguments)
-
-  -lhs_search_limit LHS_SEARCH_LIMIT The limit for the LHS coefficients
-
-  -num_of_cores NUM_OF_CORES The number of cores to run on
-
-  -poly_a_order POLY_A_ORDER the number of free coefficients for {a_n} series
-
-  -poly_a_coefficient_max POLY_A_COEFFICIENT_MAX The maximum value for the coefficients of the {a_n} polynomial
-
-  -poly_b_order POLY_B_ORDER the number of free coefficients for {b_n} series
-
-  -poly_b_coefficient_max POLY_B_COEFFICIENT_MAX The maximum value for the coefficients of the {b_n} polynomial
-
-  -custom_generator_an CUSTOM_GENERATOR_AN (optional) custom generator for {a_n} series. if defined, poly_a_order is ignored
-
-  -custom_generator_bn CUSTOM_GENERATOR_BN (optional) custom generator for {a_n} series. if defined, poly_b_order is ignored
+* -lhs_constant {zeta,e,pi,catalan,golden_ratio,khinchin,euler-mascheroni,pi-acosh_2} [{zeta,e,pi,catalan,golden_ratio,khinchin,euler-mascheroni,pi-acosh_2} ...] constants to search for - initializing the left-hand-side hash table
+* -function_value FUNCTION_VALUE Which value of the function are we assessing (assuming LHS constant takes an arguments)
+* -lhs_search_limit LHS_SEARCH_LIMIT The limit for the LHS coefficients
+* -num_of_cores NUM_OF_CORES The number of cores to run on
+* -poly_a_order POLY_A_ORDER the number of free coefficients for {a_n} series
+* -poly_a_coefficient_max POLY_A_COEFFICIENT_MAX The maximum value for the coefficients of the {a_n} polynomial
+* -poly_b_order POLY_B_ORDER the number of free coefficients for {b_n} series
+* -poly_b_coefficient_max POLY_B_COEFFICIENT_MAX The maximum value for the coefficients of the {b_n} polynomial
+* -custom_generator_an CUSTOM_GENERATOR_AN (optional) custom generator for {a_n} series. if defined, poly_a_order is ignored
+* -custom_generator_bn CUSTOM_GENERATOR_BN (optional) custom generator for {a_n} series. if defined, poly_b_order is ignored
