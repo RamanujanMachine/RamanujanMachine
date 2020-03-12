@@ -151,10 +151,7 @@ def main():
     # Initializes the argument parser to receive inputs from the user
     parser = init_parser()
 
-    if len(sys.argv) == 1:  # run from editor
-        args = parser.parse_args(['enumerate_over_gcf'])
-    else:
-        args = parser.parse_args()
+    args = parser.parse_args()
 
     if len(sys.argv) == 1:
         print("You must input the running parameters to run the Ramanujan Machine. Please run 'python main.py enumerate_over_gcf --help' to for more details about the required parameters.")

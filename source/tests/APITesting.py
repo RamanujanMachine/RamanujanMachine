@@ -5,7 +5,7 @@ import os
 
 class APITests(unittest.TestCase):
     def test_api1(self):
-        cmd = ['enumerate_over_gcf', '-LHS_constant', 'e', '-num_of_cores', '1', '-lhs_search_limit', ' 5',
+        cmd = ['enumerate_over_gcf', '-lhs_constant', 'e', '-num_of_cores', '1', '-lhs_search_limit', ' 5',
                '-poly_a_order', ' 2', '-poly_a_coefficient_max', ' 5', '-poly_b_order', ' 2', '-poly_b_coefficient_max', ' 5']
         parser = main.init_parser()
         args = parser.parse_args(cmd)
@@ -18,10 +18,10 @@ class APITests(unittest.TestCase):
                       results)
 
     def test_api2(self):
-        cmd = ['enumerate_over_gcf', '-LHS_constant', 'zeta', '--function_value', '3', '-num_of_cores', '2',
+        cmd = ['enumerate_over_gcf', '-lhs_constant', 'zeta', '-function_value', '3', '-num_of_cores', '2',
                '-lhs_search_limit', '14', '-poly_a_order', '3', '-poly_a_coefficient_max', '20',
                '-poly_b_order', '3', '-poly_b_coefficient_max', '20',
-               '--custom_generator_an', 'zeta3_an', '--custom_generator_bn', 'zeta_bn']
+               '-custom_generator_an', 'zeta3_an', '-custom_generator_bn', 'zeta_bn']
         parser = main.init_parser()
         args = parser.parse_args(cmd)
         results = main.enumerate_over_gcf_main(args)
@@ -35,10 +35,10 @@ class APITests(unittest.TestCase):
                       results)
 
     def test_api3(self):    # this one take a few minutes
-        cmd = ['enumerate_over_gcf', '-LHS_constant', 'catalan', 'pi-acosh_2', '-num_of_cores', '1',
+        cmd = ['enumerate_over_gcf', '-lhs_constant', 'catalan', 'pi-acosh_2', '-num_of_cores', '1',
                '-lhs_search_limit', '8', '-poly_a_order', '3', '-poly_a_coefficient_max', '15',
                '-poly_b_order', '2', '-poly_b_coefficient_max', '5',
-               '--custom_generator_bn', 'catalan_bn']
+               '-custom_generator_bn', 'catalan_bn']
         parser = main.init_parser()
         args = parser.parse_args(cmd)
         results = main.enumerate_over_gcf_main(args)
