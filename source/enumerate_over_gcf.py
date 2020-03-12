@@ -15,7 +15,7 @@ from sympy import lambdify
 import numpy as np
 from latex import generate_latex
 from series_generators import create_series_from_compact_poly
-from mobius import GeneralizedContinuedFraction, MobiusTransform, EfficientGCF
+from mobius import GeneralizedContinuedFraction, EfficientGCF
 from convergence_rate import calculate_convergence
 
 
@@ -251,6 +251,29 @@ class EnumerateOverGCF(object):
         :param print_results: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
+        def efficient_gcf_calculation():
+            """
+            enclosure. a_, b_, and key_factor are used from outer scope.
+            moved here from mobius.EfficientGCF to optimize performance.
+            :return: key for LHS hash table
+            """
+            prev_q = 0
+            q = 1
+            prev_p = 1
+            p = a_[0]
+            for i in range(1, len(a_)):
+                tmp_a = q
+                tmp_b = p
+                q = a_[i] * q + b_[i - 1] * prev_q
+                p = a_[i] * p + b_[i - 1] * prev_p
+                prev_q = tmp_a
+                prev_p = tmp_b
+            if q == 0:  # safety check
+                value = 0
+            else:
+                value = mpmath.mpf(p) / mpmath.mpf(q)
+            return int(value * key_factor)  # calculate hash key of gcf value
+
         start = time()
         a_coef_iter = itertools.product(*poly_a)  # all coefficients possibilities for 'a_n'
         neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
@@ -258,6 +281,7 @@ class EnumerateOverGCF(object):
         num_iterations = 2 * self.__number_of_elements(poly_b) * self.__number_of_elements(poly_a)
         size_b = 2 * self.__number_of_elements(poly_b)
         size_a = self.__number_of_elements(poly_a)
+        key_factor = 1 / self.threshold
 
         counter = 0  # number of permutations passed
         results = []  # list of intermediate results
@@ -272,8 +296,11 @@ class EnumerateOverGCF(object):
                 if 0 in an:
                     continue
                 for bn_coef in zip(bn_list, b_coef_list):
-                    gcf = EfficientGCF(an, bn_coef[0])  # create gcf from a_n and b_n
-                    key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
+                    # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
+                    a_ = an
+                    b_ = bn_coef[0]
+                    key = efficient_gcf_calculation()  # calculate hash key of gcf value
+
                     if key in self.hash_table:  # find hits in hash table
                         results.append(Match(key, a_coef, bn_coef[1]))
                     if print_results:
@@ -291,8 +318,10 @@ class EnumerateOverGCF(object):
                 if 0 in bn:
                     continue
                 for an_coef in zip(an_list, a_coef_list):
-                    gcf = EfficientGCF(an_coef[0], bn)  # create gcf from a_n and b_n
-                    key = int(gcf.evaluate() / self.threshold)  # calculate hash key of gcf value
+                    a_ = an_coef[0]
+                    b_ = bn
+                    key = efficient_gcf_calculation()  # calculate hash key of gcf value
+
                     if key in self.hash_table:  # find hits in hash table
                         results.append(Match(key, an_coef[1], b_coef))
                     if print_results:

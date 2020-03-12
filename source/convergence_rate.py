@@ -13,17 +13,17 @@ def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=Fal
     :param title: (optional) title of graph.
     :param reference: x
     """
-    _A = [0, 1]
-    _B = [1, gcf.a_[0]]
-    log_diff = [mpmath.log10(abs((dec(_B[1]) / dec(_A[1])) - reference))]
+    q_ = [0, 1]
+    p_ = [1, gcf.a_[0]]
+    log_diff = [mpmath.log10(abs((dec(p_[1]) / dec(q_[1])) - reference))]
     length = min(200, len(gcf.b_))
     for i in range(1, length):
-        _A.append(gcf.a_[i] * _A[i] + gcf.b_[i - 1] * _A[i - 1])
-        _B.append(gcf.a_[i] * _B[i] + gcf.b_[i - 1] * _B[i - 1])
-        if _A[i + 1] == 0:
+        q_.append(gcf.a_[i] * q_[i] + gcf.b_[i - 1] * q_[i - 1])
+        p_.append(gcf.a_[i] * p_[i] + gcf.b_[i - 1] * p_[i - 1])
+        if q_[i + 1] == 0:
             part_convergent = 0
         else:
-            part_convergent = dec(_B[i + 1]) / dec(_A[i + 1])
+            part_convergent = dec(p_[i + 1]) / dec(q_[i + 1])
         if not mpmath.isfinite(part_convergent):
             length = i
             break
