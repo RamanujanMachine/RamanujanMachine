@@ -429,7 +429,7 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
     :return: results
     """
     for s in range(len(splits_size)):
-        if index == (num_cores - 1):
+        if index == (num_cores - 1):  # last processor does more.
             poly_a[s] = poly_a[s][index * splits_size[s]:]
         else:
             poly_a[s] = poly_a[s][index * splits_size[s]:(index + 1) * splits_size[s]]
@@ -440,7 +440,7 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
     if create_bn_series is not None:
         enumerator.create_bn_series = create_bn_series
 
-    results = enumerator.find_hits(poly_a, poly_b, index == 0)
+    results = enumerator.find_hits(poly_a, poly_b, index == (num_cores - 1))
     enumerator.print_results(results, latex=True)
     
     results_in_latex = enumerator.convert_results_to_latex(results)
@@ -458,7 +458,8 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
     :param poly_a: explained in docstring of __first_enumeration
     :param poly_b: explained in docstring of __first_enumeration
     :param num_cores: total number of cores to be used.
-    :param manual_splits_size: manuals tiling (explained in docstring of multi_core_enumeration)
+    :param manual_splits_size: amount of work for each processor.
+    manuals tiling (explained in docstring of multi_core_enumeration)
     by default we will split the work only along the first dimension. so the tile size will be
     [dim0 / n_cores, . , . , . , rest of dimensions].
     passing this manually can be useful for a large number of cores.
