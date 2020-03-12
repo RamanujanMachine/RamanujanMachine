@@ -80,7 +80,7 @@ Currently the optional enumeration types are:
 
     gcf_parser = subparsers.add_parser('enumerate_over_gcf')
     gcf_parser.set_defaults(which='enumerate_over_gcf')
-    gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), nargs='+',
+    gcf_parser.add_argument('-lhs_constant', choices=g_const_dict.keys(), nargs='+',
                             help='constants to search for - initializing the LHS hash table')
     gcf_parser.add_argument('-function_value', type=int,
                             help='Which value of the function are we assessing \
@@ -106,8 +106,8 @@ Currently the optional enumeration types are:
 
 def enumerate_over_gcf_main(args):
     # Need to handle all the empty cases here, or have default values for them
-    if not args.LHS_constant:
-        print("You must input a parameter for the LHS_constant. Please run 'python main.py enumerate_over_gcf --help' to for more details about the required parameters.")
+    if not args.lhs_constant:
+        print("You must input a parameter for the lhs_constant. Please run 'python main.py enumerate_over_gcf --help' to for more details about the required parameters.")
         return
 
     # same path to hash_tables no matter what
@@ -125,7 +125,7 @@ def enumerate_over_gcf_main(args):
 
     # constants for LHS
     sympy_consts = []
-    for const in args.LHS_constant:
+    for const in args.lhs_constant:
         sympy_consts.append(get_constant(const, args))
     hash_table_filename = get_hash_filename(sympy_consts, args)
 
