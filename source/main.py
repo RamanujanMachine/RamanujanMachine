@@ -82,7 +82,7 @@ Currently the optional enumeration types are:
     gcf_parser.set_defaults(which='enumerate_over_gcf')
     gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), nargs='+',
                             help='constants to search for - initializing the LHS hash table')
-    gcf_parser.add_argument('--function_value', type=int,
+    gcf_parser.add_argument('-function_value', type=int,
                             help='Which value of the function are we assessing \
                                  (assuming LHS constant takes an arguments)')
     gcf_parser.add_argument('-lhs_search_limit', type=int,
@@ -97,14 +97,19 @@ Currently the optional enumeration types are:
                             help='the number of free coefficients for {b_n} series')
     gcf_parser.add_argument('-poly_b_coefficient_max', type=int,
                             help='The maximum value for the coefficients of the {b_n} polynomial')
-    gcf_parser.add_argument('--custom_generator_an', type=str,
+    gcf_parser.add_argument('-custom_generator_an', type=str,
                             help='(optional) custom generator for {a_n} series. if defined, poly_a_order is ignored')
-    gcf_parser.add_argument('--custom_generator_bn', type=str,
+    gcf_parser.add_argument('-custom_generator_bn', type=str,
                             help='(optional) custom generator for {a_n} series. if defined, poly_b_order is ignored')
     return parser
 
 
 def enumerate_over_gcf_main(args):
+    # Need to handle all the empty cases here, or have default values for them
+    if not args.LHS_constant:
+        print("You must input a parameter for the LHS_constant. Please run 'python main.py enumerate_over_gcf --help' to for more details about the required parameters.")
+        return
+
     # same path to hash_tables no matter what
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
@@ -145,11 +150,15 @@ def enumerate_over_gcf_main(args):
 def main():
     # Initializes the argument parser to receive inputs from the user
     parser = init_parser()
+
     if len(sys.argv) == 1:  # run from editor
         args = parser.parse_args(['enumerate_over_gcf'])
     else:
         args = parser.parse_args()
-    if args.which == 'enumerate_over_gcf':
+
+    if len(sys.argv) == 1:
+        print("You must input the running parameters to run the Ramanujan Machine. Please run 'python main.py enumerate_over_gcf --help' to for more details about the required parameters.")
+    elif args.which == 'enumerate_over_gcf':
         enumerate_over_gcf_main(args)
 
 
