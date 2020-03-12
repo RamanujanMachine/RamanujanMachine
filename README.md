@@ -6,11 +6,11 @@ For more information, please go to [RamanujanMachine.com](https://www.RamanujanM
 
 ## Installation
 
-Clone the repo and install the requirements in the requirements.txt file. If you have pip, it can be done by running
+Clone the repo and install the requirements in the source/requirements.txt file. If you have pip, it can be done by running
 ```
 pip install -r requirements.txt
 ```
-That's it, you are now ready to discover new conjectures.
+under the source/ folder. That's it, you are now ready to discover new conjectures.
 
 ## Running the code
 
