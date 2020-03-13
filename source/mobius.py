@@ -202,9 +202,9 @@ class GeneralizedContinuedFraction(object):
             try:
                 rcp = k_rcp(const)  # 1) (**)
             except ZeroDivisionError:
-                print("create simple continued fraction finished sooner than expected resulting in finite fraction\n"
-                      "this may be due to a rational number given as input, or insufficient precision")
-                return cls(a_, b_)
+                print("Finished extraction sooner than expected. Rational input, or insufficient precision.")
+                # return cls(a_, b_)
+                raise ZeroDivisionError
             a_.append(floor(rcp) if b_[i] > 0 else ceil(rcp))  # 2) find a_i
             next_transform = MobiusTransform(np.array([[0, b_[i-1]], [1, a_[i]]], dtype=object))  # 3) x = b[i]/x - a[i]
             k = next_transform.inverse() * k
