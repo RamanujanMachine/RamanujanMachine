@@ -118,11 +118,13 @@ def enumerate_over_gcf_main(args):
     # {an} series generator
     an_generator, poly_a_order = get_custom_generator(args.custom_generator_an, args)
     if (an_generator is None) or (poly_a_order is None):
+        print('default series generator is chosen: a_n=n(n(...(c[0]*n + c[1]) + c[2]) + ...) + c[k]')
         poly_a_order = args.poly_a_order
 
     # {bn} series generator
     bn_generator, poly_b_order = get_custom_generator(args.custom_generator_bn, args)
     if (bn_generator is None) or (poly_b_order is None):
+        print('default series generator is chosen: b_n=n(n(...(c[0]*n +ca[1]) + c[2]) + ...) + c[k]')
         poly_b_order = args.poly_b_order
 
     # constants for LHS

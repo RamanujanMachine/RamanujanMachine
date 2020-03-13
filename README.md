@@ -24,6 +24,12 @@ To find a few formulas for e, run (don't forget to be under the source/ folder w
 python main.py enumerate_over_gcf -lhs_constant e -num_of_cores 1 -lhs_search_limit 5 -poly_a_order 2 -poly_a_coefficient_max 5 -poly_b_order 2 -poly_b_coefficient_max 5
 ```
 
+#### pi
+To find a few formulas for pi, run (don't forget to be under the source/ folder when you run it)
+```python
+python main.py enumerate_over_gcf -lhs_constant pi -num_of_cores 1 -lhs_search_limit 20 -poly_a_order 2 -poly_a_coefficient_max 13 -poly_b_order 3 -poly_b_coefficient_max 11 -custom_generator_bn polynomial_shift1
+```
+
 #### Riemann Zeta function at 3 (Aépry's constant)
 To find a few formulas related to the Riemann zeta function at 3 (Zeta of 3 is called [Apéry's constant](https://www.wikiwand.com/en/Ap%C3%A9ry%27s_constant) and has a role in the electron's gyromagnetic ratio), run:
 ```python
@@ -46,6 +52,9 @@ python main.py
 ```
 runs the code. The infrastructure supports various algorithms for discovery of constants and for now can only be run using the enumerate_over_gcf toggle.
 
+##### enumerate_over_gcf module: 
+this is our new MITM implementation. The program will "mine" new Continued Fraction conjectures of the type:
+![LHS_RHS](images/LHS_RHS.png)
 The code let's you control the equation space scanned by the algorithm. To get more information about what you can control and tweak, run
 ```python
 python main.py enumerate_over_gcf -h
@@ -63,3 +72,5 @@ Parameters that you can currently control without changing the code itself inclu
 * -poly_b_coefficient_max POLY_B_COEFFICIENT_MAX The maximum value for the coefficients of the {b_n} polynomial
 * -custom_generator_an CUSTOM_GENERATOR_AN (optional) custom generator for {a_n} series. if defined, poly_a_order is ignored
 * -custom_generator_bn CUSTOM_GENERATOR_BN (optional) custom generator for {a_n} series. if defined, poly_b_order is ignored
+
+more detailed information regarding this module can be found in documentation/enumerate_over_gcf.pdf
