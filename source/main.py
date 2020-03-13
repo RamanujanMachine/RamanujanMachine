@@ -39,6 +39,8 @@ def get_custom_generator(generator_name, args):
         return series_generators.catalan_bn_generator, 2
     elif generator_name == 'polynomial_shift1':
         return series_generators.create_series_from_compact_poly_with_shift1, None
+    elif generator_name == 'polynomial_shift2n1':
+        return series_generators.create_series_from_compact_poly_with_shift2n1, None
     else:
         print("unknown custom series generator!")
         sys.exit(1)
@@ -133,12 +135,12 @@ def enumerate_over_gcf_main(args):
     final_results = multi_core_enumeration_wrapper(
         sym_constant=sympy_consts,  # constant to run on
         lhs_search_limit=args.lhs_search_limit,
-        poly_a=[[i for i in range(args.poly_a_coefficient_max)]] * poly_a_order,  # a_n polynomial coefficients
-        poly_b=[[i for i in range(args.poly_b_coefficient_max)]] * poly_b_order,  # b_n polynomial coefficients
+        poly_a=[[i for i in range(args.poly_a_coefficient_max+1)]] * poly_a_order,  # a_n polynomial coefficients
+        poly_b=[[i for i in range(args.poly_b_coefficient_max+1)]] * poly_b_order,  # b_n polynomial coefficients
         num_cores=args.num_of_cores,  # number of cores to run on
         manual_splits_size=None,  # use naive tiling
-        saved_hash=os.path.join('hash_tables', hash_table_filename),  # if existing
-        create_an_series=an_generator,  # use default
+        saved_hash=os.path.join('hash_tables', hash_table_filename),  # if this doesn't exist, it will be created.
+        create_an_series=an_generator,
         create_bn_series=bn_generator
     )
 

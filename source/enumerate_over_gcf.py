@@ -8,11 +8,9 @@ from time import time
 from math import gcd
 from typing import List, Iterator, Callable
 from collections import namedtuple
-from operator import mul
 import mpmath
 import sympy
 from sympy import lambdify
-import numpy as np
 from latex import generate_latex
 from series_generators import create_series_from_compact_poly
 from mobius import GeneralizedContinuedFraction, EfficientGCF
@@ -177,7 +175,7 @@ class LHSHashTable(object):
 
 
 class EnumerateOverGCF(object):
-    def __init__(self, sym_constants, lhs_search_limit, saved_hash=''):
+    def __init__(self, sym_constants, lhs_search_limit, saved_hash=None, an_generator=None, bn_generator=None):
         """
         initialize search engine.
         basically, this is a 3 step procedure:
@@ -187,6 +185,8 @@ class EnumerateOverGCF(object):
         :param sym_constants: sympy constants
         :param lhs_search_limit: range of coefficients for left hand side.
         :param saved_hash: path to saved hash.
+        :param an_generator: generating function for {an} series
+        :param bn_generator: generating function for {bn} series
         """
         self.threshold = 1e-10  # key length
         self.enum_dps = 50  # working decimal precision for first enumeration
@@ -199,9 +199,14 @@ class EnumerateOverGCF(object):
                 self.constants_generator.append(lambdify((), sym_constants[i], modules="mpmath"))
             except AttributeError:      # Hackish constant
                 self.constants_generator.append(sym_constants[i].mpf_val)
-        self.create_an_series = create_series_from_compact_poly
-        self.create_bn_series = create_series_from_compact_poly
-        if saved_hash == '':
+
+        if an_generator is None:
+            an_generator = create_series_from_compact_poly
+        if bn_generator is None:
+            bn_generator = create_series_from_compact_poly
+        self.create_an_series = an_generator
+        self.create_bn_series = bn_generator
+        if saved_hash is None:
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
                 constants = [const() for const in self.constants_generator]
@@ -224,12 +229,16 @@ class EnumerateOverGCF(object):
 
     @staticmethod
     def __create_series_list(coefficient_iter: Iterator,
-                             series_generator: Callable[[List[int], int], List[int]]) -> [List[int], List[int]]:
+                             series_generator: Callable[[List[int], int], List[int]],
+                             filter_from_1=False) -> [List[int], List[int]]:
         coef_list = list(coefficient_iter)
         # create a_n and b_n series fro coefficients.
         series_list = [series_generator(coef_list[i], 32) for i in range(len(coef_list))]
         # filter out all options resulting in '0' in any series term.
-        series_filter = [0 not in an for an in series_list]
+        if filter_from_1:
+            series_filter = [0 not in an[1:] for an in series_list]
+        else:
+            series_filter = [0 not in an for an in series_list]
         series_list = list(itertools.compress(series_list, series_filter))
         coef_list = list(itertools.compress(coef_list, series_filter))
         return coef_list, series_list
@@ -284,16 +293,21 @@ class EnumerateOverGCF(object):
         key_factor = 1 / self.threshold
 
         counter = 0  # number of permutations passed
+        print_counter = counter
         results = []  # list of intermediate results
 
         if size_a > size_b:     # cache {bn} in RAM, iterate over an
             b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
+            real_bn_size = len(bn_list)
+            num_iterations = (num_iterations // self.__number_of_elements(poly_b)) * real_bn_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
             for a_coef in a_coef_iter:
                 an = self.create_an_series(a_coef, 32)
-                if 0 in an:
+                if 0 in an[1:]:     # a_0 is allowed to be 0.
+                    counter += real_bn_size
+                    print_counter += real_bn_size
                     continue
                 for bn_coef in zip(bn_list, b_coef_list):
                     # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
@@ -305,17 +319,23 @@ class EnumerateOverGCF(object):
                         results.append(Match(key, a_coef, bn_coef[1]))
                     if print_results:
                         counter += 1
-                        if counter % 100000 == 0:  # print status.
+                        print_counter += 1
+                        if print_counter >= 100000:  # print status.
+                            print_counter = 0
                             print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
 
         else:   # cache {an} in RAM, iterate over bn
-            a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series)
+            a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
+            real_an_size = len(an_list)
+            num_iterations = (num_iterations // self.__number_of_elements(poly_a)) * real_an_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
             for b_coef in b_coef_iter:
                 bn = self.create_bn_series(b_coef, 32)
                 if 0 in bn:
+                    counter += real_an_size
+                    print_counter += real_an_size
                     continue
                 for an_coef in zip(an_list, a_coef_list):
                     a_ = an_coef[0]
@@ -326,7 +346,9 @@ class EnumerateOverGCF(object):
                         results.append(Match(key, an_coef[1], b_coef))
                     if print_results:
                         counter += 1
-                        if counter % 100000 == 0:  # print status.
+                        print_counter += 1
+                        if print_counter >= 100000:  # print status.
+                            print_counter = 0
                             print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
 
         if print_results:
@@ -374,29 +396,27 @@ class EnumerateOverGCF(object):
             print_length = max(max(len(r.rhs_an_poly), len(r.rhs_bn_poly)), 5)
             gcf = GeneralizedContinuedFraction(an, bn)
             sym_lhs = self.hash_table.evaluate_sym(r.lhs_key, self.const_sym)
-            # sym_lhs = sympy.simplify(sym_lhs)
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
         return ret
 
-    def print_results(self, results: List[Match], latex=False):
+    def print_results(self, results: List[Match], latex=False, convergence_rate=True):
         """
         pretty print the the results.
+        :param convergence_rate: if True calculate convergence rate and print it as well.
         :param results: list of final results as received from refine_results.
         :param latex: if True print in latex form, otherwise pretty print in unicode.
         """
         formatted_results = self.__get_formatted_results(results)
         for r in formatted_results:
-            with mpmath.workdps(self.verify_dps):
-                rate = calculate_convergence(r.GCF, lambdify((), r.LHS, 'mpmath')())
+            result = sympy.Eq(r.LHS, r.RHS)
             if latex:
-                result = sympy.Eq(r.LHS, r.RHS)
                 print(f'$$ {sympy.latex(result)} $$')
             else:
-                print('lhs: ')
-                sympy.pprint(r.LHS)
-                print('rhs: ')
-                sympy.pprint(r.RHS)
-            print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
+                sympy.pprint(result)
+            if convergence_rate:
+                with mpmath.workdps(self.verify_dps):
+                    rate = calculate_convergence(r.GCF, lambdify((), r.LHS, 'mpmath')())
+                print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
 
     def convert_results_to_latex(self, results: List[Match]):
         results_in_latex = []
@@ -462,20 +482,12 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
             poly_a[s] = poly_a[s][index * splits_size[s]:]
         else:
             poly_a[s] = poly_a[s][index * splits_size[s]:(index + 1) * splits_size[s]]
-    enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash)
 
-    if create_an_series is not None:
-        enumerator.create_an_series = create_an_series
-    if create_bn_series is not None:
-        enumerator.create_bn_series = create_bn_series
+    enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
 
     results = enumerator.find_hits(poly_a, poly_b, index == (num_cores - 1))
-    enumerator.print_results(results, latex=True)
-    
-    results_in_latex = enumerator.convert_results_to_latex(results)
-    generate_latex(file_name=f'results/{datetime.now().strftime("%m-%d-%Y--%H-%M-%S")}', eqns=results_in_latex)
 
-    return results_in_latex
+    return results
 
 
 def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_b, num_cores, manual_splits_size=None,
@@ -521,6 +533,7 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
         results = func(0)
         print(f'found {len(results)} results!')
     else:
+        print('starting Multi-Processor search.\n\tNOTICE- intermediate status prints will be done by processor 0 only.')
         pool = multiprocessing.Pool(num_cores)
         partial_results = pool.map(func, range(num_cores))
         results = []
@@ -528,4 +541,14 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
             results += r
         print(f'found {len(results)} results!')
 
-    return results
+    print('preparing results...')
+    enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
+    print('results in unicode:')
+    enumerator.print_results(results, latex=False, convergence_rate=False)
+    print('results in latex:')
+    enumerator.print_results(results, latex=True, convergence_rate=False)
+
+    results_in_latex = enumerator.convert_results_to_latex(results)
+    generate_latex(file_name=f'results/{datetime.now().strftime("%m-%d-%Y--%H-%M-%S")}', eqns=results_in_latex)
+
+    return results_in_latex
