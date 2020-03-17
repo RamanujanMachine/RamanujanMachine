@@ -2,13 +2,14 @@ import os
 import pickle
 import mpmath
 from mpmath import khinchin
-from sympy import lambdify, floor, E, pi, catalan, GoldenRatio, euler
+from sympy import lambdify, floor, E, pi, catalan, GoldenRatio, S
 import sympy
 from time import time
 import itertools
 from series_generators import create_series_from_shift_reg
 from massey import slow_massey
 from mobius import GeneralizedContinuedFraction, EfficientGCF
+
 
 
 def clear_end_zeros(items):
@@ -24,7 +25,7 @@ def clear_end_zeros(items):
 
 class SignedRcfEnumeration(object):
 
-    def __init__(self, sym_constant, cycle_len_range, depth, coefficients_limit=None, poly_deg=None, min_deg=None,
+    def __init__(self, sym_constant, cycle_len_range, depth=100, coefficients_limit=None, poly_deg=None, min_deg=None,
                  prime=199, custom_enum=None):
         """
         Initialize search engine.
@@ -51,8 +52,13 @@ class SignedRcfEnumeration(object):
             self.max_cycle_len = cycle_len_range[1]
         self.poly_deg = poly_deg
         self.min_deg = min_deg
+
         self.const_sym = sym_constant
-        self.const_val = lambdify((), sym_constant, modules="mpmath")
+        try:
+            self.const_val = lambdify((), sym_constant, modules="mpmath")
+        except AttributeError:
+            self.const_val = self.const_sym.mpf_val
+
         self.depth = depth
         self.verify_depth = 1000
         self.prime = prime
@@ -94,6 +100,8 @@ class SignedRcfEnumeration(object):
         Additional checks are performed to exclude degenerated cases.
         """
         print("Starting enumeration over LHS")
+        unsimplified = (2*self.coeff_lim + 1) ** (2*(self.poly_deg + 1))
+        print("Number of variations before simplification is: {}".format(unsimplified))
         start = time()
         coeffs = [i for i in range(-self.coeff_lim, self.coeff_lim+1)]
         if self.min_deg is not None:
@@ -118,7 +126,9 @@ class SignedRcfEnumeration(object):
                 continue
             var_sym = self.create_rational_symbol(numer, denom)
             var_sym = sympy.simplify(var_sym)
-            if abs(var_sym) not in expressions and var_sym != floor(var_sym):
+            if self.const_sym  not in var_sym.free_symbols:
+                continue
+            if abs(var_sym) not in expressions: # and var_sym != floor(var_sym):
                 expressions.add(abs(var_sym))
         print("Finished enumerations. Took {}  seconds".format(round(time()-start,2)))
         return expressions
@@ -139,20 +149,27 @@ class SignedRcfEnumeration(object):
             rational_variations = self.create_rational_variations_enum()
         else:
             rational_variations = []
+            print("Substituting " + str(self.const_sym) + 'into generic LHS:')
+            strt = time()
             for var in self.custom_enum:
                 rational_variations.append(var.subs({sympy.symbols('x'): self.const_sym}))
+            print("Took {} sec".format(time() - strt))
         sign_seqs = []
         for cyc_len in range(self.min_cycle_len, self.max_cycle_len + 1):
             sign_seqs = sign_seqs + list(itertools.product([-1, 1], repeat=cyc_len))
         domain_size = len(rational_variations) * len(sign_seqs)
-        print("De-Facto Domain Size is: {}".format(domain_size))
+        print("De-Facto Domain Size is: {}\n Starting preliminary search...".format(domain_size))
         checkpoint = max(domain_size // 20, 5)
         cnt = 0
         start = time()
         # Iterate
+        bad_variation = []
         for instance in itertools.product(rational_variations, sign_seqs):
             cnt += 1
             var, sign_cyc = instance[0], list(instance[1])
+            if var == bad_variation:
+                continue
+            bad_variation = []
             if ''.join([str(c) for c in sign_cyc]) in redundant_cycles:
                 continue
             for i in range(2, self.max_cycle_len // len(sign_cyc) + 1):
@@ -166,7 +183,13 @@ class SignedRcfEnumeration(object):
                 print("{} minutes passed.\n".format(round((time() - start) / 60, 2)))
             b_ = (sign_cyc * (self.depth // seq_len))[:self.depth]
             with mpmath.workdps(self.enum_dps):
-                signed_rcf = GeneralizedContinuedFraction.from_irrational_constant(const_gen=var_gen, b_=b_)
+                try:
+                    signed_rcf = GeneralizedContinuedFraction.from_irrational_constant(const_gen=var_gen, b_=b_)
+                except ZeroDivisionError: #TODO: Test the new handler!
+                    print('rational variation:')
+                    sympy.pprint(var)
+                    bad_variation = var
+                    continue
             a_ = signed_rcf.a_
             if 0 in a_:
                 continue
@@ -247,55 +270,77 @@ class SignedRcfEnumeration(object):
             results = self.find_signed_rcf_conj()
             end = time()
             if print_results:
-                print('that took {}s'.format(end - start))
+                print('That took {}s'.format(end - start))
         with mpmath.workdps(self.verify_dps):
             if print_results:
-                print('starting to verify results...')
+                print('Starting to verify results...')
             start = time()
             # Validate
             verified, duplicates = self.verify_results(results)
             end = time()
             if print_results:
-                print('that took {}s'.format(end - start))
+                print('{} results were verified.\nThat took {}'.format(len(verified), end - start))
             # Print if requested:
             if print_results:
                 self.print_results(verified)
         return verified, duplicates
 
+def search_wrapper(constant, custom_enum, poly_deg, coeff_lim, cycle_range, min_deg, depth):
+    if depth is not None:
+        enum = SignedRcfEnumeration(sym_constant=constant, cycle_len_range=cycle_range, depth=depth,
+                                    coefficients_limit=coeff_lim, poly_deg=poly_deg, min_deg=min_deg,
+                                    custom_enum=custom_enum)
+    else:
+        enum = SignedRcfEnumeration(sym_constant=constant, cycle_len_range=cycle_range, coefficients_limit=coeff_lim, poly_deg=poly_deg,
+                                    min_deg=min_deg, custom_enum=custom_enum)
 
-def generate_simplified_rationals(poly_deg, coefficients_limit, out_dir=False):
-    """
-    Prepares generic LHS enumerations (variable 'x'). When used later in searching conjectures- 'x' will be substituted
-    to any constant.
-    :param poly_deg: Degree of polynomials in rational function.
-    :param coefficients_limit: Limit for coefficients (symmetrical).
-    :param out_dir: Directory for saving the binary LHS enumeration.
-    :return: List of sympy expressions.
-    """
-    x = sympy.symbols('x')
-    enum = SignedRcfEnumeration(sym_constant=x, cycle_len_range=None, depth=None, coefficients_limit=coefficients_limit,
-                                poly_deg=poly_deg)
-    generic_variations = enum.create_rational_variations_enum()
-    if out_dir is not None:
-        with open(out_dir, 'wb') as file:
-            pickle.dump(generic_variations, file)
-    return generic_variations
+    return enum.find_hits()
+
+
+
 
 
 if __name__ =='__main__':
-    path = 'C:/Users/yoavha/Ramanujan/generic_enums/d2_c3'
-    if not os.path.exists(path):
-        custom = generate_simplified_rationals(1, 2, path)
+    # path = 'C:/Users/yoavha/Ramanujan/generic_LHS/std_d2_c3'
+    # if os.path.exists(path):
+    #     with open(path, 'rb') as f:
+    #         print('starting to load')
+    #         strt = time()
+    #         custom = pickle.load(f)
+    #         print('took {} sec to load'.format(time()-strt))
+    #     enum = SignedRcfEnumeration(sym_constant=S.Catalan, cycle_len_range=[2, 6], custom_enum=custom)
+    # else:
+    #     enum = SignedRcfEnumeration(sym_constant=S.Catalan, cycle_len_range=[2, 6], coefficients_limit=3, poly_deg=2)
+    # res_list, dup_dict = enum.find_hits()
+    # path = 'C:/Users/yoavha/Ramanujan/local_results/catalan/pdeg1_coeffs13'
+    # if not os.path.exists(path):
+    #     os.makedirs(path)
+    # res = '/'.join([path, 'dups_by_value'])
+    # dup = '/'.join([path, 'res_list'])
+    # with open(res, 'wb') as f:
+    #     pickle.dump(res_list, f)
+    # with open(dup, 'wb') as f:
+    #     pickle.dump(dup_dict, f)
+    path = 'C:/Users/yoavha/Ramanujan/generic_LHS/std_d1_c13'
     with open(path, 'rb') as f:
-        custom = pickle.load(f)
-    enumerator = SignedRcfEnumeration(sym_constant=sympy.pi, cycle_len_range=[2, 6], depth=100, custom_enum=custom)
-    res_list, dup_dict = enumerator.find_hits()
-    path = 'C:/Users/yoavha/Ramanujan/cata_d2_c3'
-    if not os.path.exists(path):
-        os.makedirs(path)
-    res = '/'.join([path, 'duplicates_by_value'])
-    dup = '/'.join([path, 'result_list'])
-    with open(res, 'wb') as f:
-        pickle.dump(res_list, f)
-    with open(dup, 'wb') as f:
-        pickle.dump(dup_dict, f)
+        print("Starting to load custom lhs")
+        strt = time()
+        custom_lhs = pickle.load(f)
+        print("Loaded {} lhs variations. Took {} sec".format(len(custom_lhs), time() - strt))
+    enum = SignedRcfEnumeration(sym_constant=S.EulerGamma, cycle_len_range=[2,4], custom_enum=custom_lhs)
+    res_list, dup_dict = enum.find_hits()
+    if len(res_list) == 0:
+        print("No results found.")
+    else:
+        path = 'C:/Users/yoavha/Ramanujan/local_results/euler_masch/d1_c13'
+        if not os.path.exists(path):
+            os.makedirs(path)
+            res = '/'.join([path, 'dups_by_value'])
+            dup = '/'.join([path, 'res_list'])
+        with open(res, 'wb') as f:
+            pickle.dump(res_list, f)
+        with open(dup, 'wb') as f:
+            pickle.dump(dup_dict, f)
+
+
+

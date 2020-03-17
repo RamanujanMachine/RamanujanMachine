@@ -10,7 +10,7 @@ def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=Fal
     the result is the average number of decimal digits, per term of the general continued fraction.
     :param plot: whether or not to plot the graph of the log10 difference between convergent and x.
     :param gcf: General Continued Fraction to calculate.
-    :param title: (optional) title of graph.
+    :param title: (optional) title of graph.    
     :param reference: x
     """
     _A = [0, 1]

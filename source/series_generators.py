@@ -1,3 +1,4 @@
+import sympy
 def create_series_from_polynomial(poly_a, n):
     """
     given a polynomial P(x) as generator return An when A[i] = P(i)
@@ -90,7 +91,6 @@ def create_zeta_bn_series(deg, poly_a, n):
         res = poly_a[0]*((i+1)**deg) - poly_a[1]*((i+1)**(deg-1))
         ret.append(res)
     return ret
-
 
 def zeta3_an_generator(x_, n):
     """

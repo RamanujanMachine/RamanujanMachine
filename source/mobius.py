@@ -3,7 +3,7 @@ from math import gcd, floor, ceil
 from mpmath import mpf as dec
 import mpmath
 from sympy import Symbol, pprint
-from ortools.linear_solver.pywraplp import Solver
+# from ortools.linear_solver.pywraplp import Solver
 
 
 class MobiusTransform(object):
@@ -204,7 +204,8 @@ class GeneralizedContinuedFraction(object):
             except ZeroDivisionError:
                 print("create simple continued fraction finished sooner than expected resulting in finite fraction\n"
                       "this may be due to a rational number given as input, or insufficient precision")
-                return cls(a_, b_)
+                # return cls(a_, b_)
+                raise ZeroDivisionError
             a_.append(floor(rcp) if b_[i] > 0 else ceil(rcp))  # 2) find a_i
             next_transform = MobiusTransform(np.array([[0, b_[i-1]], [1, a_[i]]], dtype=object))  # 3) x = b[i]/x - a[i]
             k = next_transform.inverse() * k
@@ -279,39 +280,39 @@ class EfficientGCF(object):
         return dec(self.B) / dec(self.A)
 
 
-def find_transform(x, y, limit, threshold=1e-7):
-    """
-    find a integer solution to ax + b - cxy - dy = 0
-    this will give us the mobius transform: T(x) = y
-    :param x: numeric constant to check
-    :param y: numeric manipulation of constant
-    :param limit: range to look at
-    :param threshold: optimal solution threshold.
-    :return MobiusTransform in case of success or None.
-    """
-    x1 = x
-    x2 = dec(1.0)
-    x3 = -x*y
-    x4 = -y
-    solver = Solver('mobius', Solver.CBC_MIXED_INTEGER_PROGRAMMING)
-    a = solver.IntVar(-limit, limit, 'a')
-    b = solver.IntVar(-limit, limit, 'b')
-    c = solver.IntVar(-limit, limit, 'c')
-    d = solver.IntVar(-limit, limit, 'd')
-    f = solver.NumVar(0, 1, 'f')
-    solver.Add(f == (a*x1 + b*x2 + c*x3 + d*x4))
-    solver.Add(a*x1 + b >= 1)   # don't except trivial solutions and remove some redundancy
-    solver.Minimize(f)
-    status = solver.Solve()
-    if status == Solver.OPTIMAL:
-        if abs(solver.Objective().Value()) <= threshold:
-            res_a, res_b, res_c, res_d = int(a.solution_value()), int(b.solution_value()),\
-                                         int(c.solution_value()), int(d.solution_value())
-            ret = MobiusTransform(np.array([[res_a, res_b], [res_c, res_d]], dtype=object))
-            ret.normalize()
-            return ret
-    else:
-        return None
+# def find_transform(x, y, limit, threshold=1e-7):
+#     """
+#     find a integer solution to ax + b - cxy - dy = 0
+#     this will give us the mobius transform: T(x) = y
+#     :param x: numeric constant to check
+#     :param y: numeric manipulation of constant
+#     :param limit: range to look at
+#     :param threshold: optimal solution threshold.
+#     :return MobiusTransform in case of success or None.
+#     """
+#     x1 = x
+#     x2 = dec(1.0)
+#     x3 = -x*y
+#     x4 = -y
+#     solver = Solver('mobius', Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+#     a = solver.IntVar(-limit, limit, 'a')
+#     b = solver.IntVar(-limit, limit, 'b')
+#     c = solver.IntVar(-limit, limit, 'c')
+#     d = solver.IntVar(-limit, limit, 'd')
+#     f = solver.NumVar(0, 1, 'f')
+#     solver.Add(f == (a*x1 + b*x2 + c*x3 + d*x4))
+#     solver.Add(a*x1 + b >= 1)   # don't except trivial solutions and remove some redundancy
+#     solver.Minimize(f)
+#     status = solver.Solve()
+#     if status == Solver.OPTIMAL:
+#         if abs(solver.Objective().Value()) <= threshold:
+#             res_a, res_b, res_c, res_d = int(a.solution_value()), int(b.solution_value()),\
+#                                          int(c.solution_value()), int(d.solution_value())
+#             ret = MobiusTransform(np.array([[res_a, res_b], [res_c, res_d]], dtype=object))
+#             ret.normalize()
+#             return ret
+#     else:
+#         return None
 
 
 def check_and_modify_precision(const, transform, const_gen, offset):

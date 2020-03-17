@@ -1,7 +1,7 @@
 from unittest import TestCase
 from mobius import GeneralizedContinuedFraction
 from mobius import SimpleContinuedFraction
-from mobius import find_transform
+# from mobius import find_transform
 from mobius import MobiusTransform
 from mobius import EfficientGCF
 from collections import namedtuple
@@ -170,16 +170,16 @@ class TestContinuedFracture(TestCase):
     def test_weird_stuff(self):
         self.known_data_test(data.data.weird_stuff)
 
-    def test_find_transform(self):
-        cases = [(2*pi/3, pi), (1/zeta(3), zeta(3)), ((8*e + 21) / (7 - 5*e), e), (25 + besseli(1, 2), besseli(1, 2))]
-        with mpmath.workdps(100):
-            for t in cases:
-                with self.subTest(find_transform=sympy.pretty(t[0])):
-                    y_value = lambdify((), t[0], modules="mpmath")()
-                    x_value = lambdify((), t[1], modules="mpmath")()
-                    transformation = find_transform(x_value, y_value, 30)
-                    sym_transform = transformation.sym_expression(t[1])
-                    self.assertEqual(sym_transform, t[0])
+    # def test_find_transform(self):
+    #     cases = [(2*pi/3, pi), (1/zeta(3), zeta(3)), ((8*e + 21) / (7 - 5*e), e), (25 + besseli(1, 2), besseli(1, 2))]
+    #     with mpmath.workdps(100):
+    #         for t in cases:
+    #             with self.subTest(find_transform=sympy.pretty(t[0])):
+    #                 y_value = lambdify((), t[0], modules="mpmath")()
+    #                 x_value = lambdify((), t[1], modules="mpmath")()
+    #                 transformation = find_transform(x_value, y_value, 30)
+    #                 sym_transform = transformation.sym_expression(t[1])
+    #                 self.assertEqual(sym_transform, t[0])
 
     def test_enumeration_over_gcf_hashtable(self):
         hashtable = LHSHashTable(3, [mpmath.pi], 1e-7)

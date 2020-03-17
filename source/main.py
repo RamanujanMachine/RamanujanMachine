@@ -5,7 +5,9 @@ import pickle
 from functools import partial
 import sympy
 from enumerate_over_gcf import multi_core_enumeration_wrapper
+import enumerate_over_signed_rcf
 import series_generators
+import lhs_generators
 import constants    # declares constants as sympy Singeltons, "not" used is intended
 
 g_const_dict = {
@@ -44,6 +46,27 @@ def get_custom_generator(generator_name, args):
         sys.exit(1)
 
 
+def get_lhs_generator(generator_name, args):
+    """
+    LHS enumeration generators. create a new one and add it here to include in API.
+    If program is given an out_dir argument, will pickle and save the enumeration locally for later use.
+    :param generator_name: name of custom generator
+    :param args: program args
+    :return: generator function , number of free coefficients
+    """
+    if generator_name == 'biased_monoms':
+        if args.poly_deg <= 0 or len(args.coeff_lim) != 2 or args.coeff_lim[0] <= 0 or args.coeff_lim[1] <= 0:
+            print("Degree and limits must be positive. Expecting two coefficient limits.")
+            raise AttributeError
+        return lhs_generators.create_biased_monoms(args.poly_deg, args.coeff_lim[0], args.coeff_lim[1])
+    if generator_name == 'standard':
+        if args.poly_deg <= 0 or len(args.coeff_lim) != 1 or args.coeff_lim <= 0:
+            print("Degree and limits must be positive. Expecting a single coefficient limit.")
+            raise AttributeError
+        return lhs_generators.create_std_lhs(args.poly_deg, args.coeff_limit, args.out_dir)
+
+
+
 def get_constant(const_name, args):
     """
     for function constants
@@ -78,8 +101,8 @@ Currently the optional enumeration types are:
 
     subparsers = parser.add_subparsers(help='enumeration type to run')
 
-    gcf_parser = subparsers.add_parser('enumerate_over_gcf')
-    gcf_parser.set_defaults(which='enumerate_over_gcf')
+    gcf_parser = subparsers.add_parser('mitm_rf')
+    gcf_parser.set_defaults(which='mitm_rf')
     gcf_parser.add_argument('-LHS_constant', choices=g_const_dict.keys(), nargs='+',
                             help='constants to search for - initializing the LHS hash table')
     gcf_parser.add_argument('--function_value', type=int,
@@ -101,6 +124,30 @@ Currently the optional enumeration types are:
                             help='(optional) custom generator for {a_n} series. if defined, poly_a_order is ignored')
     gcf_parser.add_argument('--custom_generator_bn', type=str,
                             help='(optional) custom generator for {a_n} series. if defined, poly_b_order is ignored')
+
+    srcf_parser = subparsers.add_parser('massey')
+    srcf_parser.set_defaults(which='massey_rama')
+    srcf_parser.add_argument('-out_dir', type=str,
+                             help='Directory to output binary results or generic enumeration')
+    srcf_parser.add_argument('-mode', choices=['build', 'search'],
+                             help='Build LHS enumerations or find conjectures')
+    #Search-only arguments:
+    srcf_parser.add_argument('-constant', choices=g_const_dict.keys(), nargs=1, default=None, const=None,
+                             help='constant to search for')
+    srcf_parser.add_argument('-cycle_range', type=int, nargs='?', default=None, const=None,
+                             help='Shortest and longest period-length for the signed sequences to search')
+    srcf_parser.add_argument('-depth', type=int, nargs='?', default=None, const=None,
+                             help='In case depth needs to be changed (if insufficient precision error repeats)')
+
+    #Dual-purpose arguments:
+    srcf_parser.add_argument('-lhs', type=str,
+                             help='Name of LHS pattern to build, or path of LHS enumeration to use')
+    srcf_parser.add_argument('-poly_deg', type=int, nargs='?', default=None, const=None,
+                                 help='Maximum degree of numerator and denominator polynomials in the LHS function')
+    srcf_parser.add_argument('-min_deg', type=int, nargs='?', default=None, const=None,
+                             help='Minimum degree from which to search. Useful for breaking up searches.')
+    srcf_parser.add_argument('-coeff_lim', type=int, nargs='?', default=None, const=None,
+                             help='Maximum absolute value for the coefficients of the LHS function')
     return parser
 
 
@@ -142,6 +189,35 @@ def enumerate_over_gcf_main(args):
     return final_results
 
 
+def enumerate_over_signed_rcf_main(args):
+    if args.mode == 'build':
+        if args.lhs is None:
+            print("When building LHS enumeration, a structure must be specified")
+            raise AttributeError
+        lhs = get_lhs_generator(args.LHS_structure, args)
+    if args.mode == 'search':
+        if len(args.cycle_range) != 2 or min(args.poly_deg, args.coeff_lim, min(args.cycle_range)) <= 0 or \
+                args.cycle_range[0] >= args.cycle_range[1]:
+            print("Degree, limits and range must be positive. Cycle range must be two increasing  positive integers.")
+            raise AttributeError
+        res_list, dup_dict = enumerate_over_signed_rcf.search_wrapper(args.constant, args.lhs, args.poly_deg,
+                                                                      args.coeff_lim, args.cycle_range,
+                                                                      args.min_deg, args.depth)
+        if args.out_dir:
+            path = args.out_dir
+        else:
+            path = 'tmp'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        res = '/'.join([path, 'dups_by_value'])
+        dup = '/'.join([path, 'res_list'])
+        with open(res, 'wb') as f:
+            pickle.dump(res_list, f)
+        with open(dup, 'wb') as f:
+            pickle.dump(dup_dict, f)
+
+
+
 def main():
     # Initializes the argument parser to receive inputs from the user
     parser = init_parser()
@@ -149,8 +225,10 @@ def main():
         args = parser.parse_args(['enumerate_over_gcf'])
     else:
         args = parser.parse_args()
-    if args.which == 'enumerate_over_gcf':
+    if args.which == 'mitm_rf':
         enumerate_over_gcf_main(args)
+    elif args.which == 'massey_rama':
+        enumerate_over_signed_rcf_main(args)
 
 
 if __name__ == '__main__':
