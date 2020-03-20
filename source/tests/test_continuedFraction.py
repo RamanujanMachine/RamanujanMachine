@@ -7,6 +7,7 @@ from mobius import EfficientGCF
 from collections import namedtuple
 from series_generators import create_series_from_polynomial, create_series_from_compact_poly
 from series_generators import create_series_from_shift_reg
+from lhs_generators import create_std_lhs
 import massey
 import mpmath
 from sympy import pprint
@@ -204,14 +205,22 @@ class TestContinuedFracture(TestCase):
             self.assertTrue(rhs_sym == 4/pi)
 
     def test_enumerate_signed_RCF(self):
-        enumerator = SignedRcfEnumeration(e, 1, [2, 2], 100, 1)
+        enumerator = SignedRcfEnumeration(sym_constant=e, coefficients_limit=2, cycle_len_range=[2, 2], poly_deg=1,
+                                          no_print=True)
         with mpmath.workdps(self.precision):
-            results = enumerator.find_signed_rcf_conj()
-            results, duplicates = enumerator.verify_results(results)
-            dups = []
-            for key in duplicates.keys():
-                for dup in duplicates[key]:
-                    dups.append(dup)
+            results, duplicates = enumerator.find_hits()
+            flatten = (lambda l: [item for sublist in l for item in sublist])
+            dups = flatten([duplicates[key] for key in duplicates.keys()])
+            adjusted = [[res[0], res[1], list(res[3])] for res in results+dups]
+            self.assertIn([(e/(e-1)), [1, -1], [1, 0, -2, 0, 1]], adjusted)
+
+    def test_create_and_use_generic_lhs(self):
+        generic_lhs = create_std_lhs(poly_deg=1, coefficients_limit=2, out_path=None)
+        enumerator = SignedRcfEnumeration(sym_constant=e, cycle_len_range=[2, 2], custom_enum=generic_lhs, no_print=True)
+        with mpmath.workdps(self.precision):
+            results, duplicates = enumerator.find_hits()
+            flatten = (lambda l: [item for sublist in l for item in sublist])
+            dups = flatten([duplicates[key] for key in duplicates.keys()])
             adjusted = [[res[0], res[1], list(res[3])] for res in results+dups]
             self.assertTrue([(e/(e-1)), [1, -1], [1, 0, -2, 0, 1]] in adjusted)
 
