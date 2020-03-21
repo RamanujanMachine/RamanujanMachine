@@ -6,7 +6,7 @@ from time import time
 from functools import partial
 import sympy
 from enumerate_over_gcf import multi_core_enumeration_wrapper
-import enumerate_over_signed_rcf
+from enumerate_over_signed_rcf import esma_search_wrapper
 import series_generators
 import lhs_generators
 import constants    # declares constants as sympy Singeltons, "not" used is intended
@@ -18,7 +18,7 @@ g_const_dict = {
     'catalan': sympy.Catalan,
     'golden_ratio': sympy.GoldenRatio,
     'khinchin': sympy.S.Khinchin,
-    'euler-mascheroni': sympy.S.EulerGamma,
+    'euler-mascheroni': sympy.EulerGamma,
     'pi-acosh_2': sympy.pi * sympy.acosh(2)
 }
 
@@ -99,7 +99,7 @@ def init_parser():
         
 Currently the optional enumeration types are:
     enumerate_over_gcf    enumerates over different RHS permutation by using 2 series generators for {an} and {bn}
-    ESMA (Extract Signed, Massey Approve)   builds LHS enumeration, and conducts searches using the ESMA algorithm.
+    ESMA                  builds LHS enumeration, and conducts searches using the ESMA algorithm.
         ''')
 
     subparsers = parser.add_subparsers(help='enumeration type to run')
@@ -226,15 +226,15 @@ def enumerate_over_signed_rcf_main(args):
         if len(args.cycle_range) != 2 or args.cycle_range[0] > args.cycle_range[1]:
             print("Cycle range must be two non-decreasing  positive integers.")
             raise ValueError
-        results, _ = enumerate_over_signed_rcf.search_wrapper(constant=g_const_dict[args.constant],
-                                                              custom_enum=custom_lhs,
-                                                              poly_deg=args.poly_deg,
-                                                              coeff_lim=args.coeff_lim,
-                                                              cycle_range=args.cycle_range,
-                                                              min_deg=args.min_deg,
-                                                              depth=args.depth,
-                                                              out_dir=args.out_dir,
-                                                              do_print=(not args.no_print))
+        results, _ = esma_search_wrapper(constant=g_const_dict[args.constant],
+                                         custom_enum=custom_lhs,
+                                         poly_deg=args.poly_deg,
+                                         coeff_lim=args.coeff_lim,
+                                         cycle_range=args.cycle_range,
+                                         min_deg=args.min_deg,
+                                         depth=args.depth,
+                                         out_dir=args.out_dir,
+                                         do_print=(not args.no_print))
         return results
 
 

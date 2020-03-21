@@ -315,7 +315,7 @@ class SignedRcfEnumeration(object):
         return verified_results, recurring_value_results
 
 
-def search_wrapper(constant, custom_enum, poly_deg, coeff_lim,
+def esma_search_wrapper(constant, custom_enum, poly_deg, coeff_lim,
                    cycle_range, min_deg, depth, out_dir=None, do_print=True):
     """
     A Wrapper for searching using ESMA (currently without multiprocessing).

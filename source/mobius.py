@@ -203,7 +203,6 @@ class GeneralizedContinuedFraction(object):
                 rcp = k_rcp(const)  # 1) (**)
             except ZeroDivisionError:
                 print("Finished extraction sooner than expected. Rational input, or insufficient precision.")
-                # return cls(a_, b_)
                 raise ZeroDivisionError
             a_.append(floor(rcp) if b_[i] > 0 else ceil(rcp))  # 2) find a_i
             next_transform = MobiusTransform(np.array([[0, b_[i-1]], [1, a_[i]]], dtype=object))  # 3) x = b[i]/x - a[i]
