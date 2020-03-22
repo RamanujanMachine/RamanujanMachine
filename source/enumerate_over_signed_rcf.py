@@ -8,7 +8,7 @@ from sympy import lambdify, Rational
 from series_generators import create_series_from_shift_reg
 from massey import slow_massey
 from mobius import GeneralizedContinuedFraction, EfficientGCF
-from convergence_rate import  calculate_convergence
+from convergence_rate import calculate_convergence
 
 """
 Some important terminology:
@@ -198,7 +198,7 @@ class SignedRcfEnumeration(object):
                 print("\n{}% of domain searched.".format(round(100 * count / domain_size, 2)))
                 print("{} possible results found".format(len(inter_results)))
                 print("{} minutes passed.\n".format(round((time() - start) / 60, 2)))
-            b_ = (sign_period * ((self.depth // seq_len)+1))  # Concatenate periods to form sequence.
+            b_ = (sign_period * ((self.depth // seq_len) + 1))  # Concatenate periods to form sequence.
             b_ = b_[:self.depth]  # Cut to proper size.
             with mpmath.workdps(self.enum_dps):
                 try:
@@ -231,7 +231,7 @@ class SignedRcfEnumeration(object):
         for res in results:
             var_gen = lambdify((), res[0], modules="mpmath")
             a_ = create_series_from_shift_reg(res[3], res[2], self.verify_depth)
-            b_ = (res[1] * (self.verify_depth // len(res[1])))
+            b_ = (res[1] * ((self.verify_depth // len(res[1])) + 1))
             b_ = b_[:self.verify_depth]
             gcf = EfficientGCF(a_, b_)
             with mpmath.workdps(self.verify_dps):
