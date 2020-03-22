@@ -279,12 +279,11 @@ class SignedRcfEnumeration(object):
                 print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
             else:
                 equation = sympy.Eq(var_sym, gcf.sym_expression(5))
-                print(str(res_num + 1)+'. $$ ' + sympy.latex(equation) + ' $$\n')
+                print('\n\n' + str(res_num + 1) + '. $$ ' + sympy.latex(equation) + ' $$\n')
                 print('$\\{a_n\\}$ LFSR: \\quad \\quad \\quad \\quad \\;' + str(lfsr))
                 print('\n$\\{a_n\\}$ initialization: \\quad \\; ' + str(initials))
                 print('\n$\\{b_n\\}$ Sequence period: \\! ' + str(cycle))
-                print('\nConvergence rate: ${}$ digits per term'.format(mpmath.nstr(rate, 5)))
-                print('\n\n')
+                print('\nConvergence rate: ${}$ digits per term\n\n'.format(mpmath.nstr(rate, 5)))
 
     def find_hits(self):
         """
@@ -343,8 +342,13 @@ def esma_search_wrapper(constant, custom_enum, poly_deg, coeff_lim,
         path = out_dir
         if not os.path.isdir(path):
             os.makedirs(path)
-        res = '/'.join([path, 'recurring_by_value'])
-        dup = '/'.join([path, 'res_list'])
+        dup = '/'.join([path, 'recurring_by_value_0'])
+        res = '/'.join([path, 'res_list_0'])
+        i = 1
+        while os.path.exists(res):
+            res = res[:-1] + str(i)
+            dup = dup[:-1] + str(i)
+            i += 1
         with open(res, 'wb') as f:
             pickle.dump(result_list, f)
         with open(dup, 'wb') as f:
