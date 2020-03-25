@@ -131,7 +131,7 @@ Currently the optional enumeration types are:
     srcf_parser = subparsers.add_parser('ESMA')
     srcf_parser.set_defaults(which='ESMA')
     srcf_parser.add_argument('-out_dir', type=str,
-                             help='Directory to output binary results or generic enumeration')
+                             help='Directory to output binary results or file path for existing generic enumeration')
     srcf_parser.add_argument('-mode', choices=['build', 'search'],
                              help='Build LHS enumerations or find conjectures')
     # Search-only arguments:
@@ -207,7 +207,11 @@ def enumerate_over_signed_rcf_main(args):
             raise ValueError
         print('Building an LHS enumeration:')
         if args.out_dir is not None:
-            print('Saving the pickled enumeration to ' + str(args.out_dir))
+            if os.path.exists(args.out_dir):
+                print("File under given name already exists. Choose different name for output file.")
+                return
+            else:
+                print('Saving the pickled enumeration to ' + str(args.out_dir))
         lhs = get_lhs_generator(args.lhs, args)
         return lhs
     if args.mode == 'search':
