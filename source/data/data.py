@@ -78,6 +78,8 @@ catalan = {
     'catalan2': CFData(2 / (2 * sympy.Catalan - 1),
                        lambda n: n * (3 * n + 7) + 3,
                        lambda n: -2 * (n + 3) * (n + 1) ** 3),
+
+""" more results commented out to shorten unit-tests
     'catalan3': CFData(1 / (2 - 2 * sympy.Catalan),
                        lambda n: 3*n*(n+3) + 7,
                        lambda n: -2 * (n + 1) * (n + 2) ** 3),
@@ -87,18 +89,31 @@ catalan = {
     'catalan5': CFData(16 / (6 * sympy.Catalan - 1),
                        lambda n: n * (3 * n + 11) + 5,
                        lambda n: -2 * ((n + 1) ** 2) * (n+2)*(n+5)),
+"""
     'catalan6': CFData(6 / (-18 * sympy.Catalan + 17),
                        lambda n: n * (3 * n + 13) + 13,
                        lambda n: -2 * ((n + 2) ** 2) * (n+1) * (n+4))
+
 }
 
-new_zeta_findings = {
+new_zeta2_findings = {
     'zeta2_0': CFData(4 / (3 * zeta(2)), lambda n: n * (3 * n + 3) + 1, lambda n: -2 * (n + 1) ** 4 + (n + 1) ** 3),
     'zeta2_1': CFData(4 / zeta(2), lambda n: n * (7 * n + 7) + 2, lambda n: 8 * (n + 1) ** 4),
     'zeta2_2': CFData(3 / zeta(2), lambda n: n * (5 * n + 6) + 2, lambda n: -4 * (n + 1) ** 4 + 2 * (n + 1) ** 3),
     'zeta2_3': CFData(8 / (2 + 3 * zeta(2)), lambda n: n * (3 * n + 3) + 1,
                       lambda n: -2 * (n + 1) ** 4 + 3 * (n + 1) ** 3),
+    'zeta2_4': CFData(8 / (-2 + 3 * zeta(2)),
+                      lambda n: n*(3*n+7)+3,
+                      lambda n: -(n + 1)**2 * (n + 3)*(2*n + 1)),
+    'zeta2_5': CFData(16 / (3 * zeta(2)),
+                      lambda n: n * (3 * n + 7) + 3,
+                      lambda n: -(n + 1)**2 * (n + 3) * (2*n - 1)),
+    'zeta2_6': CFData(8 / (-4 + 3 * zeta(2)),
+                      lambda n: n*(3*n + 11) + 9,
+                      lambda n: -(n + 1)*(n + 3)**2 * (2*n + 1)),
+}
 
+new_zeta3_findings = {
     'zeta3_0': CFData(8 / (7 * zeta(3)), lambda n: n * (n * (6 * n + 9) + 5) + 1, lambda n: -(n + 1) ** 6),
     'zeta3_1': CFData(12 / (7 * zeta(3)), lambda n: n * (n * (10 * n + 15) + 9) + 2, lambda n: -16 * (n + 1) ** 6)
 }

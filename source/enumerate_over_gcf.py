@@ -41,6 +41,20 @@ g_N_verify_terms = 1000
 g_N_initial_search_terms = 32
 
 
+def get_size_of_nested_list(list_of_elem):
+    """ Get number of elements in a nested list"""
+    count = 0
+    # Iterate over the list
+    for elem in list_of_elem:
+        # Check if type of element is list
+        if type(elem) == list:
+            # Again call this function to get the size of this element
+            count += get_size_of_nested_list(elem)
+        else:
+            count += 1
+    return count
+
+
 class LHSHashTable(object):
 
     @staticmethod
@@ -390,7 +404,7 @@ class EnumerateOverGCF(object):
         for r in results:
             an = self.create_an_series(r.rhs_an_poly, 250)
             bn = self.create_bn_series(r.rhs_bn_poly, 250)
-            print_length = max(max(len(r.rhs_an_poly), len(r.rhs_bn_poly)), 5)
+            print_length = max(max(get_size_of_nested_list(r.rhs_an_poly), get_size_of_nested_list(r.rhs_bn_poly)), 5)
             gcf = GeneralizedContinuedFraction(an, bn)
             sym_lhs = self.hash_table.evaluate_sym(r.lhs_key, self.const_sym)
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))

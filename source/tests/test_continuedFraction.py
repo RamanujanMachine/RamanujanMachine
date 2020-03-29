@@ -231,14 +231,29 @@ class TestContinuedFracture(TestCase):
             val_ref = gcf_ref.evaluate()
             self.assertEqual(val, val_ref)
 
-    def test_known_new_zeta_values(self):
+    def test_known_new_zeta2_values(self):
         """
         test new findings of zeta values in data.py
         """
         with mpmath.workdps(2000):
-            for t in data.data.new_zeta_findings:
+            for t in data.data.new_zeta2_findings:
                 with self.subTest(test_constant=t):
-                    d = data.data.new_zeta_findings[t]
+                    d = data.data.new_zeta2_findings[t]
+                    rhs_an = [d.rhs_an(i) for i in range(400)]
+                    rhs_bn = [d.rhs_bn(i) for i in range(400)]
+                    rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
+                    self.compare(d.lhs, rhs, 100)
+                    rate = calculate_convergence(rhs, lambdify((), d.lhs, 'mpmath')())
+                    print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
+
+    def test_known_new_zeta3_values(self):
+        """
+        test new findings of zeta values in data.py
+        """
+        with mpmath.workdps(2000):
+            for t in data.data.new_zeta3_findings:
+                with self.subTest(test_constant=t):
+                    d = data.data.new_zeta3_findings[t]
                     rhs_an = [d.rhs_an(i) for i in range(400)]
                     rhs_bn = [d.rhs_bn(i) for i in range(400)]
                     rhs = GeneralizedContinuedFraction(rhs_an, rhs_bn)
