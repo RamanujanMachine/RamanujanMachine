@@ -12,9 +12,9 @@ import mpmath
 import sympy
 from sympy import lambdify
 from latex import generate_latex
-from series_generators import create_series_from_compact_poly
 from mobius import GeneralizedContinuedFraction, EfficientGCF
 from convergence_rate import calculate_convergence
+from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
 
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
@@ -36,7 +36,9 @@ class GlobalHashTableInstance:
 
 
 # global instance
-hash_instance = GlobalHashTableInstance()
+g_hash_instance = GlobalHashTableInstance()
+g_N_verify_terms = 1000
+g_N_initial_search_terms = 32
 
 
 class LHSHashTable(object):
@@ -149,9 +151,9 @@ class LHSHashTable(object):
         save the hash table as file
         :param name: path for file.
         """
-        if hash_instance.name != name:  # save to global instance.
-            hash_instance.hash = self
-            hash_instance.name = name
+        if g_hash_instance.name != name:  # save to global instance.
+            g_hash_instance.hash = self
+            g_hash_instance.name = name
         with open(name, 'wb') as f:
             pickle.dump(self, f)
 
@@ -162,20 +164,22 @@ class LHSHashTable(object):
         :param name:
         :return:
         """
-        if hash_instance.name == name:
+        if g_hash_instance.name == name:
             print('loading instance')
-            return hash_instance.hash  # hopefully on linux this will not make a copy.
+            return g_hash_instance.hash  # hopefully on linux this will not make a copy.
         else:
             with open(name, 'rb') as f:
                 print('not loading instance')
                 ret = pickle.load(f)
-                hash_instance.hash = ret  # save in instance
-                hash_instance.name = name
+                g_hash_instance.hash = ret  # save in instance
+                g_hash_instance.name = name
         return ret
 
 
 class EnumerateOverGCF(object):
-    def __init__(self, sym_constants, lhs_search_limit, saved_hash=None, an_generator=None, bn_generator=None):
+    def __init__(self, sym_constants, lhs_search_limit, saved_hash=None,
+                 an_generator: SeriesGeneratorClass = CartesianProductAnGenerator(),
+                 bn_generator: SeriesGeneratorClass = CartesianProductBnGenerator()):
         """
         initialize search engine.
         basically, this is a 3 step procedure:
@@ -200,12 +204,13 @@ class EnumerateOverGCF(object):
             except AttributeError:      # Hackish constant
                 self.constants_generator.append(sym_constants[i].mpf_val)
 
-        if an_generator is None:
-            an_generator = create_series_from_compact_poly
-        if bn_generator is None:
-            bn_generator = create_series_from_compact_poly
-        self.create_an_series = an_generator
-        self.create_bn_series = bn_generator
+        self.create_an_series = an_generator.get_function()
+        self.get_an_length = an_generator.get_num_iterations
+        self.get_an_iterator = an_generator.get_iterator
+        self.create_bn_series = bn_generator.get_function()
+        self.get_bn_length = bn_generator.get_num_iterations
+        self.get_bn_iterator = bn_generator.get_iterator
+
         if saved_hash is None:
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
@@ -221,19 +226,12 @@ class EnumerateOverGCF(object):
             self.hash_table = LHSHashTable.load_from(saved_hash)
 
     @staticmethod
-    def __number_of_elements(permutation_options: List[List]):
-        res = 1
-        for l in permutation_options:
-            res *= len(l)
-        return res
-
-    @staticmethod
     def __create_series_list(coefficient_iter: Iterator,
                              series_generator: Callable[[List[int], int], List[int]],
                              filter_from_1=False) -> [List[int], List[int]]:
         coef_list = list(coefficient_iter)
         # create a_n and b_n series fro coefficients.
-        series_list = [series_generator(coef_list[i], 32) for i in range(len(coef_list))]
+        series_list = [series_generator(coef_list[i], g_N_initial_search_terms) for i in range(len(coef_list))]
         # filter out all options resulting in '0' in any series term.
         if filter_from_1:
             series_filter = [0 not in an[1:] for an in series_list]
@@ -284,12 +282,11 @@ class EnumerateOverGCF(object):
             return int(value * key_factor)  # calculate hash key of gcf value
 
         start = time()
-        a_coef_iter = itertools.product(*poly_a)  # all coefficients possibilities for 'a_n'
-        neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
-        b_coef_iter = itertools.chain(itertools.product(*poly_b), itertools.product(*neg_poly_b))
-        num_iterations = 2 * self.__number_of_elements(poly_b) * self.__number_of_elements(poly_a)
-        size_b = 2 * self.__number_of_elements(poly_b)
-        size_a = self.__number_of_elements(poly_a)
+        a_coef_iter = self.get_an_iterator(poly_a)  # all coefficients possibilities for 'a_n'
+        b_coef_iter = self.get_bn_iterator(poly_b)
+        size_b = self.get_bn_length(poly_b)
+        size_a = self.get_an_length(poly_a)
+        num_iterations = size_b * size_a
         key_factor = 1 / self.threshold
 
         counter = 0  # number of permutations passed
@@ -299,7 +296,7 @@ class EnumerateOverGCF(object):
         if size_a > size_b:     # cache {bn} in RAM, iterate over an
             b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
             real_bn_size = len(bn_list)
-            num_iterations = (num_iterations // self.__number_of_elements(poly_b)) * real_bn_size
+            num_iterations = (num_iterations // self.get_bn_length(poly_b)) * real_bn_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
@@ -327,7 +324,7 @@ class EnumerateOverGCF(object):
         else:   # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
             real_an_size = len(an_list)
-            num_iterations = (num_iterations // self.__number_of_elements(poly_a)) * real_an_size
+            num_iterations = (num_iterations // self.get_an_length(poly_a)) * real_an_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
@@ -379,8 +376,8 @@ class EnumerateOverGCF(object):
                 continue
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
-            an = self.create_an_series(r.rhs_an_poly, 1000)
-            bn = self.create_bn_series(r.rhs_bn_poly, 1000)
+            an = self.create_an_series(r.rhs_an_poly, g_N_verify_terms)
+            bn = self.create_bn_series(r.rhs_bn_poly, g_N_verify_terms)
             gcf = EfficientGCF(an, bn)
             val_str = mpmath.nstr(val, 100)
             rhs_str = mpmath.nstr(gcf.evaluate(), 100)

@@ -3,13 +3,12 @@ import sys
 import argparse
 import pickle
 from time import time
-from functools import partial
 import sympy
-from enumerate_over_gcf import multi_core_enumeration_wrapper
+from enumerate_over_gcf import multi_core_enumeration_wrapper, g_N_verify_terms
 from enumerate_over_signed_rcf import esma_search_wrapper
 import series_generators
 import lhs_generators
-import constants    # declares constants as sympy Singeltons, "not" used is intended
+import constants  # declares constants as sympy Singeltons, "not" used is intended
 
 g_const_dict = {
     'zeta': sympy.zeta,
@@ -23,30 +22,84 @@ g_const_dict = {
 }
 
 
-def get_custom_generator(generator_name, args):
+def get_custom_an_generator(args):
     """
-    Hackish custom generators. create a new one and add it here to include in API.
-    :param generator_name: name of custom generator
+    custom {an} generators. create a new one and add it here and include in 'init_custom_an_generator_parser'.
     :param args: program args
     :return: generator function , number of free coefficients
     """
-    if generator_name is None:
-        return None, None
-    elif generator_name == 'zeta_bn':
-        return partial(series_generators.create_zeta_bn_series, args.function_value * 2), 2
-    elif generator_name == 'zeta3_an':
-        return series_generators.zeta3_an_generator, 2
-    elif generator_name == 'zeta5_an':
-        return series_generators.zeta5_an_generator, 3
-    elif generator_name == 'catalan_bn':
-        return series_generators.catalan_bn_generator, 2
-    elif generator_name == 'polynomial_shift1':
-        return series_generators.create_series_from_compact_poly_with_shift1, None
-    elif generator_name == 'polynomial_shift2n1':
-        return series_generators.create_series_from_compact_poly_with_shift2n1, None
+    if args.zeta3_an:
+        return series_generators.CartesianProductZeta3An(), 2
+    elif args.zeta5_an:
+        return series_generators.CartesianProductZeta5An(), 3
+    elif args.polynomial_shift1_an:
+        return series_generators.CartesianProductAnShift1(), None
+    elif args.polynomial_an:
+        return series_generators.CartesianProductAnGenerator(), None
     else:
-        print("unknown custom series generator!")
-        sys.exit(1)
+        return series_generators.CartesianProductAnGenerator(), None
+
+
+def init_custom_an_generator_parser(parser):
+    """ custom series generators """
+    custom_an_group = parser.add_argument_group(
+        'custom {a_n} series generator', 'if defined, poly_a_order is ignored.'
+                                         'if not defined the default polynomial will be used'
+    )
+    custom_an_exclusive = custom_an_group.add_mutually_exclusive_group()
+    custom_an_exclusive.add_argument('--zeta3_an', action='store_true',
+                                     help=series_generators.CartesianProductZeta3An.help_string)
+    custom_an_exclusive.add_argument('--zeta5_an', action='store_true',
+                                     help=series_generators.CartesianProductZeta5An.help_string)
+    custom_an_exclusive.add_argument('--polynomial_shift1_an', action='store_true',
+                                     help=series_generators.CartesianProductAnShift1.help_string)
+    custom_an_exclusive.add_argument('--polynomial_an', action='store_true',
+                                     help=series_generators.CartesianProductAnGenerator.help_string)
+
+
+def get_custom_bn_generator(args):
+    """
+    custom generators. create a new one and add it here and include in API.
+    :param args: program args
+    :return: generator function , number of free coefficients
+    """
+    if args.zeta_bn:
+        if args.function_value is None:
+            print('\'-function_value\' is required when using \'--zeta_bn\'')
+            exit(1)
+        return series_generators.CartesianProductZetaBn(args.function_value), 2
+    elif args.catalan_bn:
+        return series_generators.CartesianProductBnCatalan(), 2
+    elif args.polynomial_shift1_bn:
+        return series_generators.CartesianProductBnShift1(), None
+    elif args.polynomial_shift2n1_bn:
+        return series_generators.CartesianProductBnShift2n1(), None
+    elif args.integer_factorization_bn:
+        return series_generators.IntegerFactor(args.poly_b_order, g_N_verify_terms), 1
+    elif args.polynomial_bn:
+        return series_generators.CartesianProductBnGenerator(), None
+    else:
+        return series_generators.CartesianProductBnGenerator(), None
+
+
+def init_custom_bn_generator_parser(parser):
+    custom_bn_group = parser.add_argument_group(
+        'custom {b_n} series generator', 'if defined, poly_b_order is ignored.'
+                                         ' if not defined the default polynomial will be used'
+    )
+    custom_bn_exclusive = custom_bn_group.add_mutually_exclusive_group()
+    custom_bn_exclusive.add_argument('--zeta_bn', action='store_true',
+                                     help=series_generators.CartesianProductZetaBn.help_string)
+    custom_bn_exclusive.add_argument('--catalan_bn', action='store_true',
+                                     help=series_generators.CartesianProductBnCatalan.help_string)
+    custom_bn_exclusive.add_argument('--polynomial_shift1_bn', action='store_true',
+                                     help=series_generators.CartesianProductBnShift1.help_string)
+    custom_bn_exclusive.add_argument('--polynomial_shift2n1_bn', action='store_true',
+                                     help=series_generators.CartesianProductBnShift2n1.help_string)
+    custom_bn_exclusive.add_argument('--integer_factorization_bn', action='store_true',
+                                     help=series_generators.IntegerFactor.help_string)
+    custom_bn_exclusive.add_argument('--polynomial_bn', action='store_true',
+                                     help=series_generators.CartesianProductBnGenerator.help_string)
 
 
 def get_lhs_generator(generator_name, args):
@@ -67,7 +120,6 @@ def get_lhs_generator(generator_name, args):
             print("Degree and limits must be positive. Expecting a single coefficient limit.")
             raise AttributeError
         return lhs_generators.create_standard_lhs(args.poly_deg, args.coeff_lim, args.out_dir, do_print=(not args.no_print))
-
 
 
 def get_constant(const_name, args):
@@ -98,13 +150,13 @@ def init_parser():
         usage='''main.py <enumeration_type> [<args>]
         
 Currently the optional enumeration types are:
-    enumerate_over_gcf    enumerates over different RHS permutation by using 2 series generators for {an} and {bn}
+    MITM_RF               enumerates over different RHS permutation by using 2 series generators for {an} and {bn}
     ESMA                  builds LHS enumeration, and conducts searches using the ESMA algorithm.
         ''')
 
-    subparsers = parser.add_subparsers(help='enumeration type to run')
+    subparsers = parser.add_subparsers(help='MITM_RF')
 
-    gcf_parser = subparsers.add_parser('enumerate_over_gcf')
+    gcf_parser = subparsers.add_parser('MITM_RF')
     gcf_parser.set_defaults(which='enumerate_over_gcf')
     gcf_parser.add_argument('-lhs_constant', choices=g_const_dict.keys(), nargs='+',
                             help='constants to search for - initializing the LHS hash table')
@@ -123,11 +175,10 @@ Currently the optional enumeration types are:
                             help='the number of free coefficients for {b_n} series')
     gcf_parser.add_argument('-poly_b_coefficient_max', type=int,
                             help='The maximum value for the coefficients of the {b_n} polynomial')
-    gcf_parser.add_argument('-custom_generator_an', type=str,
-                            help='(optional) custom generator for {a_n} series. if defined, poly_a_order is ignored')
-    gcf_parser.add_argument('-custom_generator_bn', type=str,
-                            help='(optional) custom generator for {a_n} series. if defined, poly_b_order is ignored')
+    init_custom_an_generator_parser(gcf_parser)
+    init_custom_bn_generator_parser(gcf_parser)
 
+    """ ESMA PARSER """
     srcf_parser = subparsers.add_parser('ESMA')
     srcf_parser.set_defaults(which='ESMA')
     srcf_parser.add_argument('-out_dir', type=str,
@@ -165,15 +216,13 @@ def enumerate_over_gcf_main(args):
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
     # {an} series generator
-    an_generator, poly_a_order = get_custom_generator(args.custom_generator_an, args)
-    if (an_generator is None) or (poly_a_order is None):
-        print('default series generator is chosen: a_n=n(n(...(c[0]*n + c[1]) + c[2]) + ...) + c[k]')
+    an_generator, poly_a_order = get_custom_an_generator(args)
+    if poly_a_order is None:
         poly_a_order = args.poly_a_order
 
     # {bn} series generator
-    bn_generator, poly_b_order = get_custom_generator(args.custom_generator_bn, args)
-    if (bn_generator is None) or (poly_b_order is None):
-        print('default series generator is chosen: b_n=n(n(...(c[0]*n +ca[1]) + c[2]) + ...) + c[k]')
+    bn_generator, poly_b_order = get_custom_bn_generator(args)
+    if poly_b_order is None:
         poly_b_order = args.poly_b_order
 
     # constants for LHS
