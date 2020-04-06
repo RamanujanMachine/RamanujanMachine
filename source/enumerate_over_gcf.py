@@ -333,7 +333,7 @@ class EnumerateOverGCF(object):
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
-                            print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
+                            print(f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
 
         else:   # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
@@ -360,7 +360,7 @@ class EnumerateOverGCF(object):
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
-                            print(f'passed {counter} out of {num_iterations}. found so far {len(results)} results')
+                            print(f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
 
         if print_results:
             print(f'created results after {time() - start}s')
