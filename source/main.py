@@ -36,6 +36,8 @@ def get_custom_an_generator(args):
         return series_generators.CartesianProductAnShift1(), None
     elif args.polynomial_an:
         return series_generators.CartesianProductAnGenerator(), None
+    elif args.polynomial_an_odd:
+        return series_generators.CartesianProductAnOddOnly(), None
     else:
         return series_generators.CartesianProductAnGenerator(), None
 
@@ -55,6 +57,8 @@ def init_custom_an_generator_parser(parser):
                                      help=series_generators.CartesianProductAnShift1.help_string)
     custom_an_exclusive.add_argument('--polynomial_an', action='store_true',
                                      help=series_generators.CartesianProductAnGenerator.help_string)
+    custom_an_exclusive.add_argument('--polynomial_an_odd', action='store_true',
+                                     help=series_generators.CartesianProductAnOddOnly.help_string)
 
 
 def get_custom_bn_generator(args):

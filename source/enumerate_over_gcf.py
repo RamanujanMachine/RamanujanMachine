@@ -8,6 +8,7 @@ from time import time
 from math import gcd
 from typing import List, Iterator, Callable
 from collections import namedtuple
+from collections.abc import Iterable
 import mpmath
 import sympy
 from sympy import lambdify
@@ -15,6 +16,7 @@ from latex import generate_latex
 from mobius import GeneralizedContinuedFraction, EfficientGCF
 from convergence_rate import calculate_convergence
 from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
+from utils import find_polynomial_series_coefficients
 
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
@@ -47,7 +49,7 @@ def get_size_of_nested_list(list_of_elem):
     # Iterate over the list
     for elem in list_of_elem:
         # Check if type of element is list
-        if type(elem) == list:
+        if isinstance(elem, Iterable):
             # Again call this function to get the size of this element
             count += get_size_of_nested_list(elem)
         else:
@@ -69,7 +71,7 @@ class LHSHashTable(object):
     @staticmethod
     def prod(coefs, consts):
         ret = coefs[0]
-        for i in range(len(consts)):
+        for i in range(len(coefs) - 1):
             ret += consts[i] * coefs[i+1]
         return ret
 
@@ -315,7 +317,7 @@ class EnumerateOverGCF(object):
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
             for a_coef in a_coef_iter:
-                an = self.create_an_series(a_coef, 32)
+                an = self.create_an_series(a_coef, g_N_initial_search_terms)
                 if 0 in an[1:]:     # a_0 is allowed to be 0.
                     counter += real_bn_size
                     print_counter += real_bn_size
@@ -343,7 +345,7 @@ class EnumerateOverGCF(object):
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
             for b_coef in b_coef_iter:
-                bn = self.create_bn_series(b_coef, 32)
+                bn = self.create_bn_series(b_coef, g_N_initial_search_terms)
                 if 0 in bn:
                     counter += real_an_size
                     print_counter += real_an_size
@@ -410,6 +412,23 @@ class EnumerateOverGCF(object):
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
         return ret
 
+    def __get_formatted_polynomials(self, result: Match):
+        def sym_poly(poly_deg, poly_terms):
+            poly = list(reversed(find_polynomial_series_coefficients(poly_deg, poly_terms, 0)))
+            n = sympy.Symbol('n')
+            poly_sym = 0
+            for i in range(len(poly)):
+                poly_sym += n ** i * poly[i]
+            return poly_sym
+
+        an_poly_max_deg = get_size_of_nested_list(result.rhs_an_poly)
+        an = self.create_an_series(result.rhs_an_poly, an_poly_max_deg+1)
+        bn_poly_max_deg = get_size_of_nested_list(result.rhs_bn_poly)
+        bn = self.create_bn_series(result.rhs_bn_poly, bn_poly_max_deg+1)
+        an_eq = sympy.Eq(sympy.Symbol('a(n)'), sym_poly(an_poly_max_deg, an))
+        bn_eq = sympy.Eq(sympy.Symbol('b(n)'), sym_poly(bn_poly_max_deg, bn))
+        return an_eq, bn_eq
+
     def print_results(self, results: List[Match], latex=False, convergence_rate=True):
         """
         pretty print the the results.
@@ -418,12 +437,15 @@ class EnumerateOverGCF(object):
         :param latex: if True print in latex form, otherwise pretty print in unicode.
         """
         formatted_results = self.__get_formatted_results(results)
-        for r in formatted_results:
+        for r, raw_r in zip(formatted_results, results):
             result = sympy.Eq(r.LHS, r.RHS)
             if latex:
                 print(f'$$ {sympy.latex(result)} $$')
+                print(f'$$ {sympy.latex(self.__get_formatted_polynomials(raw_r))} $$\n')
             else:
                 sympy.pprint(result)
+                sympy.pprint(self.__get_formatted_polynomials(raw_r))
+                print('')
             if convergence_rate:
                 with mpmath.workdps(self.verify_dps):
                     rate = calculate_convergence(r.GCF, lambdify((), r.LHS, 'mpmath')())
@@ -489,6 +511,8 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
     :return: results
     """
     for s in range(len(splits_size)):
+        if splits_size[s] == -1:  # no split
+            continue
         if index == (num_cores - 1):  # last processor does more.
             poly_a[s] = poly_a[s][index * splits_size[s]:]
         else:
