@@ -39,8 +39,14 @@ class GlobalHashTableInstance:
 
 # global instance
 g_hash_instance = GlobalHashTableInstance()
-g_N_verify_terms = 1000
-g_N_initial_search_terms = 32
+
+# global hyper-parameters
+g_N_verify_terms = 1000             # number of CF terms to calculate in __refine_results. (verify hits)
+g_N_verify_compare_length = 100     # number of digits to compare in __refine_results. (verify hits)
+g_N_verify_dps = 2000               # working decimal precision in __refine_results. (verify hits)
+g_N_initial_search_terms = 32       # number of CF terms to calculate in __first_enumeration (initial search)
+g_N_initial_key_length = 10         # number of digits to compare in __first_enumeration (initial search)
+g_N_initial_search_dps = 50         # working decimal precision in __refine_results. (verify hits)
 
 
 def get_size_of_nested_list(list_of_elem):
@@ -208,9 +214,9 @@ class EnumerateOverGCF(object):
         :param an_generator: generating function for {an} series
         :param bn_generator: generating function for {bn} series
         """
-        self.threshold = 1e-10  # key length
-        self.enum_dps = 50  # working decimal precision for first enumeration
-        self.verify_dps = 2000  # working decimal precision for validating results.
+        self.threshold = 1 * 10**(-g_N_initial_key_length)  # key length
+        self.enum_dps = g_N_initial_search_dps  # working decimal precision for first enumeration
+        self.verify_dps = g_N_verify_dps  # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constants
         self.constants_generator = []
@@ -395,8 +401,8 @@ class EnumerateOverGCF(object):
             an = self.create_an_series(r.rhs_an_poly, g_N_verify_terms)
             bn = self.create_bn_series(r.rhs_bn_poly, g_N_verify_terms)
             gcf = EfficientGCF(an, bn)
-            val_str = mpmath.nstr(val, 100)
-            rhs_str = mpmath.nstr(gcf.evaluate(), 100)
+            val_str = mpmath.nstr(val, g_N_verify_compare_length)
+            rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
             if val_str == rhs_str:
                 results.append(r)
         return results
