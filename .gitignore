@@ -1,0 +1,3 @@
+source/venv/*
+source/__pycache__/*
+source/tmp_results
