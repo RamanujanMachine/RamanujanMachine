@@ -16,8 +16,8 @@ from latex import generate_latex
 from mobius import GeneralizedContinuedFraction, EfficientGCF
 from convergence_rate import calculate_convergence
 from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
-from utils import find_polynomial_series_coefficients
-
+from utils import find_polynomial_series_coefficients, measure_performance
+from numba import njit, jit
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
@@ -263,6 +263,7 @@ class EnumerateOverGCF(object):
         coef_list = list(itertools.compress(coef_list, series_filter))
         return coef_list, series_list
 
+    @measure_performance
     def __first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
         """
         this is usually the bottleneck of the search.
@@ -280,29 +281,7 @@ class EnumerateOverGCF(object):
         :param print_results: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
-        def efficient_gcf_calculation():
-            """
-            enclosure. a_, b_, and key_factor are used from outer scope.
-            moved here from mobius.EfficientGCF to optimize performance.
-            :return: key for LHS hash table
-            """
-            prev_q = 0
-            q = 1
-            prev_p = 1
-            p = a_[0]
-            for i in range(1, len(a_)):
-                tmp_a = q
-                tmp_b = p
-                q = a_[i] * q + b_[i - 1] * prev_q
-                p = a_[i] * p + b_[i - 1] * prev_p
-                prev_q = tmp_a
-                prev_p = tmp_b
-            if q == 0:  # safety check
-                value = 0
-            else:
-                value = mpmath.mpf(p) / mpmath.mpf(q)
-            return int(value * key_factor)  # calculate hash key of gcf value
-
+        
         start = time()
         a_coef_iter = self.get_an_iterator(poly_a)  # all coefficients possibilities for 'a_n'
         b_coef_iter = self.get_bn_iterator(poly_b)
@@ -332,7 +311,7 @@ class EnumerateOverGCF(object):
                     # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
                     a_ = an
                     b_ = bn_coef[0]
-                    key = efficient_gcf_calculation()  # calculate hash key of gcf value
+                    key = __efficient_gcf_calculation(a_, b_, key_factor)  # calculate hash key of gcf value
 
                     if key in self.hash_table:  # find hits in hash table
                         results.append(Match(key, a_coef, bn_coef[1]))
@@ -341,38 +320,73 @@ class EnumerateOverGCF(object):
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
-                            print(f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+                            speed = counter / (time()-start)
+                            time_remaining = (num_iterations - counter) / speed # time remaining
+                            print(f'Passed {counter:,} out of {num_iterations:,} in {time()-current_epoch_start:.2f}s ({round(100. * counter / num_iterations, 2)}%). Estimated time remaining {time_remaining:.2f}s. Found so far {len(results):,} results.')
+                            start = time() # restart timer
 
         else:   # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
             real_an_size = len(an_list)
             num_iterations = (num_iterations // self.get_an_length(poly_a)) * real_an_size
             if print_results:
-                print(f'created final enumerations filters after {time() - start}s')
-            start = time()
+                print(f'created final enumerations filters after {time() - start:.2f}s')
+            current_epoch_start = start = time()
             for b_coef in b_coef_iter:
                 bn = self.create_bn_series(b_coef, g_N_initial_search_terms)
                 if 0 in bn:
                     counter += real_an_size
                     print_counter += real_an_size
                     continue
-                for an_coef in zip(an_list, a_coef_list):
-                    a_ = an_coef[0]
-                    b_ = bn
-                    key = efficient_gcf_calculation()  # calculate hash key of gcf value
-
-                    if key in self.hash_table:  # find hits in hash table
-                        results.append(Match(key, an_coef[1], b_coef))
-                    if print_results:
-                        counter += 1
-                        print_counter += 1
-                        if print_counter >= 100000:  # print status.
-                            print_counter = 0
-                            print(f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+                counter, print_counter, current_epoch_start = self.__loop_through(an_list, a_coef_list, bn, counter, key_factor, print_results, print_counter, results, b_coef, start, current_epoch_start, num_iterations)
 
         if print_results:
             print(f'created results after {time() - start}s')
         return results
+
+    def __efficient_gcf_calculation(self, a_, b_, key_factor):
+                """
+                a_, b_, and key_factor are used from outer scope.
+                moved here from mobius.EfficientGCF to optimize performance.
+                :return: key for LHS hash table
+                """
+                prev_q = 0
+                q = 1
+                prev_p = 1
+                p = a_[0]
+                for i in range(1, len(a_)):
+                    tmp_a = q
+                    tmp_b = p
+                    q = a_[i] * q + b_[i - 1] * prev_q
+                    p = a_[i] * p + b_[i - 1] * prev_p
+                    prev_q = tmp_a
+                    prev_p = tmp_b
+                if q == 0:  # safety check
+                    value = 0
+                else:
+                    value = mpmath.mpf(p) / mpmath.mpf(q)
+                return int(value * key_factor)  # calculate hash key of gcf value
+
+    @jit
+    def __loop_through(self, an_list, a_coef_list, bn, counter, key_factor, print_results, print_counter, results, b_coef, start, current_epoch_start, num_iterations):
+        for an_coef in zip(an_list, a_coef_list):
+            a_ = an_coef[0]
+            b_ = bn
+            key = self.__efficient_gcf_calculation(a_, b_, key_factor)  # calculate hash key of gcf value
+
+            if key in self.hash_table:  # find hits in hash table
+                results.append(Match(key, an_coef[1], b_coef))
+            if print_results:
+                counter += 1
+                print_counter += 1
+                if print_counter >= 100000:  # print status.
+                    print_counter = 0
+                    # speed = counter / (time()-start)
+                    # time_remaining = (num_iterations - counter) / speed # time remaining
+                    # print(f'Passed {counter:,} out of {num_iterations:,} in {time()-current_epoch_start:.2f}s ({round(100. * counter / num_iterations, 2)}%). Estimated time remaining {time_remaining:.2f}s. Found so far {len(results):,} results.')
+                    # current_epoch_start = time() # restart timer
+
+        return counter, print_counter, current_epoch_start
 
     def __refine_results(self, intermediate_results: List[Match], print_results=True):
         """
