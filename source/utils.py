@@ -1,5 +1,22 @@
 import numpy as np
 from typing import List
+import time
+
+# Measures the amount of time the function takes to run in milliseconds in order to check improvements
+def measure_performance(func):
+    """
+    measure the duration of a function execution in milliseconds in order to improve its performance
+
+    Use as decorator by adding @measure_performance before functions you wish to test
+    """
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        func_value = func(*args, **kwargs)
+        end = time.time()
+        print(f"{func.__name__} elapsed (with compilation) = {1000 * (end - start)} ms")
+        return func_value
+
+    return wrapper
 
 
 def find_polynomial_series_coefficients(poly_deg, lead_terms: List[int], starting_n=0):
