@@ -44,6 +44,15 @@ python main.py MITM_RF -lhs_constant catalan pi-acosh_2 -num_of_cores 1 -lhs_sea
 
 Now that you've seen how to run the basic code, you can tweak the search parameters and find new conjectures of your own. To do so, please read the next section.
 
+## Testing for performance
+
+To test the speed of various modules or functions, use the inherent cProfile module in python, e.g.
+```python
+python -m cProfile -s tottime main.py MITM_RF -lhs_constant e -num_of_cores 1 -lhs_search_limit 5 -poly_a_order 3 -poly_a_coefficient_max 10 -poly_b_order 2 -poly_b_coefficient_max 10
+```
+
+In addition, we added a decorator called measure_performance under utils that allows you to test individual functions by adding @measure_performance before the function definition.
+
 ### Tweaking the search parameters
 
 Under the source/ folder,
