@@ -367,7 +367,6 @@ class EnumerateOverGCF(object):
                     value = mpmath.mpf(p) / mpmath.mpf(q)
                 return int(value * key_factor)  # calculate hash key of gcf value
 
-    @jit
     def __loop_through(self, an_list, a_coef_list, bn, counter, key_factor, print_results, print_counter, results, b_coef, start, current_epoch_start, num_iterations):
         for an_coef in zip(an_list, a_coef_list):
             a_ = an_coef[0]
@@ -381,10 +380,11 @@ class EnumerateOverGCF(object):
                 print_counter += 1
                 if print_counter >= 100000:  # print status.
                     print_counter = 0
-                    # speed = counter / (time()-start)
-                    # time_remaining = (num_iterations - counter) / speed # time remaining
-                    # print(f'Passed {counter:,} out of {num_iterations:,} in {time()-current_epoch_start:.2f}s ({round(100. * counter / num_iterations, 2)}%). Estimated time remaining {time_remaining:.2f}s. Found so far {len(results):,} results.')
-                    # current_epoch_start = time() # restart timer
+                    speed = counter / (time()-start)
+                    time_remaining = (num_iterations - counter) / speed # time remaining
+                    # Numba print: print('Passed ' + str(counter) + ' out of ' + str(num_iterations) + ' in ' + str(round(time()-current_epoch_start, 2)) + 's (' + str(round(100. * counter / num_iterations, 2)) + '%). Estimated time remaining ' + str(time_remaining) + 's. Found so far ' + str(len(results)) + ' results.')
+                    print(f'Passed {counter:,} out of {num_iterations:,} in {time()-current_epoch_start:.2f}s ({round(100. * counter / num_iterations, 2)}%). Estimated time remaining {time_remaining:.2f}s. Found so far {len(results):,} results.')
+                    current_epoch_start = time() # restart timer
 
         return counter, print_counter, current_epoch_start
 
