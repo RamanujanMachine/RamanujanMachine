@@ -366,13 +366,15 @@ class IntegerFactor(SeriesGeneratorClass):
         ]
 
     def get_num_iterations(self, poly_options):
-        poly_real = [i for i in poly_options[0] if i != 0] + [-i for i in poly_options[0] if i != 0]
+        # poly_real = [i for i in poly_options[0] if i != 0] + [-i for i in poly_options[0] if i != 0]
+        poly_real = [-i for i in poly_options[0] if i != 0]  # disable positive options for bn
         return binomial(len(self.factors) + self.deg - 1, self.deg) * len(poly_real)
 
     def get_iterator(self, poly_options):
         factor_indices = [i for i in range(len(self.factors))]
         permutations = combinations_with_replacement(factor_indices, self.deg)
-        poly_real = [i for i in poly_options[0] if i != 0] + [-i for i in poly_options[0] if i != 0]
+        # poly_real = [i for i in poly_options[0] if i != 0] + [-i for i in poly_options[0] if i != 0]
+        poly_real = [-i for i in poly_options[0] if i != 0]  # disable positive options for bn
         return product(poly_real, permutations)
 
     def get_function(self):

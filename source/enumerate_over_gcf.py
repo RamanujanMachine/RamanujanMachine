@@ -116,7 +116,10 @@ class LHSHashTable(object):
 
         # create enumeration lists
         constants = [mpmath.mpf(1)] + const_vals
-        coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
+
+        # coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
+        coefs_top = [range(-search_range, search_range + 1)] + [range(1)] * (len(constants) - 1)  # fix zero on all constant coefficients in numerator
+
         coefs_bottom = [range(-search_range, search_range + 1)] * len(constants)  # denominator range
         coef_top_list = itertools.product(*coefs_top)
         coef_bottom_list = list(itertools.product(*coefs_bottom))
@@ -564,7 +567,8 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
             EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash)
 
     if manual_splits_size is None:  # naive work split
-        manual_splits_size = [len(poly_a[0]) // num_cores]
+        # manual_splits_size = [len(poly_a[0]) // num_cores]
+        manual_splits_size = [-1, len(poly_a[1]) // num_cores]  # split second coefficient
 
     # built function for processes
     func = partial(multi_core_enumeration, sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores,
