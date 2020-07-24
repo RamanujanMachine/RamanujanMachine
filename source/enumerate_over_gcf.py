@@ -13,40 +13,24 @@ import mpmath
 import sympy
 from sympy import lambdify
 from latex import generate_latex
+from pybloom_live import BloomFilter
+import diskhash
 from mobius import GeneralizedContinuedFraction, EfficientGCF
 from convergence_rate import calculate_convergence
 from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
 from utils import find_polynomial_series_coefficients
 
-
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 
-
-class GlobalHashTableInstance:
-    def __init__(self):
-        """
-        python processes don't share memory. so when using multiprocessing the hash table will be duplicated.
-        to try and avoid this, we initiate a global instance of the hash table.
-        hopefully this will useful when running on linux (taking advantage of Copy On Write).
-        this has not been tested yet on linux.
-        on windows it has no effect when multiprocessing.
-        """
-        self.hash = {}
-        self.name = ''
-
-
-# global instance
-g_hash_instance = GlobalHashTableInstance()
-
 # global hyper-parameters
-g_N_verify_terms = 1000             # number of CF terms to calculate in __refine_results. (verify hits)
-g_N_verify_compare_length = 100     # number of digits to compare in __refine_results. (verify hits)
-g_N_verify_dps = 2000               # working decimal precision in __refine_results. (verify hits)
-g_N_initial_search_terms = 32       # number of CF terms to calculate in __first_enumeration (initial search)
-g_N_initial_key_length = 10         # number of digits to compare in __first_enumeration (initial search)
-g_N_initial_search_dps = 50         # working decimal precision in __refine_results. (verify hits)
+g_N_verify_terms = 1000  # number of CF terms to calculate in __refine_results. (verify hits)
+g_N_verify_compare_length = 100  # number of digits to compare in __refine_results. (verify hits)
+g_N_verify_dps = 2000  # working decimal precision in __refine_results. (verify hits)
+g_N_initial_search_terms = 32  # number of CF terms to calculate in __first_enumeration (initial search)
+g_N_initial_key_length = 10  # number of digits to compare in __first_enumeration (initial search)
+g_N_initial_search_dps = 50  # working decimal precision in __refine_results. (verify hits)
 
 
 def get_size_of_nested_list(list_of_elem):
@@ -78,22 +62,32 @@ class LHSHashTable(object):
     def prod(coefs, consts):
         ret = coefs[0]
         for i in range(len(coefs) - 1):
-            ret += consts[i] * coefs[i+1]
+            ret += consts[i] * coefs[i + 1]
         return ret
 
+    @staticmethod
+    def lhs_hash_name_to_shelve_name(name):
+        return name.split('.')[0] + '.dht'
+
+    def _get_by_key(self, key):
+        vals = self.s.lookup(str(key))
+        if vals is None:
+            raise KeyError
+        return vals[:self.n_constants], vals[-self.n_constants:]
+
     def evaluate(self, key, constant_values):
-        c_top, c_bottom = self.s[key]
+        c_top, c_bottom = self._get_by_key(key)
         numerator = self.prod(c_top, constant_values)
         denominator = self.prod(c_bottom, constant_values)
         return mpmath.mpf(numerator) / mpmath.mpf(denominator)
 
     def evaluate_sym(self, key, symbols):
-        c_top, c_bottom = self.s[key]
+        c_top, c_bottom = self._get_by_key(key)
         numerator = self.prod(c_top, symbols)
         denominator = self.prod(c_bottom, symbols)
         return numerator / denominator
 
-    def __init__(self, search_range, const_vals, threshold) -> None:
+    def __init__(self, name, search_range, const_vals, threshold) -> None:
         """
         hash table for LHS. storing values in the form of (a + b*x_1 + c*x_2 + ...)/(d + e*x_1 + f*x_2 + ...)
         :param search_range: range for value coefficient values
@@ -102,33 +96,46 @@ class LHSHashTable(object):
                             -log_{10}(threshold) digits of the value. for example, if threshold is 1e-10 - then the
                             first 10 digits will be used as the hash key.
         """
-        self.s = {}
+        self.name = name
+        self.s_name = self.lhs_hash_name_to_shelve_name(name)
         self.threshold = threshold
         key_factor = 1 / threshold
+        self.max_key_length = len(str(int(key_factor))) * 2
 
         # create blacklist of rational numbers
-        coef_possibilities = [i for i in range(-search_range, search_range+1)]
+        coef_possibilities = [i for i in range(-search_range, search_range + 1)]
         coef_possibilities.remove(0)
         rational_options = itertools.product(*[coef_possibilities, coef_possibilities])
         rational_keys = [int((mpmath.mpf(ratio[0]) / ratio[1]) * key_factor) for ratio in rational_options]
         # +-1 for numeric errors in keys.
-        rational_blacklist = set(rational_keys + [x+1 for x in rational_keys] + [x-1 for x in rational_keys])
+        rational_blacklist = set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
 
         # create enumeration lists
         constants = [mpmath.mpf(1)] + const_vals
+        self.n_constants = len(constants)
         coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
         coefs_bottom = [range(-search_range, search_range + 1)] * len(constants)  # denominator range
         coef_top_list = itertools.product(*coefs_top)
         coef_bottom_list = list(itertools.product(*coefs_bottom))
-        denominator_list = [sum(i*j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
+        denominator_list = [sum(i * j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
 
         # start enumerating
+        t = time()
+
+        self.max_capacity = (search_range * 2 + 1) ** (len(constants) * 2)
+        s = diskhash.StructHash(fname=self.s_name,
+                                keysize=self.max_key_length,
+                                structformat='ll' * self.n_constants,
+                                mode='rw')
+        self.bloom = BloomFilter(capacity=self.max_capacity, error_rate=0.05)
+        count = 0
         for c_top in coef_top_list:
             numerator = sum(i * j for (i, j) in zip(c_top, constants))
             if numerator <= 0:  # allow only positive values to avoid duplication
                 continue
             numerator = mpmath.mpf(numerator)
             for c_bottom, denominator in zip(coef_bottom_list, denominator_list):
+                count += 1
                 if reduce(gcd, c_top + c_bottom) != 1:  # avoid expressions that can be simplified easily
                     continue
                 if denominator == 0:  # don't store inf or nan.
@@ -138,7 +145,15 @@ class LHSHashTable(object):
                 if key in rational_blacklist:
                     # don't store values that are independent of the constant (e.g. rational numbers)
                     continue
-                self.s[key] = c_top, c_bottom  # store key and transformation
+                str_key = str(key)
+                s.insert(str_key, *[*c_top, *c_bottom])  # store key and transformation
+                self.bloom.add(str_key)
+
+        self.s = diskhash.StructHash(fname=self.s_name,
+                                     keysize=self.max_key_length,
+                                     structformat='ll' * self.n_constants,
+                                     mode='r')
+        print('initializing LHS dict: {}'.format(time() - t))
 
     def __contains__(self, item):
         """
@@ -146,7 +161,7 @@ class LHSHashTable(object):
         :param item: key
         :return: true of false
         """
-        return item in self.s
+        return item in self.bloom
 
     def __getitem__(self, item):
         """
@@ -154,7 +169,7 @@ class LHSHashTable(object):
         :param item: key
         :return: transformation of x
         """
-        return self.s[item]
+        return self._get_by_key(item)
 
     def __eq__(self, other):
         """
@@ -165,18 +180,14 @@ class LHSHashTable(object):
         if type(other) != type(self):
             return False
         ret = self.threshold == other.threshold
-        ret &= sorted(self.s.keys()) == sorted(other.s.keys())
+        # ret &= sorted(self.s.keys()) == sorted(other.s.keys())
         return ret
 
-    def save(self, name):
+    def save(self):
         """
         save the hash table as file
-        :param name: path for file.
         """
-        if g_hash_instance.name != name:  # save to global instance.
-            g_hash_instance.hash = self
-            g_hash_instance.name = name
-        with open(name, 'wb') as f:
+        with open(self.name, 'wb') as f:
             pickle.dump(self, f)
 
     @classmethod
@@ -186,20 +197,19 @@ class LHSHashTable(object):
         :param name:
         :return:
         """
-        if g_hash_instance.name == name:
-            print('loading instance')
-            return g_hash_instance.hash  # hopefully on linux this will not make a copy.
-        else:
-            with open(name, 'rb') as f:
-                print('not loading instance')
-                ret = pickle.load(f)
-                g_hash_instance.hash = ret  # save in instance
-                g_hash_instance.name = name
+        with open(name, 'rb') as f:
+            print('not loading instance')
+            ret = pickle.load(f)
+        ret.s_name = ret.lhs_hash_name_to_shelve_name(name)
+        ret.s = diskhash.StructHash(fname=ret.s_name,
+                                    keysize=ret.max_key_length,
+                                    structformat='ll' * ret.n_constants,
+                                    mode='r')
         return ret
 
 
 class EnumerateOverGCF(object):
-    def __init__(self, sym_constants, lhs_search_limit, saved_hash=None,
+    def __init__(self, sym_constants, lhs_search_limit, saved_hash,
                  an_generator: SeriesGeneratorClass = CartesianProductAnGenerator(),
                  bn_generator: SeriesGeneratorClass = CartesianProductBnGenerator()):
         """
@@ -214,7 +224,7 @@ class EnumerateOverGCF(object):
         :param an_generator: generating function for {an} series
         :param bn_generator: generating function for {bn} series
         """
-        self.threshold = 1 * 10**(-g_N_initial_key_length)  # key length
+        self.threshold = 1 * 10 ** (-g_N_initial_key_length)  # key length
         self.enum_dps = g_N_initial_search_dps  # working decimal precision for first enumeration
         self.verify_dps = g_N_verify_dps  # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
@@ -223,7 +233,7 @@ class EnumerateOverGCF(object):
         for i in range(len(sym_constants)):
             try:
                 self.constants_generator.append(lambdify((), sym_constants[i], modules="mpmath"))
-            except AttributeError:      # Hackish constant
+            except AttributeError:  # Hackish constant
                 self.constants_generator.append(sym_constants[i].mpf_val)
 
         self.create_an_series = an_generator.get_function()
@@ -233,17 +243,18 @@ class EnumerateOverGCF(object):
         self.get_bn_length = bn_generator.get_num_iterations
         self.get_bn_iterator = bn_generator.get_iterator
 
-        if saved_hash is None:
+        if not os.path.isfile(saved_hash):
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
                 constants = [const() for const in self.constants_generator]
                 start = time()
                 self.hash_table = LHSHashTable(
+                    saved_hash,
                     self.lhs_limit,
                     constants,  # constant
                     self.threshold)  # length of key
                 end = time()
-                print(f'that took {end-start}s')
+                print(f'that took {end - start}s')
         else:
             self.hash_table = LHSHashTable.load_from(saved_hash)
 
@@ -280,6 +291,7 @@ class EnumerateOverGCF(object):
         :param print_results: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
+
         def efficient_gcf_calculation():
             """
             enclosure. a_, b_, and key_factor are used from outer scope.
@@ -315,7 +327,7 @@ class EnumerateOverGCF(object):
         print_counter = counter
         results = []  # list of intermediate results
 
-        if size_a > size_b:     # cache {bn} in RAM, iterate over an
+        if size_a > size_b:  # cache {bn} in RAM, iterate over an
             b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
             real_bn_size = len(bn_list)
             num_iterations = (num_iterations // self.get_bn_length(poly_b)) * real_bn_size
@@ -324,7 +336,7 @@ class EnumerateOverGCF(object):
             start = time()
             for a_coef in a_coef_iter:
                 an = self.create_an_series(a_coef, g_N_initial_search_terms)
-                if 0 in an[1:]:     # a_0 is allowed to be 0.
+                if 0 in an[1:]:  # a_0 is allowed to be 0.
                     counter += real_bn_size
                     print_counter += real_bn_size
                     continue
@@ -341,9 +353,10 @@ class EnumerateOverGCF(object):
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
-                            print(f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+                            print(
+                                f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
 
-        else:   # cache {an} in RAM, iterate over bn
+        else:  # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
             real_an_size = len(an_list)
             num_iterations = (num_iterations // self.get_an_length(poly_a)) * real_an_size
@@ -368,7 +381,8 @@ class EnumerateOverGCF(object):
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
-                            print(f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+                            print(
+                                f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
 
         if print_results:
             print(f'created results after {time() - start}s')
@@ -394,7 +408,7 @@ class EnumerateOverGCF(object):
                 val = self.hash_table.evaluate(r.lhs_key, constant_vals)
                 if mpmath.isinf(val) or mpmath.isnan(val):  # safety
                     continue
-            except ZeroDivisionError:
+            except (ZeroDivisionError, KeyError) as e:
                 continue
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
@@ -428,9 +442,9 @@ class EnumerateOverGCF(object):
             return poly_sym
 
         an_poly_max_deg = get_size_of_nested_list(result.rhs_an_poly)
-        an = self.create_an_series(result.rhs_an_poly, an_poly_max_deg+1)
+        an = self.create_an_series(result.rhs_an_poly, an_poly_max_deg + 1)
         bn_poly_max_deg = get_size_of_nested_list(result.rhs_bn_poly)
-        bn = self.create_bn_series(result.rhs_bn_poly, bn_poly_max_deg+1)
+        bn = self.create_bn_series(result.rhs_bn_poly, bn_poly_max_deg + 1)
         an_eq = sympy.Eq(sympy.Symbol('a(n)'), sym_poly(an_poly_max_deg, an))
         bn_eq = sympy.Eq(sympy.Symbol('b(n)'), sym_poly(bn_poly_max_deg, bn))
         return an_eq, bn_eq
@@ -482,7 +496,7 @@ class EnumerateOverGCF(object):
             end = time()
             if print_results:
                 print(f'that took {end - start}s')
-        with mpmath.workdps(self.verify_dps*2):
+        with mpmath.workdps(self.verify_dps * 2):
             if print_results:
                 print('starting to verify results...')
             start = time()
@@ -553,11 +567,11 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
     :return: results.
     """
     print(locals())
-    if (saved_hash is None) or (not os.path.isfile(saved_hash)):
+    if not os.path.isfile(saved_hash):
         if saved_hash is None:  # if no hash table given, build it here.
             saved_hash = 'tmp_hash.p'
-        enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit)
-        enumerator.hash_table.save(saved_hash)  # and save it to file (and global instance)
+        enumerator = EnumerateOverGCF(sym_constant, lhs_search_limit, saved_hash)
+        enumerator.hash_table.save()  # and save it to file (and global instance)
     else:
         if os.name != 'nt':  # if creation of process uses 'Copy On Write' we can benefit from it by
             # loading the hash table to memory here.
@@ -574,7 +588,8 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
         results = func(0)
         print(f'found {len(results)} results!')
     else:
-        print('starting Multi-Processor search.\n\tNOTICE- intermediate status prints will be done by processor 0 only.')
+        print(
+            'starting Multi-Processor search.\n\tNOTICE- intermediate status prints will be done by processor 0 only.')
         pool = multiprocessing.Pool(num_cores)
         partial_results = pool.map(func, range(num_cores))
         results = []
