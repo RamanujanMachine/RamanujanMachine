@@ -4,7 +4,8 @@ import argparse
 import pickle
 from time import time
 import sympy
-from enumerate_over_gcf import multi_core_enumeration_wrapper, g_N_verify_terms
+from enumerate_over_gcf import multi_core_enumeration_wrapper
+from GCFEnumerator import g_N_verify_terms
 from enumerate_over_signed_rcf import esma_search_wrapper
 import series_generators
 import lhs_generators

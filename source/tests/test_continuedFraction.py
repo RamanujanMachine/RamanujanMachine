@@ -19,7 +19,8 @@ from sympy import lambdify
 from sympy import zeta
 import sympy
 import data.data
-from enumerate_over_gcf import EnumerateOverGCF, LHSHashTable
+from EnumerateOverGCF import EnumerateOverGCF
+from LHSHashTable import LHSHashTable
 from enumerate_over_signed_rcf import SignedRcfEnumeration
 from convergence_rate import calculate_convergence
 
