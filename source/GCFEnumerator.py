@@ -34,6 +34,19 @@ g_N_initial_key_length = 10  # number of digits to compare in __first_enumeratio
 g_N_initial_search_dps = 50  # working decimal precision in __refine_results. (verify hits)
 
 
+def get_size_of_nested_list(list_of_elem):
+    """ Get number of elements in a nested list"""
+    count = 0
+    # Iterate over the list
+    for elem in list_of_elem:
+        # Check if type of element is list
+        if isinstance(elem, Iterable):
+            # Again call this function to get the size of this element
+            count += get_size_of_nested_list(elem)
+        else:
+            count += 1
+    return count
+
 class GCFEnumerator(object):
     def __init__(self, sym_constants, lhs_search_limit, saved_hash,
                  an_generator: SeriesGeneratorClass = CartesianProductAnGenerator(),

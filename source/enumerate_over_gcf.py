@@ -22,19 +22,6 @@ from utils import find_polynomial_series_coefficients
 from LHSHashTable import LHSHashTable
 from GCFEnumerator import GCFEnumerator
 
-def get_size_of_nested_list(list_of_elem):
-    """ Get number of elements in a nested list"""
-    count = 0
-    # Iterate over the list
-    for elem in list_of_elem:
-        # Check if type of element is list
-        if isinstance(elem, Iterable):
-            # Again call this function to get the size of this element
-            count += get_size_of_nested_list(elem)
-        else:
-            count += 1
-    return count
-
 
 def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores, splits_size,
                            create_an_series=None, create_bn_series=None, index=0):
