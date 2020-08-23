@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import mpmath
 from mpmath import mpf as dec
-from mobius import GeneralizedContinuedFraction
+from ramanujan.utils.mobius import GeneralizedContinuedFraction
 
 
 def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=False, title=''):

@@ -267,8 +267,8 @@ class EfficientGCF(object):
         for i in range(1, len(a_)):
             tmp_a = self.A
             tmp_b = self.B
-            self.A = a_[i] * self.A + b_[i - 1] * self.prev_A
-            self.B = a_[i] * self.B + b_[i - 1] * self.prev_B
+            self.A = a_[i] * self.A + b_[i] * self.prev_A
+            self.B = a_[i] * self.B + b_[i] * self.prev_B
             self.prev_A = tmp_a
             self.prev_B = tmp_b
 

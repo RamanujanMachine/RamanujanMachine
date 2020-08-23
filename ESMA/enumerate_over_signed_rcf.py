@@ -5,10 +5,10 @@ import itertools
 import mpmath
 import sympy
 from sympy import lambdify, Rational
-from series_generators import create_series_from_shift_reg
 from massey import slow_massey
-from mobius import GeneralizedContinuedFraction, EfficientGCF
-from convergence_rate import calculate_convergence
+from EfficientGCF import EfficientGCF
+from ramanujan.utils.mobius import GeneralizedContinuedFraction
+from ramanujan.utils.convergence_rate import calculate_convergence
 
 """
 Some important terminology:
@@ -27,6 +27,29 @@ def clear_end_zeros(items):
     """
     while items[-1] == 0:
         items.pop()
+
+
+def create_series_from_shift_reg(poly_a, initials, n):
+    """
+    this is the reversed action to the massey algorithm.
+    given a polynomial P as shift register, generate a series.
+    series follows the following rule: A[n] = sum i=1 to deg(P): -(P[i] * A[n-i])
+    :param poly_a: P(x) : same format as the massey algorithm output (expects poly_a[0] = 1)
+    :param initials: starting conditions of the series. must be of length = deg(P)
+    :param n: number of values to generate
+    :return: series with length of n
+    """
+    assert ((len(poly_a) - len(initials)) == 1), 'There should be deg(poly) initial conditions'
+    assert (len(poly_a) > 0) and (poly_a[0] == 1), 'Illegal polynomial - first coefficient must be 1'
+    a_ = []
+    for i in range(len(initials)):
+        a_.append(initials[i])
+    for i in range(len(a_), n):
+        a_i = 0
+        for j in range(1, len(poly_a)):
+            a_i -= poly_a[j] * a_[i - j]
+        a_.append(a_i)
+    return a_
 
 
 class SignedRcfEnumeration(object):
