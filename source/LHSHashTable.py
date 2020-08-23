@@ -11,45 +11,6 @@ from functools import partial, reduce
 from math import gcd
 
 class LHSHashTable(object):
-    @staticmethod
-    def are_co_prime(integers):
-        common = integers[-1]
-        for x in integers:
-            common = gcd(x, common)
-            if common == 1:
-                return True
-        return False
-
-    @staticmethod
-    def prod(coefs, consts):
-        ret = coefs[0]
-        for i in range(len(coefs) - 1):
-            ret += consts[i] * coefs[i + 1]
-        return ret
-
-    @staticmethod
-    def lhs_hash_name_to_shelve_name(name):
-        return name.split('.')[0] + '.db'
-
-    def _get_by_key(self, key):
-        if self.s is None:
-            with open(self.s_name, 'rb') as f:
-                self.s = pickle.load(f)
-        vals = struct.unpack(self.pack_format, self.s[str(key)])
-        return vals[:self.n_constants], vals[-self.n_constants:]
-
-    def evaluate(self, key, constant_values):
-        c_top, c_bottom = self._get_by_key(key)
-        numerator = self.prod(c_top, constant_values)
-        denominator = self.prod(c_bottom, constant_values)
-        return mpmath.mpf(numerator) / mpmath.mpf(denominator)
-
-    def evaluate_sym(self, key, symbols):
-        c_top, c_bottom = self._get_by_key(key)
-        numerator = self.prod(c_top, symbols)
-        denominator = self.prod(c_bottom, symbols)
-        return numerator / denominator
-
     def __init__(self, name, search_range, const_vals, threshold) -> None:
         """
         hash table for LHS. storing values in the form of (a + b*x_1 + c*x_2 + ...)/(d + e*x_1 + f*x_2 + ...)
@@ -140,13 +101,33 @@ class LHSHashTable(object):
         ret = self.threshold == other.threshold
         # ret &= sorted(self.s.keys()) == sorted(other.s.keys())
         return ret
+        
+    @staticmethod
+    def are_co_prime(integers):
+        common = integers[-1]
+        for x in integers:
+            common = gcd(x, common)
+            if common == 1:
+                return True
+        return False
 
-    def save(self):
-        """
-        save the hash table as file
-        """
-        with open(self.name, 'wb') as f:
-            pickle.dump(self, f)
+    @staticmethod
+    def prod(coefs, consts):
+        ret = coefs[0]
+        for i in range(len(coefs) - 1):
+            ret += consts[i] * coefs[i + 1]
+        return ret
+
+    @staticmethod
+    def lhs_hash_name_to_shelve_name(name):
+        return name.split('.')[0] + '.db'
+
+    def _get_by_key(self, key):
+        if self.s is None:
+            with open(self.s_name, 'rb') as f:
+                self.s = pickle.load(f)
+        vals = struct.unpack(self.pack_format, self.s[str(key)])
+        return vals[:self.n_constants], vals[-self.n_constants:]
 
     @classmethod
     def load_from(cls, name):
@@ -159,3 +140,22 @@ class LHSHashTable(object):
             ret = pickle.load(f)
         ret.s_name = ret.lhs_hash_name_to_shelve_name(name)
         return ret
+
+    def evaluate(self, key, constant_values):
+        c_top, c_bottom = self._get_by_key(key)
+        numerator = self.prod(c_top, constant_values)
+        denominator = self.prod(c_bottom, constant_values)
+        return mpmath.mpf(numerator) / mpmath.mpf(denominator)
+
+    def evaluate_sym(self, key, symbols):
+        c_top, c_bottom = self._get_by_key(key)
+        numerator = self.prod(c_top, symbols)
+        denominator = self.prod(c_bottom, symbols)
+        return numerator / denominator
+
+    def save(self):
+        """
+        save the hash table as file
+        """
+        with open(self.name, 'wb') as f:
+            pickle.dump(self, f)
