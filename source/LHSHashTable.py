@@ -11,6 +11,13 @@ from functools import partial, reduce
 from math import gcd
 
 class LHSHashTable(object):
+    """
+    This class makes use of bloom filters and a regular representation to improve performance 
+    LHS items are stored in their "raw" form on a file called self.s_name. This file is only 
+    opened when needed, to reduce memory consumptions.
+    The bloom filter is always loaded and used to determine if a LHS value is in the database
+    all LHS possibilities within computed domain
+    """
     def __init__(self, name, search_range, const_vals, threshold) -> None:
         """
         hash table for LHS. storing values in the form of (a + b*x_1 + c*x_2 + ...)/(d + e*x_1 + f*x_2 + ...)
@@ -20,22 +27,53 @@ class LHSHashTable(object):
                             -log_{10}(threshold) digits of the value. for example, if threshold is 1e-10 - then the
                             first 10 digits will be used as the hash key.
         """
+        
         self.name = name
         self.s_name = self.lhs_hash_name_to_shelve_name(name)
         self.threshold = threshold
         key_factor = 1 / threshold
         self.max_key_length = len(str(int(key_factor))) * 2
-
-        self._create_ratoinal_numbers_blacklist(search_range)
-        self._create_enumeration_lists()
+        constants = [mpmath.mpf(1)] + const_vals
+        self.n_constants = len(constants)
         
-        # start enumerating
-        t = time()
-
-        self.max_capacity = (search_range * 2 + 1) ** (len(constants) * 2)
-        self.s = {}
+        self.max_capacity = (search_range * 2 + 1) ** (self.n_constants * 2)
         self.pack_format = 'll' * self.n_constants
+        self.lhs_possibilities = {}
         self.bloom = BloomFilter(capacity=self.max_capacity, error_rate=0.05)
+        
+        start_time = time()
+
+        self._enumerate_lhs_domain(constants, search_range, key_factor)
+
+        with open(self.s_name, 'wb') as f:
+            pickle.dump(self.lhs_possibilities, f)
+        
+        # after init, deleteing self.lhs_possibilities to free unused memory 
+        self.lhs_possibilities = None
+        print('initializing LHS dict: {}'.format(time() - start_time))
+
+
+    def _create_ratoinal_numbers_blacklist(self, search_range, key_factor):
+        # LHS numerator and denominator might cancel out and LHS will be rational. 
+        # Those options are not relevant  
+        coef_possibilities = [i for i in range(-search_range, search_range + 1)]
+        coef_possibilities.remove(0)
+        rational_options = itertools.product(coef_possibilities, coef_possibilities)
+        rational_keys = [int((mpmath.mpf(num) / denom) * key_factor) for num, denom in rational_options]
+        # +-1 for numeric errors in keys.
+        return set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
+
+    def _enumerate_lhs_domain(self, constants, search_range, key_factor):
+        rational_blacklist = self._create_ratoinal_numbers_blacklist(search_range, key_factor)
+
+        # Create enumeration lists
+        coefs_top = [range(-search_range, search_range + 1)] * self.n_constants  # numerator range
+        coefs_bottom = [range(-search_range, search_range + 1)] * self.n_constants  # denominator range
+        coef_top_list = itertools.product(*coefs_top)
+        coef_bottom_list = list(itertools.product(*coefs_bottom))
+        denominator_list = [sum(i * j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
+
+        # start enumerating
         for c_top in coef_top_list:
             numerator = sum(i * j for (i, j) in zip(c_top, constants))
             if numerator <= 0:  # allow only positive values to avoid duplication
@@ -48,17 +86,13 @@ class LHSHashTable(object):
                     continue
                 val = numerator / denominator
                 key = int(val * key_factor)
-                if key in self.rational_blacklist:
+                if key in rational_blacklist:
                     # don't store values that are independent of the constant (e.g. rational numbers)
                     continue
                 str_key = str(key)
-                self.s[str_key] = struct.pack(self.pack_format, *[*c_top, *c_bottom])  # store key and transformation
+                self.lhs_possibilities[str_key] = struct.pack(self.pack_format, *[*c_top, *c_bottom])  # store key and transformation
                 self.bloom.add(str_key)
-
-        with open(self.s_name, 'wb') as f:
-            pickle.dump(self.s, f)
-        self.s = None
-        print('initializing LHS dict: {}'.format(time() - t))
+    
 
     def __contains__(self, item):
         """
@@ -85,25 +119,13 @@ class LHSHashTable(object):
         if type(other) != type(self):
             return False
         ret = self.threshold == other.threshold
-        # ret &= sorted(self.s.keys()) == sorted(other.s.keys())
+        # ret &= sorted(self.lhs_possibilities.keys()) == sorted(other.s.keys())
         return ret
 
-    def _create_ratoinal_numbers_blacklist(self, search_range):
-        coef_possibilities = [i for i in range(-search_range, search_range + 1)]
-        coef_possibilities.remove(0)
-        rational_options = itertools.product(coef_possibilities, coef_possibilities)
-        rational_keys = [int((mpmath.mpf(num) / denom) * key_factor) for num, denom in rational_options]
-        # +-1 for numeric errors in keys.
-        self.rational_blacklist = set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
+    @staticmethod
+    def lhs_hash_name_to_shelve_name(name):
+        return name.split('.')[0] + '.db'
 
-    def _create_enumeration_lists(self):
-        constants = [mpmath.mpf(1)] + const_vals
-        self.n_constants = len(constants)
-        coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
-        self.coefs_bottom = [range(-search_range, search_range + 1)] * len(constants)  # denominator range
-        self.coef_top_list = itertools.product(*coefs_top)
-        self.coef_bottom_list = list(itertools.product(*coefs_bottom))
-        self.denominator_list = [sum(i * j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
 
     @staticmethod
     def are_co_prime(integers):
@@ -126,11 +148,11 @@ class LHSHashTable(object):
         return name.split('.')[0] + '.db'
 
     def _get_by_key(self, key):
-        if self.s is None:
-            with open(self.s_name, 'rb') as f:
-                self.s = pickle.load(f)
-        vals = struct.unpack(self.pack_format, self.s[str(key)])
-        return vals[:self.n_constants], vals[-self.n_constants:]
+        with open(self.s_name, 'rb') as f:
+            if self.lhs_possibilities is None:
+                    self.lhs_possibilities = pickle.load(f)
+            vals = struct.unpack(self.pack_format, self.lhs_possibilities[str(key)])
+            return vals[:self.n_constants], vals[-self.n_constants:]
 
     @classmethod
     def load_from(cls, name):
