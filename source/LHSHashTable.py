@@ -29,8 +29,8 @@ class LHSHashTable(object):
         # create blacklist of rational numbers
         coef_possibilities = [i for i in range(-search_range, search_range + 1)]
         coef_possibilities.remove(0)
-        rational_options = itertools.product(*[coef_possibilities, coef_possibilities])
-        rational_keys = [int((mpmath.mpf(ratio[0]) / ratio[1]) * key_factor) for ratio in rational_options]
+        rational_options = itertools.product(coef_possibilities, coef_possibilities)
+        rational_keys = [int((mpmath.mpf(nume) / denom) * key_factor) for num, denom in rational_options]
         # +-1 for numeric errors in keys.
         rational_blacklist = set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
 
@@ -101,7 +101,7 @@ class LHSHashTable(object):
         ret = self.threshold == other.threshold
         # ret &= sorted(self.s.keys()) == sorted(other.s.keys())
         return ret
-        
+
     @staticmethod
     def are_co_prime(integers):
         common = integers[-1]
