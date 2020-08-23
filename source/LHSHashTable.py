@@ -26,23 +26,9 @@ class LHSHashTable(object):
         key_factor = 1 / threshold
         self.max_key_length = len(str(int(key_factor))) * 2
 
-        # create blacklist of rational numbers
-        coef_possibilities = [i for i in range(-search_range, search_range + 1)]
-        coef_possibilities.remove(0)
-        rational_options = itertools.product(coef_possibilities, coef_possibilities)
-        rational_keys = [int((mpmath.mpf(nume) / denom) * key_factor) for num, denom in rational_options]
-        # +-1 for numeric errors in keys.
-        rational_blacklist = set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
-
-        # create enumeration lists
-        constants = [mpmath.mpf(1)] + const_vals
-        self.n_constants = len(constants)
-        coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
-        coefs_bottom = [range(-search_range, search_range + 1)] * len(constants)  # denominator range
-        coef_top_list = itertools.product(*coefs_top)
-        coef_bottom_list = list(itertools.product(*coefs_bottom))
-        denominator_list = [sum(i * j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
-
+        self._create_ratoinal_numbers_blacklist(search_range)
+        self._create_enumeration_lists()
+        
         # start enumerating
         t = time()
 
@@ -62,7 +48,7 @@ class LHSHashTable(object):
                     continue
                 val = numerator / denominator
                 key = int(val * key_factor)
-                if key in rational_blacklist:
+                if key in self.rational_blacklist:
                     # don't store values that are independent of the constant (e.g. rational numbers)
                     continue
                 str_key = str(key)
@@ -101,6 +87,23 @@ class LHSHashTable(object):
         ret = self.threshold == other.threshold
         # ret &= sorted(self.s.keys()) == sorted(other.s.keys())
         return ret
+
+    def _create_ratoinal_numbers_blacklist(self, search_range):
+        coef_possibilities = [i for i in range(-search_range, search_range + 1)]
+        coef_possibilities.remove(0)
+        rational_options = itertools.product(coef_possibilities, coef_possibilities)
+        rational_keys = [int((mpmath.mpf(num) / denom) * key_factor) for num, denom in rational_options]
+        # +-1 for numeric errors in keys.
+        self.rational_blacklist = set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
+
+    def _create_enumeration_lists(self):
+        constants = [mpmath.mpf(1)] + const_vals
+        self.n_constants = len(constants)
+        coefs_top = [range(-search_range, search_range + 1)] * len(constants)  # numerator range
+        self.coefs_bottom = [range(-search_range, search_range + 1)] * len(constants)  # denominator range
+        self.coef_top_list = itertools.product(*coefs_top)
+        self.coef_bottom_list = list(itertools.product(*coefs_bottom))
+        self.denominator_list = [sum(i * j for (i, j) in zip(c_bottom, constants)) for c_bottom in coef_bottom_list]
 
     @staticmethod
     def are_co_prime(integers):
