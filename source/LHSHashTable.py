@@ -89,8 +89,13 @@ class LHSHashTable(object):
                 if key in rational_blacklist:
                     # don't store values that are independent of the constant (e.g. rational numbers)
                     continue
+                
+                # TODO - consider using collections 
                 str_key = str(key)
-                self.lhs_possibilities[str_key] = struct.pack(self.pack_format, *[*c_top, *c_bottom])  # store key and transformation
+                if str_key in self.lhs_possibilities:
+                    self.lhs_possibilities[str_key].append(struct.pack(self.pack_format, *[*c_top, *c_bottom]))  # store key and transformation
+                else:
+                    self.lhs_possibilities[str_key] = [struct.pack(self.pack_format, *[*c_top, *c_bottom])]  # store key and transformation
                 self.bloom.add(str_key)
     
 
@@ -151,8 +156,11 @@ class LHSHashTable(object):
         with open(self.s_name, 'rb') as f:
             if self.lhs_possibilities is None:
                     self.lhs_possibilities = pickle.load(f)
-            vals = struct.unpack(self.pack_format, self.lhs_possibilities[str(key)])
-            return vals[:self.n_constants], vals[-self.n_constants:]
+            values = []
+            for lhs_match in self.lhs_possibilities[str(key)]:
+                vals = struct.unpack(self.pack_format, lhs_match)
+                values.append([vals[:self.n_constants], vals[-self.n_constants:]])
+            return values
 
     @classmethod
     def load_from(cls, name):
@@ -167,16 +175,25 @@ class LHSHashTable(object):
         return ret
 
     def evaluate(self, key, constant_values):
-        c_top, c_bottom = self._get_by_key(key)
-        numerator = self.prod(c_top, constant_values)
-        denominator = self.prod(c_bottom, constant_values)
-        return mpmath.mpf(numerator) / mpmath.mpf(denominator)
+        stored_values = self._get_by_key(key)
+        evaluated_values = []
+        
+        for c_top, c_bottom in stored_values:
+            numerator = self.prod(c_top, constant_values)
+            denominator = self.prod(c_bottom, constant_values)
+            evaluated_values.append(mpmath.mpf(numerator) / mpmath.mpf(denominator))
+
+        return evaluated_values
 
     def evaluate_sym(self, key, symbols):
-        c_top, c_bottom = self._get_by_key(key)
-        numerator = self.prod(c_top, symbols)
-        denominator = self.prod(c_bottom, symbols)
-        return numerator / denominator
+        stored_values = self._get_by_key(key)
+        evaluated_values = []
+
+        for c_top, c_bottom in stored_values:
+            numerator = self.prod(c_top, symbols)
+            denominator = self.prod(c_bottom, symbols)
+            evaluated_values.append(numerator / denominator)
+        return evaluated_values
 
     def save(self):
         """
