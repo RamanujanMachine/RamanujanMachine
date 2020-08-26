@@ -10,10 +10,9 @@ class CachedPolySeriesCalculator(object):
 	def __init__(self):
 		self.cached_items = {}
 
-	def iter_series_items(self, poly_coef, max_iters=1000):
+	def iter_series_items(self, poly_coef, max_iters=1000, start_n=0):
 		if poly_coef in self.cached_items:
 			for i in self.cached_items[poly_coef]:
-				print('pulled from cache')
 				yield i
 		else:
 			self.cached_items[poly_coef] = []
