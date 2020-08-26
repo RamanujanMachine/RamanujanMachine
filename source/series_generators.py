@@ -168,6 +168,21 @@ class CartesianProductZeta3An(CartesianProductAnGenerator):
         super().__init__()
         self.function = zeta3_an_generator
 
+class CartesianProductZeta3N6Bn(CartesianProductBnGenerator):
+    help_string = 'Generator3[x0_] := {x_[0]*n^6}.\n' \
+                  'this was found to be useful for zeta3 searches'
+
+    def __init__(self):
+        super().__init__()
+        self.function = zeta3_bn_n6_generator
+
+class CartesianProductZeta3N6ComplementAn(CartesianProductAnGenerator):
+    help_string = 'Generator3[x3_, x0_] := {(2*i - 1) * (i * (i - 1) + (x_[0]**2 + 1)/2)}.\n' \
+                  'this was found to be useful for zeta3 searches'
+
+    def __init__(self):
+        super().__init__()
+        self.function = zeta3_an_n6_complement_generator
 
 class CartesianProductZeta5An(CartesianProductAnGenerator):
     help_string = 'Generator5[x5_, x3_, x0_] := {x0, 2 *x0 + x3 - 2 *x5, 3*x3 - 5*x5, 2*x3, 5*x5, 2*x5}'
@@ -236,6 +251,20 @@ def create_series_from_compact_poly(poly_a, n):
         ret.append(tmp)
     return ret
 
+def iter_series_items_from_compact_poly(poly_coef, max_runs, start_n=1):
+    """
+    create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
+    :param poly_a: a[k] coefficients
+    :param n: length of series
+    :return: a list of numbers in series
+    """
+    for i in range(start_n, max_runs):
+        tmp = 0
+        for c in poly_coef:
+            tmp *= i
+            tmp += c
+        yield tmp
+
 
 def create_series_from_compact_poly_with_shift1(poly_a, n):
     """
@@ -298,6 +327,33 @@ def zeta3_an_generator(x_, n):
     ret = []
     for i in range(n):
         res = x_[0] + (2 * x_[0] + x_[1]) * i + 3 * x_[1] * (i ** 2) + 2 * x_[1] * (i ** 3)
+        ret.append(res)
+    return ret
+
+
+def zeta3_bn_n6_generator(x_, n):
+    """
+    Generator3_n6[x3_, x0_] := {x0, 2 *x0 + x3, 3*x3, 2*x3}
+    :param x_:
+    :param n:
+    """
+    ret = []
+    for i in range(1, n):
+        res = x_[0] * (i ** 6) 
+        ret.append(res)
+    return ret
+
+
+def zeta3_an_n6_complement_generator(x_, n):
+    """
+    Generator3_n6[x3_, x0_] := {x0, 2 *x0 + x3, 3*x3, 2*x3}
+    :param x_:
+    :param n:
+    """
+    print("="*20)
+    ret = []
+    for i in range(n):
+        res = (2*i - 1) * (i * (i - 1) + (x_[0]**2 + 1)/2)
         ret.append(res)
     return ret
 
