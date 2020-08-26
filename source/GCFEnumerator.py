@@ -23,6 +23,7 @@ from LHSHashTable import LHSHashTable
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
+RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 
 # global hyper-parameters
@@ -238,26 +239,36 @@ class GCFEnumerator(object):
         counter = 0
         n_iterations = len(intermediate_results)
         constant_vals = [const() for const in self.constants_generator]
-        for r in intermediate_results:
+        for res in intermediate_results:
             counter += 1
             if (counter % 50) == 0 and print_results:
                 print('passed {} permutations out of {}. found so far {} matches'.format(
                     counter, n_iterations, len(results)))
             try:
-                val = self.hash_table.evaluate(r.lhs_key, constant_vals)
-                if mpmath.isinf(val) or mpmath.isnan(val):  # safety
+                all_matches = self.hash_table.evaluate(res.lhs_key, constant_vals)
+                # check if all values enounter are not inf or nan
+                # TODO - consider mpmath.isnormal(val)
+                if not all([ not (mpmath.isinf(val) or mpmath.isnan(val)) for val in all_matches]):  # safety
+                    print('Something wicked happend!')
+                    print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
                     continue
             except (ZeroDivisionError, KeyError) as e:
                 continue
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
-            an = self.create_an_series(r.rhs_an_poly, g_N_verify_terms)
-            bn = self.create_bn_series(r.rhs_bn_poly, g_N_verify_terms)
+            an = self.create_an_series(res.rhs_an_poly, g_N_verify_terms)
+            bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
             gcf = EfficientGCF(an, bn)
-            val_str = mpmath.nstr(val, g_N_verify_compare_length)
             rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
-            if val_str == rhs_str:
-                results.append(r)
+            
+            for i, val in enumerate(all_matches):
+                val_str = mpmath.nstr(val, g_N_verify_compare_length)
+                if val_str == rhs_str:
+                    # This patch is ment to allow support for multiple matches for an
+                    # LHS key, i will later be used to determind which item in the LHS dict
+                    # was matched
+                    results.append(RefinedMatch(*res, i))
+
         return results
 
     def __get_formatted_results(self, results: List[Match]) -> List[FormattedResult]:
@@ -267,7 +278,7 @@ class GCFEnumerator(object):
             bn = self.create_bn_series(r.rhs_bn_poly, 250)
             print_length = max(max(get_size_of_nested_list(r.rhs_an_poly), get_size_of_nested_list(r.rhs_bn_poly)), 5)
             gcf = GeneralizedContinuedFraction(an, bn)
-            sym_lhs = self.hash_table.evaluate_sym(r.lhs_key, self.const_sym)
+            sym_lhs = self.hash_table.evaluate_sym(r.lhs_key, self.const_sym)[r.lhs_match_idx]
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
         return ret
 
