@@ -20,6 +20,8 @@ from convergence_rate import calculate_convergence
 from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
 from utils import find_polynomial_series_coefficients
 from LHSHashTable import LHSHashTable
+from cached_poly_series_calculator import CachedPolySeriesCalculator
+from series_generators import iter_series_items_from_compact_poly
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
@@ -167,25 +169,30 @@ class GCFEnumerator(object):
         print_counter = counter
         results = []  # list of intermediate results
 
+        # we want to loop through all available combinations
+        # if we'll just iter through both items, each internal series will be calculated
+        # again for each external loop. Caching the smaller one and using it as the internal loop
+        print(f'size a - {size_a} | size b - {size_b}')
         if size_a > size_b:  # cache {bn} in RAM, iterate over an
-            b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
-            real_bn_size = len(bn_list)
+            print('caching bn')
+            bn_family = CachedPolySeriesCalculator()
             num_iterations = (num_iterations // self.get_bn_length(poly_b)) * real_bn_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
+
             for a_coef in a_coef_iter:
                 an = self.create_an_series(a_coef, g_N_initial_search_terms)
                 if 0 in an[1:]:  # a_0 is allowed to be 0.
                     counter += real_bn_size
                     print_counter += real_bn_size
                     continue
-                for bn_coef in zip(bn_list, b_coef_list):
-                    # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
+                for b_coef in b_coef_iter:
+                    bn = bn_family.iter_series_items(b_coef, g_N_initial_search_terms)
                     a_ = an
-                    b_ = bn_coef[0]
+                    b_ = [i for i in bn]
+                    # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
                     key = efficient_gcf_calculation()  # calculate hash key of gcf value
-
                     if key in self.hash_table:  # find hits in hash table
                         results.append(Match(key, a_coef, bn_coef[1]))
                     if print_results:
@@ -197,8 +204,9 @@ class GCFEnumerator(object):
                                 f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
 
         else:  # cache {an} in RAM, iterate over bn
-            a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
-            real_an_size = len(an_list)
+            print('caching an')
+            an_family = CachedPolySeriesCalculator()
+            real_an_size = size_a
             num_iterations = (num_iterations // self.get_an_length(poly_a)) * real_an_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
@@ -209,13 +217,15 @@ class GCFEnumerator(object):
                     counter += real_an_size
                     print_counter += real_an_size
                     continue
-                for an_coef in zip(an_list, a_coef_list):
-                    a_ = an_coef[0]
+                a_coef_iter = self.get_an_iterator(poly_a)
+                for a_coef in a_coef_iter:
+                    an = an_family.iter_series_items(a_coef, g_N_initial_search_terms)
+                    a_ = [i for i in an]
                     b_ = bn
                     key = efficient_gcf_calculation()  # calculate hash key of gcf value
 
                     if key in self.hash_table:  # find hits in hash table
-                        results.append(Match(key, an_coef[1], b_coef))
+                        results.append(Match(key, a_coef, b_coef))
                     if print_results:
                         counter += 1
                         print_counter += 1
@@ -226,6 +236,7 @@ class GCFEnumerator(object):
 
         if print_results:
             print(f'created results after {time() - start}s')
+            print(f'found {len(results)} results')
         return results
 
     def __refine_results(self, intermediate_results: List[Match], print_results=True):
