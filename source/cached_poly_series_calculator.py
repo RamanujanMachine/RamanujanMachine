@@ -17,13 +17,16 @@ class CachedPolySeriesCalculator(object):
 		with another start_n, caching will break
 		2. start_n
 		"""
+		cache = []
 		if poly_coef in self.cached_items:
-			yield from self.cached_items[poly_coef][:max_iters]
+			cache = self.cached_items[poly_coef]
+			yield from cache[:max_iters]
 		else:
 			self.cached_items[poly_coef] = []
 
-		itered_so_far = len(self.cached_items[poly_coef])
+		itered_so_far = len(cache)
 		remaining_iters = max_iters - itered_so_far
+		
 		for i in iter_series_items_from_compact_poly(poly_coef, max_runs=max_iters, 
 			start_n=itered_so_far):
 			self.cached_items[poly_coef].append(i)
