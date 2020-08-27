@@ -21,12 +21,14 @@ from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator,
 from utils import find_polynomial_series_coefficients
 from LHSHashTable import LHSHashTable
 from cached_poly_series_calculator import CachedPolySeriesCalculator
+from cached_series_calculator import CachedSeriesCalculator
 from series_generators import iter_series_items_from_compact_poly
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
+IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef iter_counter')
 
 # global hyper-parameters
 g_N_verify_terms = 1000  # number of CF terms to calculate in __refine_results. (verify hits)
@@ -116,6 +118,59 @@ class GCFEnumerator(object):
         coef_list = list(itertools.compress(coef_list, series_filter))
         return coef_list, series_list
 
+    def __gcf_series_cached_iters(self, poly_a_domain, poly_b_domain, max_iters=100):
+        """
+        Calculates the approximate size for each domain, and using a nested loop over both
+        domains return two iterators for each combination of a and b polynomials, where
+        the smaller one is cached using CachedPolySeriesCalculator. 
+        Also returns metadata about the execution stage, according to print_interval_percentage. 
+        if its not the time to print stats, will return none for this variable 
+        """
+        size_a = self.get_an_length(poly_a_domain)
+        size_b = self.get_bn_length(poly_b_domain)
+
+        iter_counter = 0
+        # # we want to loop through all available combinations
+        # if we'll just iter through both items, each internal series will be calculated
+        # again for each external loop. Caching the smaller one and using it as the internal loop
+        print(f'size a - {size_a} | size b - {size_b}')
+
+        # This distinction is meant to make sure that we cache the smaller group
+        if size_a > size_b:  # cache {bn} in RAM, iterate over an
+            print('caching bn')
+            bn_family = CachedPolySeriesCalculator()
+
+            # external loop is not cached, and is for an
+            a_coef_iter = self.get_an_iterator(poly_a_domain)
+            for a_coef in a_coef_iter:
+                an_cache = CachedSeriesCalculator(a_coef)
+
+                b_coef_iter = self.get_bn_iterator(poly_b_domain)
+                for b_coef, bn_iterator in bn_family.iter_family(a_coef_iter, max_iters):
+                    iter_counter += 1
+                    yield \
+                        an_cache.iter_series_items(max_iters), \
+                        bn_iterator, \
+                        IterationMetadata(a_coef, b_coef, iter_counter)
+
+        else:  # cache {an} in RAM, iterate over bn
+            print('caching an')
+            an_family = CachedPolySeriesCalculator()
+
+            # external loop is not cached, and is for an
+            b_coef_iter = self.get_bn_iterator(poly_b_domain)
+            for b_coef in b_coef_iter:
+                bn_cache = CachedSeriesCalculator(b_coef)
+
+                a_coef_iter = self.get_an_iterator(poly_a_domain)
+                for a_coef, an_iterator in an_family.iter_family(a_coef_iter, max_iters):
+                    iter_counter += 1
+                    yield \
+                        an_iterator, \
+                        bn_cache.iter_series_items(max_iters), \
+                        IterationMetadata(a_coef, b_coef, iter_counter)
+
+
     def __first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
         """
         this is usually the bottleneck of the search.
@@ -133,7 +188,6 @@ class GCFEnumerator(object):
         :param print_results: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
-
         def efficient_gcf_calculation():
             """
             enclosure. a_, b_, and key_factor are used from outer scope.
@@ -157,83 +211,34 @@ class GCFEnumerator(object):
                 value = mpmath.mpf(p) / mpmath.mpf(q)
             return int(value * key_factor)  # calculate hash key of gcf value
 
-        start = time()
-        a_coef_iter = self.get_an_iterator(poly_a)  # all coefficients possibilities for 'a_n'
-        b_coef_iter = self.get_bn_iterator(poly_b)
-        size_b = self.get_bn_length(poly_b)
         size_a = self.get_an_length(poly_a)
+        size_b = self.get_bn_length(poly_b)
         num_iterations = size_b * size_a
+
+        start = time()
         key_factor = 1 / self.threshold
 
-        counter = 0  # number of permutations passed
-        print_counter = counter
-        results = []  # list of intermediate results
+        results = []  # list of intermediate results        
 
-        # we want to loop through all available combinations
-        # if we'll just iter through both items, each internal series will be calculated
-        # again for each external loop. Caching the smaller one and using it as the internal loop
-        print(f'size a - {size_a} | size b - {size_b}')
-        if size_a > size_b:  # cache {bn} in RAM, iterate over an
-            print('caching bn')
-            bn_family = CachedPolySeriesCalculator()
-            num_iterations = (num_iterations // self.get_bn_length(poly_b)) * real_bn_size
-            if print_results:
-                print(f'created final enumerations filters after {time() - start}s')
-            start = time()
+        for an_iter, bn_iter, metadata in self.__gcf_series_cached_iters(poly_a, poly_b, g_N_initial_search_terms):
+            a_ = [i for i in an_iter]
+            b_ = [i for i in bn_iter]
 
-            for a_coef in a_coef_iter:
-                an = self.create_an_series(a_coef, g_N_initial_search_terms)
-                if 0 in an[1:]:  # a_0 is allowed to be 0.
-                    counter += real_bn_size
-                    print_counter += real_bn_size
-                    continue
-                for b_coef in b_coef_iter:
-                    bn = bn_family.iter_series_items(b_coef, g_N_initial_search_terms)
-                    a_ = an
-                    b_ = [i for i in bn]
-                    # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
-                    key = efficient_gcf_calculation()  # calculate hash key of gcf value
-                    if key in self.hash_table:  # find hits in hash table
-                        results.append(Match(key, a_coef, bn_coef[1]))
-                    if print_results:
-                        counter += 1
-                        print_counter += 1
-                        if print_counter >= 100000:  # print status.
-                            print_counter = 0
-                            print(
-                                f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+            if 0 in a_[1:] or 0 in b_:  # a_0 is allowed to be 0.
+                continue
+            
+            # import ipdb
+            # ipdb.set_trace()
+            key = efficient_gcf_calculation()
+            if key in self.hash_table:  # find hits in hash table
+                results.append(Match(key, metadata.an_coef, metadata.bn_coef))
 
-        else:  # cache {an} in RAM, iterate over bn
-            print('caching an')
-            an_family = CachedPolySeriesCalculator()
-            real_an_size = size_a
-            num_iterations = (num_iterations // self.get_an_length(poly_a)) * real_an_size
-            if print_results:
-                print(f'created final enumerations filters after {time() - start}s')
-            start = time()
-            for b_coef in b_coef_iter:
-                bn = self.create_bn_series(b_coef, g_N_initial_search_terms)
-                if 0 in bn:
-                    counter += real_an_size
-                    print_counter += real_an_size
-                    continue
-                a_coef_iter = self.get_an_iterator(poly_a)
-                for a_coef in a_coef_iter:
-                    an = an_family.iter_series_items(a_coef, g_N_initial_search_terms)
-                    a_ = [i for i in an]
-                    b_ = bn
-                    key = efficient_gcf_calculation()  # calculate hash key of gcf value
-
-                    if key in self.hash_table:  # find hits in hash table
-                        results.append(Match(key, a_coef, b_coef))
-                    if print_results:
-                        counter += 1
-                        print_counter += 1
-                        if print_counter >= 100000:  # print status.
-                            print_counter = 0
-                            print(
-                                f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
-
+                # This is a fast way to check if iter counter hit some print interval 
+                if metadata.iter_counter & 0x1000 == metadata.iter_counter & 0x1fff:  # print status.
+                    print(
+                        f'passed {metadata.iter_counter} out of {num_iterations} ({round(100. * metadata.iter_counter / num_iterations, 2)}%). found so far {len(results)} results')
+        # import ipdb
+        # ipdb.set_trace()
         if print_results:
             print(f'created results after {time() - start}s')
             print(f'found {len(results)} results')
