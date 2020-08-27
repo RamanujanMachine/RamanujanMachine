@@ -10,15 +10,30 @@ class CachedPolySeriesCalculator(object):
 	def __init__(self):
 		self.cached_items = {}
 
-	def iter_series_items(self, poly_coef, max_iters=1000, start_n=0):
+	def iter_series_items(self, poly_coef, max_iters=1000):
+		"""
+		Notes:
+		1. if you call this function with start_n and then call it again
+		with another start_n, caching will break
+		2. start_n
+		"""
 		if poly_coef in self.cached_items:
-			for i in self.cached_items[poly_coef]:
-				yield i
+			yield from self.cached_items[poly_coef][:max_iters]
 		else:
 			self.cached_items[poly_coef] = []
 
-		remaining_iters = max_iters - len(self.cached_items[poly_coef]) + 1
-		for i in iter_series_items_from_compact_poly(poly_coef, max_runs=remaining_iters, 
-			start_n=start_n):
+		itered_so_far = len(self.cached_items[poly_coef])
+		remaining_iters = max_iters - itered_so_far
+		for i in iter_series_items_from_compact_poly(poly_coef, max_runs=max_iters, 
+			start_n=itered_so_far):
 			self.cached_items[poly_coef].append(i)
 			yield i
+
+	def iter_family(self, coef_iter, max_iters=1000):
+		if self.cached_items == {}:
+			# nothing in cache so far
+			for coef in coef_iter:
+				yield coef, self.iter_series_items(coef, max_iters)
+		else:
+			for coef in self.cached_items:
+				yield coef, self.iter_series_items(coef, max_iters)
