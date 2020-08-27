@@ -226,19 +226,16 @@ class GCFEnumerator(object):
 
             if 0 in a_[1:] or 0 in b_:  # a_0 is allowed to be 0.
                 continue
-            
-            # import ipdb
-            # ipdb.set_trace()
+
             key = efficient_gcf_calculation()
             if key in self.hash_table:  # find hits in hash table
                 results.append(Match(key, metadata.an_coef, metadata.bn_coef))
 
-                # This is a fast way to check if iter counter hit some print interval 
-                if metadata.iter_counter & 0x1000 == metadata.iter_counter & 0x1fff:  # print status.
-                    print(
-                        f'passed {metadata.iter_counter} out of {num_iterations} ({round(100. * metadata.iter_counter / num_iterations, 2)}%). found so far {len(results)} results')
-        # import ipdb
-        # ipdb.set_trace()
+            # This is a fast way to check if iter counter hit some print interval 
+            if metadata.iter_counter & 0x10000 == metadata.iter_counter & 0x1ffff:  # print status.
+                print(
+                    f'passed {metadata.iter_counter} out of {num_iterations} ({round(100. * metadata.iter_counter / num_iterations, 2)}%). found so far {len(results)} results')
+ 
         if print_results:
             print(f'created results after {time() - start}s')
             print(f'found {len(results)} results')
