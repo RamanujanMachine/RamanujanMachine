@@ -70,14 +70,20 @@ class CartesianProductAnGenerator(SeriesGeneratorClass):
         return self.function
 
     def get_num_iterations(self, poly_a: List[List[int]]):
-        return number_of_cartesian_product_elements(poly_a)
+        #return 2 * number_of_cartesian_product_elements(poly_a)
+
+        # TODO - acutally make the following be:
+        # allowing all elements to be negetive beside the leading coef (to save on duplicate runs)
+        return number_of_cartesian_product_elements(poly_a[1:]) * len(poly_a[1])
 
     def get_iterator(self, poly_a: List[List[int]]) -> Iterator:
         """
         return cartesian product iterator
         if poly_a = [[1,2,3],[5,6]], permutations will be { [1,5] ; [1,6] ; [2,5] ; [2,6] ; [3,5] ; [3,6] }
         """
-        return product(*poly_a)
+        neg_poly_a = [poly_a[0], *[[-i for i in a] for a in poly_a[1:]]]  # for b_n include negative terms
+        return chain(product(*poly_a), product(*neg_poly_a))
+        #return product(*poly_a)
 
     help_string = 'a[n] = n(n(...(x[1]*n + x[0]) + x[2]) + ...) + x[k]. this is the default generator'
 
@@ -101,7 +107,11 @@ class CartesianProductBnGenerator(SeriesGeneratorClass):
                                                       +   { [-1,-5] ; [-1,-6] ; [-2,-5] ; [-2,-6] ; [-3,-5] ; [-3,-6] }
         """
         neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
-        return chain(product(*poly_b), product(*neg_poly_b))
+        #all_possibilites = neg_poly_b + poly_b
+        all_possibilites = [[-i for i in b][1:] + b for b in poly_b]
+
+        return product(*all_possibilites)
+
 
 
 class CartesianProductBnShift1(CartesianProductBnGenerator):
