@@ -18,7 +18,7 @@ from pybloom_live import BloomFilter
 from mobius import GeneralizedContinuedFraction, EfficientGCF
 from convergence_rate import calculate_convergence
 from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
-from utils import find_polynomial_series_coefficients
+from utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_coef
 from LHSHashTable import LHSHashTable
 from cached_poly_series_calculator import CachedPolySeriesCalculator
 from cached_series_calculator import CachedSeriesCalculator
@@ -51,6 +51,71 @@ def get_size_of_nested_list(list_of_elem):
         else:
             count += 1
     return count
+
+class ZeroInAn(Exception):
+    pass
+
+def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision,
+    max_iters = 400):
+    """
+    Calculates the GCF value until all results are equal when regarding the precision required.
+    If this isn't possible, compute until hitting max_iters 
+    """
+    # To reduce the number of divisions executed, we will loop for BURST_NUMBER iterations for 
+    # num/denum, and then calculate the GCF (divide them). This will reduce the number of divisions
+    # that take a lot of time
+    # TODO - exponential backoff?
+    BURST_NUMBER = 15
+    computed_values = []
+
+    prev_q = 0
+    q = 1
+    prev_p = 1
+    # This is a ugly hack but it works. a[0] is handled before the rest here:
+    p = an_iterator.__next__() # will place a[0] to p
+    if p == 0:
+        raise ZeroInAn()
+
+    for i, (a_i_1, b_i) in enumerate(zip(an_iterator, bn_iterator)):
+        if a_i_1 == 0:
+            raise ZeroInAn()
+
+        # a_i_1 is the (i+1)'th item of an, and b_i the the i'th item of bn
+        tmp_a = q
+        tmp_b = p
+
+        q = a_i_1 * q + b_i * prev_q
+        p = a_i_1 * p + b_i * prev_p
+        
+        prev_q = tmp_a
+        prev_p = tmp_b
+
+        # This can be much more efficient if divided to loops
+        # save on calculations later
+        items_computed = 0 
+        if i % BURST_NUMBER:
+            if q != 0:  # safety check
+                computed_values.append(mpmath.mpf(p) / mpmath.mpf(q))
+                items_computed += 1
+            else:
+                computed_values.append(mpmath.mpf(0))
+                items_computed += 1
+
+            # checking if the value stabilized
+            # after the first 10 iterations, start checking the the last two values, which are (perhaps) the max and min, are equal considering the precession required
+            if items_computed >= 2: # not in the first iteration
+                if int(computed_values[-1]*result_precision) == \
+                    int(computed_values[-2]*result_precision):
+                    if i>50:
+                        print(f'WOW super slow! {i}')
+                    return computed_values[-1]
+        
+    # GCF didn't converge int time. guessing the avg between the 
+    # last two calculations    
+    avg = (computed_values[-1] + computed_values[-2])/2
+
+    return avg
+
 
 class GCFEnumerator(object):
     def __init__(self, sym_constants, lhs_search_limit, saved_hash,
@@ -129,6 +194,9 @@ class GCFEnumerator(object):
         size_a = self.get_an_length(poly_a_domain)
         size_b = self.get_bn_length(poly_b_domain)
 
+        a_coef_iter = self.get_an_iterator(poly_a_domain)
+        b_coef_iter = self.get_bn_iterator(poly_b_domain)
+
         iter_counter = 0
         # # we want to loop through all available combinations
         # if we'll just iter through both items, each internal series will be calculated
@@ -141,13 +209,14 @@ class GCFEnumerator(object):
             bn_family = CachedPolySeriesCalculator()
 
             # external loop is not cached, and is for an
-            a_coef_iter = self.get_an_iterator(poly_a_domain)
+            
             for a_coef in a_coef_iter:
+                a_degree, a_leading_coef = get_poly_deg_and_leading_coef(a_coef)
                 an_cache = CachedSeriesCalculator(a_coef)
 
-                b_coef_iter = self.get_bn_iterator(poly_b_domain)
-                for b_coef, bn_iterator in bn_family.iter_family(a_coef_iter, max_iters):
+                for b_coef, bn_iterator in bn_family.iter_family(b_coef_iter, max_iters):
                     iter_counter += 1
+                    
                     yield \
                         an_cache.iter_series_items(max_iters), \
                         bn_iterator, \
@@ -158,11 +227,10 @@ class GCFEnumerator(object):
             an_family = CachedPolySeriesCalculator()
 
             # external loop is not cached, and is for an
-            b_coef_iter = self.get_bn_iterator(poly_b_domain)
             for b_coef in b_coef_iter:
                 bn_cache = CachedSeriesCalculator(b_coef)
+                b_degree, b_leading_coef = get_poly_deg_and_leading_coef(b_coef)
 
-                a_coef_iter = self.get_an_iterator(poly_a_domain)
                 for a_coef, an_iterator in an_family.iter_family(a_coef_iter, max_iters):
                     iter_counter += 1
                     yield \
@@ -213,6 +281,7 @@ class GCFEnumerator(object):
 
         size_a = self.get_an_length(poly_a)
         size_b = self.get_bn_length(poly_b)
+
         num_iterations = size_b * size_a
 
         start = time()
@@ -221,13 +290,13 @@ class GCFEnumerator(object):
         results = []  # list of intermediate results        
 
         for an_iter, bn_iter, metadata in self.__gcf_series_cached_iters(poly_a, poly_b, g_N_initial_search_terms):
-            a_ = [i for i in an_iter]
-            b_ = [i for i in bn_iter]
 
-            if 0 in a_[1:] or 0 in b_:  # a_0 is allowed to be 0.
+            try:
+                gcf_val = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length)
+            except ZeroInAn:
                 continue
 
-            key = efficient_gcf_calculation()
+            key = int(gcf_val * key_factor)
             if key in self.hash_table:  # find hits in hash table
                 results.append(Match(key, metadata.an_coef, metadata.bn_coef))
 
@@ -235,6 +304,7 @@ class GCFEnumerator(object):
             if metadata.iter_counter & 0x10000 == metadata.iter_counter & 0x1ffff:  # print status.
                 print(
                     f'passed {metadata.iter_counter} out of {num_iterations} ({round(100. * metadata.iter_counter / num_iterations, 2)}%). found so far {len(results)} results')
+                print(f'currently at an = {metadata.an_coef} bn = {metadata.bn_coef}')
  
         if print_results:
             print(f'created results after {time() - start}s')
