@@ -20,11 +20,18 @@ from convergence_rate import calculate_convergence
 from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
 from utils import find_polynomial_series_coefficients
 from LHSHashTable import LHSHashTable
-from GCFEnumerator import GCFEnumerator
 
+# GCF enumerator type 
+from RelativeGCFEnumerator import RelativeGCFEnumerator
+from EfficentGCFEnumerator import EfficentGCFEnumerator
+
+enumerators = { 
+    'relative': RelativeGCFEnumerator,
+    'efficent': EfficentGCFEnumerator
+}
 
 def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores, splits_size,
-                           create_an_series=None, create_bn_series=None, index=0):
+                           create_an_series=None, create_bn_series=None, index=0, enumerator_type='efficent'):
     """
     function to run for each process. this also divides the work to tiles/
     :param sym_constant: sympy constant for search
@@ -52,15 +59,19 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
         if index == (num_cores - 1):  # last processor does more.
             poly_a[s] = poly_a[s][index * splits_size[s]:]
         else:
-            poly_a[s] = poly_a[s][index * splits_size[s]:(index + 1) * splits_size[s]]
+            try:
+                poly_a[s] = poly_a[s][index * splits_size[s]:(index + 1) * splits_size[s]]
+            except Exception as e:
+                import ipdb
+                ipdb.set_trace()
 
-    enumerator = GCFEnumerator(sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
+    enumerator = enumerators[enumerator_type](sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
     results = enumerator.find_initial_hits(poly_a, poly_b, index == (num_cores - 1))
     return results
 
 
 def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_b, num_cores, manual_splits_size=None,
-                                   saved_hash=None, create_an_series=None, create_bn_series=None):
+                                   saved_hash=None, create_an_series=None, create_bn_series=None, enumerator_type='efficent'):
     """
     a wrapper for enumerating using multi processing.
     :param sym_constant: sympy constant for search
@@ -84,19 +95,19 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
     if not os.path.isfile(saved_hash):
         if saved_hash is None:  # if no hash table given, build it here.
             saved_hash = 'tmp_hash.p'
-        enumerator = GCFEnumerator(sym_constant, lhs_search_limit, saved_hash)
+        enumerator = enumerators[enumerator_type](sym_constant, lhs_search_limit, saved_hash)
         enumerator.hash_table.save()  # and save it to file (and global instance)
     else:
         if os.name != 'nt':  # if creation of process uses 'Copy On Write' we can benefit from it by
             # loading the hash table to memory here.
-            GCFEnumerator(sym_constant, lhs_search_limit, saved_hash)
+            enumerators[enumerator_type](sym_constant, lhs_search_limit, saved_hash)
 
     if manual_splits_size is None:  # naive work split
         manual_splits_size = [len(poly_a[0]) // num_cores]
 
     # built function for processes
     func = partial(multi_core_enumeration, sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores,
-                   manual_splits_size, create_an_series, create_bn_series)
+                   manual_splits_size, create_an_series, create_bn_series, enumerator_type=enumerator_type)
 
     if num_cores == 1:  # don't open child processes
         results = func(0)
@@ -109,7 +120,7 @@ def multi_core_enumeration_wrapper(sym_constant, lhs_search_limit, poly_a, poly_
         for r in partial_results:
             results += r
 
-    enumerator = GCFEnumerator(sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
+    enumerator = enumerators[enumerator_type](sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
     results = enumerator.refine_results(results)
     print(f'found {len(results)} results!')
 

@@ -5,7 +5,7 @@ import pickle
 from time import time
 import sympy
 from enumerate_over_gcf import multi_core_enumeration_wrapper
-from GCFEnumerator import g_N_verify_terms
+from AbstractGCFEnumerator import g_N_verify_terms
 from enumerate_over_signed_rcf import esma_search_wrapper
 import series_generators
 import lhs_generators
@@ -15,6 +15,7 @@ g_const_dict = {
     'zeta': sympy.zeta,
     'e': sympy.E,
     'pi': sympy.pi,
+    'pi_sqared': sympy.pi ** 2,
     'catalan': sympy.Catalan,
     'golden_ratio': sympy.GoldenRatio,
     'khinchin': sympy.S.Khinchin,
@@ -22,6 +23,8 @@ g_const_dict = {
     'pi-acosh_2': sympy.pi * sympy.acosh(2)
 }
 
+enumerators = ['relative', 'efficent']
+   
 
 def get_custom_an_generator(args):
     """
@@ -31,6 +34,8 @@ def get_custom_an_generator(args):
     """
     if args.zeta3_an:
         return series_generators.CartesianProductZeta3An(), 2
+    elif args.zeta3_an_n6_complement:
+        return series_generators.CartesianProductZeta3N6ComplementAn(), 1
     elif args.zeta5_an:
         return series_generators.CartesianProductZeta5An(), 3
     elif args.polynomial_shift1_an:
@@ -52,6 +57,8 @@ def init_custom_an_generator_parser(parser):
     custom_an_exclusive = custom_an_group.add_mutually_exclusive_group()
     custom_an_exclusive.add_argument('--zeta3_an', action='store_true',
                                      help=series_generators.CartesianProductZeta3An.help_string)
+    custom_an_exclusive.add_argument('--zeta3_an_n6_complement', action='store_true',
+                                     help=series_generators.CartesianProductZeta3N6ComplementAn.help_string)
     custom_an_exclusive.add_argument('--zeta5_an', action='store_true',
                                      help=series_generators.CartesianProductZeta5An.help_string)
     custom_an_exclusive.add_argument('--polynomial_shift1_an', action='store_true',
@@ -75,6 +82,8 @@ def get_custom_bn_generator(args):
         return series_generators.CartesianProductZetaBn(args.function_value), 2
     elif args.catalan_bn:
         return series_generators.CartesianProductBnCatalan(), 2
+    elif args.zeta3_n6_bn:
+        return series_generators.CartesianProductZeta3N6Bn(), 1
     elif args.polynomial_shift1_bn:
         return series_generators.CartesianProductBnShift1(), None
     elif args.polynomial_shift2n1_bn:
@@ -95,6 +104,8 @@ def init_custom_bn_generator_parser(parser):
     custom_bn_exclusive = custom_bn_group.add_mutually_exclusive_group()
     custom_bn_exclusive.add_argument('--zeta_bn', action='store_true',
                                      help=series_generators.CartesianProductZetaBn.help_string)
+    custom_bn_exclusive.add_argument('--zeta3_n6_bn', action='store_true',
+                                     help=series_generators.CartesianProductZeta3N6Bn.help_string)
     custom_bn_exclusive.add_argument('--catalan_bn', action='store_true',
                                      help=series_generators.CartesianProductBnCatalan.help_string)
     custom_bn_exclusive.add_argument('--polynomial_shift1_bn', action='store_true',
@@ -172,6 +183,8 @@ Currently the optional enumeration types are:
                             help='The limit for the LHS coefficients')
     gcf_parser.add_argument('-num_of_cores', type=int,
                             help='The number of cores to run on', default=1)
+    gcf_parser.add_argument('-enumerator', type=str, choices=enumerators, default='efficent',
+                            help=f'enumerator to use for GCF calculations, from {enumerators}')
     gcf_parser.add_argument('-poly_a_order', type=int,
                             help='the number of free coefficients for {a_n} series')
     gcf_parser.add_argument('-poly_a_coefficient_max', type=int,
@@ -246,7 +259,8 @@ def enumerate_over_gcf_main(args):
         manual_splits_size=None,  # use naive tiling
         saved_hash=os.path.join('hash_tables', hash_table_filename),  # if this doesn't exist, it will be created.
         create_an_series=an_generator,
-        create_bn_series=bn_generator
+        create_bn_series=bn_generator,
+        enumerator_type=args.enumerator
     )
 
     with open('tmp_results', 'wb') as file:
