@@ -33,7 +33,7 @@ FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef iter_counter')
 
 def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision,
-    max_iters = 400):
+    min_iters=1, burst_number=15):
     """
     Calculates the GCF value until all results are equal when regarding the precision required.
     If this isn't possible, compute until hitting max_iters 
@@ -42,35 +42,43 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision,
     # num/denum, and then calculate the GCF (divide them). This will reduce the number of divisions
     # that take a lot of time
     # TODO - exponential backoff?
-    BURST_NUMBER = 15
     computed_values = []
+    items_computed = 0 
 
+    # Some GCFs converge by oscillation. its better to take odd burst_number to test
+    # values from both sub-series
+    burst_number = burst_number if burst_number % 2 ==1 else burst_number +1
+    next_gcf_calculation = burst_number if burst_number >= min_iters else min_iters
+    
+    precision_factor = 10**result_precision
     prev_q = 0
     q = 1
     prev_p = 1
     # This is a ugly hack but it works. a[0] is handled before the rest here:
     p = an_iterator.__next__() # will place a[0] to p
+    bn_iterator.__next__() # b0 is discarded
+
     if p == 0:
         raise ZeroInAn()
 
-    for i, (a_i_1, b_i) in enumerate(zip(an_iterator, bn_iterator)):
-        if a_i_1 == 0:
+    for i, (a_i, b_i) in enumerate(zip(an_iterator, bn_iterator)):
+        if a_i == 0:
             raise ZeroInAn()
 
-        # a_i_1 is the (i+1)'th item of an, and b_i the the i'th item of bn
+        # a_i is the (i+1)'th item of an, and b_i the the i'th item of bn
         tmp_a = q
         tmp_b = p
 
-        q = a_i_1 * q + b_i * prev_q
-        p = a_i_1 * p + b_i * prev_p
+        q = a_i * q + b_i * prev_q
+        p = a_i * p + b_i * prev_p
         
         prev_q = tmp_a
         prev_p = tmp_b
 
-        # This can be much more efficient if divided to loops
-        # save on calculations later
-        items_computed = 0 
-        if i % BURST_NUMBER:
+        # using module so many times take noticeable resorces. using this method 
+        # to decide when to divide next should save some time
+        if i == next_gcf_calculation:
+            next_gcf_calculation += burst_number
             if q != 0:  # safety check
                 computed_values.append(mpmath.mpf(p) / mpmath.mpf(q))
                 items_computed += 1
@@ -81,10 +89,8 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision,
             # checking if the value stabilized
             # after the first 10 iterations, start checking the the last two values, which are (perhaps) the max and min, are equal considering the precession required
             if items_computed >= 2: # not in the first iteration
-                if int(computed_values[-1]*result_precision) == \
-                    int(computed_values[-2]*result_precision):
-                    if i>50:
-                        print(f'WOW super slow! {i}')
+                if int(computed_values[-1]*precision_factor) == \
+                    int(computed_values[-2]*precision_factor):
                     return computed_values[-1]
         
     # GCF didn't converge int time. guessing the avg between the 
@@ -99,13 +105,19 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         This enumerator calculates the gcf to an arbitrary dept, until getting to
         a stable value withing the precession required bounds.
         Useful for GCF that converges slowly.
+
+        Note-
+            Currently using costume series generators is not allowed, since those 
+            operate by computing a fixed n items, as opposed to the fluid approach
+            which suggested here. To implement it, one need to make those an iterative
+            function, and pass it to cached_series_iterator (and also add support there)
     """
 
     def __init__(self, *args, **kwargs):
         print('using relative enumerator')
         super().__init__(*args, **kwargs)
 
-    def _gcf_series_cached_iters(self, poly_a_domain, poly_b_domain, max_iters=100):
+    def _gcf_series_cached_iters(self, poly_domains, max_iters=100):
         """
         Calculates the approximate size for each domain, and using a nested loop over both
         domains return two iterators for each combination of a and b polynomials, where
@@ -113,11 +125,12 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         Also returns metadata about the execution stage, according to print_interval_percentage. 
         if its not the time to print stats, will return none for this variable 
         """
-        size_a = self.get_an_length(poly_a_domain)
-        size_b = self.get_bn_length(poly_b_domain)
+        size_a = poly_domains.an_length
+        size_b = poly_domains.bn_length
 
-        a_coef_iter = self.get_an_iterator(poly_a_domain)
-        b_coef_iter = self.get_bn_iterator(poly_b_domain)
+        a_coef_iter, b_coef_iter = poly_domains.get_individual_polys_generators()
+
+        an_series_iter, bn_series_iter = poly_domains.get_calculation_method()
 
         iter_counter = 0
         # # we want to loop through all available combinations
@@ -129,18 +142,19 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         if size_a > size_b:  # cache {bn} in RAM, iterate over an
             print('caching bn')
             bn_family = CachedPolySeriesCalculator()
-
             # external loop is not cached, and is for an
             
             for a_coef in a_coef_iter:
-                a_degree, a_leading_coef = get_poly_deg_and_leading_coef(a_coef)
-                an_cache = CachedSeriesCalculator(a_coef)
+                #a_degree, a_leading_coef = get_poly_deg_and_leading_coef(a_coef)
+                #an_cache = CachedSeriesCalculator(a_coef)
 
-                for b_coef, bn_iterator in bn_family.iter_family(b_coef_iter, max_iters):
+                b_coef_iter = poly_domains.get_b_coef_iterator()
+                for b_coef, bn_iterator in bn_family.iter_family(b_coef_iter, max_iters,
+                    series_iterator=bn_series_iter):
                     iter_counter += 1
-                    
+
                     yield \
-                        an_cache.iter_series_items(max_iters), \
+                        an_series_iter(a_coef, max_iters, 0), \
                         bn_iterator, \
                         IterationMetadata(a_coef, b_coef, iter_counter)
 
@@ -150,30 +164,28 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
 
             # external loop is not cached, and is for an
             for b_coef in b_coef_iter:
-                bn_cache = CachedSeriesCalculator(b_coef)
-                b_degree, b_leading_coef = get_poly_deg_and_leading_coef(b_coef)
-
-                for a_coef, an_iterator in an_family.iter_family(a_coef_iter, max_iters):
+                #bn_cache = CachedSeriesCalculator(b_coef)
+                #b_degree, b_leading_coef = get_poly_deg_and_leading_coef(b_coef)
+                
+                a_coef_iter = poly_domains.get_a_coef_iterator()
+                for a_coef, an_iterator in an_family.iter_family(a_coef_iter, max_iters,
+                    series_iterator=an_series_iter):
                     iter_counter += 1
                     yield \
                         an_iterator, \
-                        bn_cache.iter_series_items(max_iters), \
+                        bn_series_iter(b_coef, max_iters, 0), \
                         IterationMetadata(a_coef, b_coef, iter_counter)
 
 
-    def _first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
-        size_a = self.get_an_length(poly_a)
-        size_b = self.get_bn_length(poly_b)
-
-        num_iterations = size_b * size_a
+    def _first_enumeration(self, poly_domains, print_results: bool):
+        num_iterations = poly_domains.num_iterations
 
         start = time()
         key_factor = 1 / self.threshold
 
         results = []  # list of intermediate results        
 
-        for an_iter, bn_iter, metadata in self._gcf_series_cached_iters(poly_a, poly_b, g_N_initial_search_terms):
-
+        for an_iter, bn_iter, metadata in self._gcf_series_cached_iters(poly_domains, 1000):
             try:
                 gcf_val = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length)
             except ZeroInAn:
@@ -186,7 +198,9 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
             # This is a fast way to check if iter counter hit some print interval 
             if metadata.iter_counter & 0x10000 == metadata.iter_counter & 0x1ffff:  # print status.
                 print(
-                    f'passed {metadata.iter_counter} out of {num_iterations} ({round(100. * metadata.iter_counter / num_iterations, 2)}%). found so far {len(results)} results')
+                    f'passed {metadata.iter_counter} out of {poly_domains.num_iterations} ' + \
+                    f'({round(100. * metadata.iter_counter / poly_domains.num_iterations, 2)}%). ' + \
+                    f' found so far {len(results)} results')
                 print(f'currently at an = {metadata.an_coef} bn = {metadata.bn_coef}')
  
         if print_results:
@@ -221,12 +235,18 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
             except (ZeroDivisionError, KeyError) as e:
                 continue
 
-            # create a_n, b_n with huge length, calculate gcf, and verify result.
-            an = self.create_an_series(res.rhs_an_poly, g_N_verify_terms)
-            bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
-            gcf = EfficientGCF(an, bn)
-            rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
-            
+            # # create a_n, b_n with huge length, calculate gcf, and verify result.
+            # an = self.create_an_series(res.rhs_an_poly, g_N_verify_terms)
+            # bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
+            # gcf = EfficientGCF(an, bn)
+            an_iter_func, bn_iter_func = self.poly_domains_generator.get_calculation_method()
+            an_iter = an_iter_func(res.rhs_an_poly, 100000, start_n=0)
+            bn_iter = bn_iter_func(res.rhs_bn_poly, 100000, start_n=0)
+
+            gcf = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length, 
+                min_iters=2000, burst_number=500)
+            rhs_str = mpmath.nstr(gcf, g_N_verify_compare_length)
+
             for i, val in enumerate(all_matches):
                 val_str = mpmath.nstr(val, g_N_verify_compare_length)
                 if val_str == rhs_str:

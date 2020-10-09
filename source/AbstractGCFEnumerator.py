@@ -22,7 +22,7 @@ from utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_
 from LHSHashTable import LHSHashTable
 from cached_poly_series_calculator import CachedPolySeriesCalculator
 from cached_series_calculator import CachedSeriesCalculator
-from series_generators import iter_series_items_from_compact_poly
+from series_generators import iter_series_items_from_compact_poly, get_series_items_from_iter
 from abc import ABCMeta, abstractmethod
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
@@ -74,8 +74,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
     """
     def __init__(self, sym_constants, lhs_search_limit, saved_hash,
-                 an_generator: SeriesGeneratorClass = CartesianProductAnGenerator(),
-                 bn_generator: SeriesGeneratorClass = CartesianProductBnGenerator()):
+                 poly_domains_generator):
         """
         initialize search engine.
         :param sym_constants: sympy constants
@@ -96,13 +95,21 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             except AttributeError:  # Hackish constant
                 self.constants_generator.append(sym_constants[i].mpf_val)
 
-        self.create_an_series = an_generator.get_function()
-        self.get_an_length = an_generator.get_num_iterations
-        self.get_an_iterator = an_generator.get_iterator
-        self.create_bn_series = bn_generator.get_function()
-        self.get_bn_length = bn_generator.get_num_iterations
-        self.get_bn_iterator = bn_generator.get_iterator
-
+        # there are two methods to generate and iter over domains.
+        # the newer one uses poly_domains_generator only, but the old one 
+        # still uses the rest of the arguments.
+        # generating them here to avoid breaking older enumerators
+        self.poly_domains_generator = poly_domains_generator
+        a_iterator_func, b_iterator_func = poly_domains_generator.get_calculation_method()
+        self.create_an_series = \
+            lambda coefs, items: get_series_items_from_iter(a_iterator_func, coefs, items)
+        self.create_bn_series = \
+            lambda coefs, items: get_series_items_from_iter(b_iterator_func, coefs, items)
+        self.get_an_length = poly_domains_generator.get_an_length
+        self.get_bn_length = poly_domains_generator.get_bn_length
+        self.get_an_iterator = poly_domains_generator.get_a_coef_iterator
+        self.get_bn_iterator = poly_domains_generator.get_b_coef_iterator
+        
         if not os.path.isfile(saved_hash):
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
@@ -176,7 +183,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             results_in_latex.append(sympy.latex(equation))
         return results_in_latex
 
-    def find_initial_hits(self, poly_a: List[List], poly_b: List[List], print_results=True):
+    def find_initial_hits(self, poly_domains, print_results=True):
         """
         use search engine to find results (steps (2) and (3) explained in __init__ docstring)
         :param poly_a: explained in docstring of __first_enumeration
@@ -189,7 +196,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                 print('starting preliminary search...')
             start = time()
             # step (2)
-            results = self._first_enumeration(poly_a, poly_b, print_results)
+            results = self._first_enumeration(poly_domains, print_results)
             end = time()
             if print_results:
                 print(f'that took {end - start}s')
