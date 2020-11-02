@@ -110,6 +110,9 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         self.get_an_iterator = poly_domains_generator.get_a_coef_iterator
         self.get_bn_iterator = poly_domains_generator.get_b_coef_iterator
         
+        self._init_hash_table(saved_hash)
+    
+    def _init_hash_table(self, saved_hash):
         if not os.path.isfile(saved_hash):
             print('no previous hash table given, initializing hash table...')
             with mpmath.workdps(self.enum_dps):
