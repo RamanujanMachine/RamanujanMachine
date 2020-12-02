@@ -261,6 +261,9 @@ def create_series_from_compact_poly(poly_a, n):
         ret.append(tmp)
     return ret
 
+def get_series_items_from_iter(series_iter, coefs, max_n, start_n = 0):
+    return [i for i in series_iter(coefs, max_n, start_n)]
+    
 def iter_series_items_from_compact_poly(poly_coef, max_runs, start_n=1):
     """
     create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
