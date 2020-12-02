@@ -2,6 +2,7 @@ from LHSHashTable import *
 import csv
 import re
 import os
+import pandas as pd
 
 class HugeLHSHashTable(LHSHashTable):
     """
@@ -64,7 +65,7 @@ class HugeLHSHashTable(LHSHashTable):
         # the number of unique items possible in each partition
         self.partition_max_unique_ids = int(self.key_factor / partitions)
 
-        self.loaded_partition = {}
+        self.loaded_partition = pd.DataFrame(columns=['coef_top', 'coef_bottom'])
         self.loaded_partition_id = -1
 
         self.partition_chunk_map = {}
@@ -121,40 +122,50 @@ class HugeLHSHashTable(LHSHashTable):
         if partition_id != self.loaded_partition_id:
             # get next partition
             print(f'loading partition no. {partition_id}')
-            self.loaded_partition = {}
+            self.loaded_partition = pd.DataFrame(columns=['coef_top', 'coef_bottom'])
             self.loaded_partition_id = partition_id
 
             for chunk_file_name in self.partition_chunk_map[partition_id]:
                 self._load_csv_to_cache(self.name + '/' + chunk_file_name)
                 
-        return [self._expand_coefs(i) for i in self.loaded_partition[int(key)]]
+        lines = self.loaded_partition.loc[int(key)].values
+        matches = []
+        try:
+            # fix me
+            c_top_str, c_bottom_str = lines
+            c_top = tuple([int(i) for i in c_top_str.split(',')])
+            c_bottom = tuple([int(i) for i in c_bottom_str.split(',')])
+            return [(c_top, c_bottom)]
+        
+        except Exception as e:
+            print(e)
+            print(key)
+            print(lines)
 
-    def _load_csv_to_cache(self, csv_path):
-        with open(csv_path, 'r') as f:
-            csv_reader = csv.reader(f)
-            for exp_value, c_top_str, c_bottom_str in csv_reader:
-                exp_value = int(exp_value)
+            for c_top_str, c_bottom_str in self.loaded_partition.loc[int(key)].values:
                 c_top = tuple([int(i) for i in c_top_str.split(',')])
                 c_bottom = tuple([int(i) for i in c_bottom_str.split(',')])
 
-                compressed_coefs = self._compres_coefs(c_top, c_bottom)
+                matches.append((c_top, c_bottom))
 
-                if exp_value in self.loaded_partition:
-                    self.loaded_partition[exp_value].append(compressed_coefs)
-                else:
-                    self.loaded_partition[exp_value] = [compressed_coefs]
+        return matches
 
-    def _expand_coefs(self, compressed_coefs):
-        coefs = []
-        for i in range(4):
-            coefs.append(compressed_coefs % self.search_range)
-            compressed_coefs //= self.search_range
+    def _load_csv_to_cache(self, csv_path):
+        chunk = pd.read_csv(csv_path, names=['coef_top', 'coef_bottom'])
+        self.loaded_partition = self.loaded_partition.append(chunk)
+        # with open(csv_path, 'r') as f:
+        #     csv_reader = csv.reader(f)
+        #     for exp_value, c_top_str, c_bottom_str in csv_reader:
+        #         exp_value = int(exp_value)
+        #         c_top = tuple([int(i) for i in c_top_str.split(',')])
+        #         c_bottom = tuple([int(i) for i in c_bottom_str.split(',')])
 
-        return (coefs[0], coefs[1]), (coefs[2], coefs[3])
+        #         compressed_coefs = self._compres_coefs(c_top, c_bottom)
 
-    def _compres_coefs(self, coef_top, coef_bottom):
-        return coef_top[0] + coef_top[1]*self.search_range + \
-            coef_bottom[0]*(self.search_range ** 2) + coef_bottom[1]*(self.search_range ** 3)
+        #         if exp_value in self.loaded_partition:
+        #             self.loaded_partition[exp_value].append(compressed_coefs)
+        #         else:
+        #             self.loaded_partition[exp_value] = [compressed_coefs]
 
     def _add_to_lhs_possblilites(self, exp_value, c_top, c_bottom):
         # get name and subsitude to name_format
