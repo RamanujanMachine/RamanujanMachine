@@ -10,7 +10,7 @@ class CachedPolySeriesCalculator(object):
 	def __init__(self):
 		self.cached_items = {}
 
-	def iter_series_items(self, poly_coef, max_iters=1000):
+	def iter_series_items(self, poly_coef, max_iters=1000, series_iterator=iter_series_items_from_compact_poly):
 		"""
 		Notes:
 		1. if you call this function with start_n and then call it again
@@ -18,6 +18,7 @@ class CachedPolySeriesCalculator(object):
 		2. start_n
 		"""
 		cache = []
+
 		if poly_coef in self.cached_items:
 			cache = self.cached_items[poly_coef]
 			yield from cache[:max_iters]
@@ -27,16 +28,16 @@ class CachedPolySeriesCalculator(object):
 		itered_so_far = len(cache)
 		remaining_iters = max_iters - itered_so_far
 		
-		for i in iter_series_items_from_compact_poly(poly_coef, max_runs=max_iters, 
+		for i in series_iterator(poly_coef, max_runs=max_iters, 
 			start_n=itered_so_far):
 			self.cached_items[poly_coef].append(i)
 			yield i
 
-	def iter_family(self, coef_iter, max_iters=1000):
-		if self.cached_items == {}:
-			# nothing in cache so far
-			for coef in coef_iter:
-				yield coef, self.iter_series_items(coef, max_iters)
-		else:
-			for coef in self.cached_items:
-				yield coef, self.iter_series_items(coef, max_iters)
+	def iter_family(self, coef_iter, max_iters=1000, series_iterator=iter_series_items_from_compact_poly):
+#		if self.cached_items == {}:
+		# nothing in cache so far
+		for coef in coef_iter:
+			yield coef, self.iter_series_items(coef, max_iters, series_iterator=series_iterator)
+		# else:
+		# 	for coef in self.cached_items:
+		# 		yield coef, self.iter_series_items(coef, max_iters, series_iterator=iter_series_items_from_compact_poly)
