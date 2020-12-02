@@ -90,15 +90,10 @@ class LHSHashTable(object):
                     # don't store values that are independent of the constant (e.g. rational numbers)
                     continue
                 
-                # TODO - consider using collections 
                 str_key = str(key)
-                if str_key in self.lhs_possibilities:
-                    self.lhs_possibilities[str_key].append(struct.pack(self.pack_format, *[*c_top, *c_bottom]))  # store key and transformation
-                else:
-                    self.lhs_possibilities[str_key] = [struct.pack(self.pack_format, *[*c_top, *c_bottom])]  # store key and transformation
+                self._add_to_lhs_possblilites(str_key, c_top, c_bottom)
                 self.bloom.add(str_key)
     
-
     def __contains__(self, item):
         """
         operator 'in'
@@ -173,6 +168,13 @@ class LHSHashTable(object):
             ret = pickle.load(f)
         ret.s_name = ret.lhs_hash_name_to_shelve_name(name)
         return ret
+
+    def _add_to_lhs_possblilites(self, str_key, c_top, c_bottom):
+        # TODO - consider using collections 
+        if str_key in self.lhs_possibilities:
+            self.lhs_possibilities[str_key].append(struct.pack(self.pack_format, *[*c_top, *c_bottom]))  # store key and transformation
+        else:
+            self.lhs_possibilities[str_key] = [struct.pack(self.pack_format, *[*c_top, *c_bottom])]  # store key and transformation
 
     def evaluate(self, key, constant_values):
         stored_values = self._get_by_key(key)
