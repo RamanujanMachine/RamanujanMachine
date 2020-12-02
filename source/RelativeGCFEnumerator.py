@@ -83,8 +83,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision,
                 computed_values.append(mpmath.mpf(p) / mpmath.mpf(q))
                 items_computed += 1
             else:
-                computed_values.append(mpmath.mpf(0))
-                items_computed += 1
+                return mpmath.mpf(-1)
 
             # checking if the value stabilized
             # after the first 10 iterations, start checking the the last two values, which are (perhaps) the max and min, are equal considering the precession required
@@ -92,11 +91,16 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision,
                 if int(computed_values[-1]*precision_factor) == \
                     int(computed_values[-2]*precision_factor):
                     return computed_values[-1]
+
+                if items_computed >= 3:
+                    if abs(computed_values[-2] - computed_values[-1]) > \
+                        abs(computed_values[-3] - computed_values[-2]):
+                        # not converging
+                        return mpmath.mpf(-1)
         
     # GCF didn't converge int time. guessing the avg between the 
     # last two calculations    
     avg = (computed_values[-1] + computed_values[-2])/2
-
     return avg
 
 
@@ -185,7 +189,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
 
         results = []  # list of intermediate results        
 
-        for an_iter, bn_iter, metadata in self._gcf_series_cached_iters(poly_domains, 1000):
+        for an_iter, bn_iter, metadata in self._gcf_series_cached_iters(poly_domains, 4000):
             try:
                 gcf_val = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length)
             except ZeroInAn:
@@ -240,8 +244,8 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
             # bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
             # gcf = EfficientGCF(an, bn)
             an_iter_func, bn_iter_func = self.poly_domains_generator.get_calculation_method()
-            an_iter = an_iter_func(res.rhs_an_poly, 100000, start_n=0)
-            bn_iter = bn_iter_func(res.rhs_bn_poly, 100000, start_n=0)
+            an_iter = an_iter_func(res.rhs_an_poly, 40000, start_n=0)
+            bn_iter = bn_iter_func(res.rhs_bn_poly, 40000, start_n=0)
 
             gcf = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length, 
                 min_iters=2000, burst_number=500)
