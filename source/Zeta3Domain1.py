@@ -73,8 +73,31 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	@classmethod
 	def get_poly_bn_lead_coef(bn_coefs):
 		return bn_coefs[0]
-
 	
+	def check_for_convegence(self, an_coefs, bn_coefs):
+		a_leading_coef = an_coefs[0] * an_coefs[2]
+
+		# checking for >= as well as >, might be overkill
+		return bn_coefs[0] * 4 >= -1 * (a_leading_coef**2)
+
+	def iter_polys(self, primary_looped_domain):
+		an_domain, bn_domain = self.dump_domain_ranges()
+
+		if primary_looped_domain == 'a':
+			a_coef_iter = product(*an_domain)
+			for a_coef in a_coef_iter:
+				b_coef_iter = product(*bn_domain)
+				for b_coef in b_coef_iter:
+					if check_for_convegence(a_coef, b_coef):
+						yield a_coef, b_coef
+		else:
+			b_coef_iter = product(*bn_domain)
+			for b_coef in b_coef_iter:
+				a_coef_iter = product(*an_domain)
+				for a_coef in a_coef_iter:
+					if check_for_convegence(a_coef, b_coef):
+						yield a_coef, b_coef
+
 	def get_individual_polys_generators(self):
 		# skips throught non conveging examples
 		an_domain, bn_domain = self.dump_domain_ranges()
