@@ -59,15 +59,16 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 	def iter_polys(self, primary_looped_domain):
 		an_domain, bn_domain = self.dump_domain_ranges()
 
-		a_coef_iter = product(*an_domain)
-		b_coef_iter = product(*bn_domain)
-
 		if primary_looped_domain == 'a':
+			a_coef_iter = product(*an_domain)
 			for a_coef in a_coef_iter:
+				b_coef_iter = product(*bn_domain)
 				for b_coef in b_coef_iter:
 					yield a_coef, b_coef
 		else:
+			b_coef_iter = product(*bn_domain)
 			for b_coef in b_coef_iter:
+				a_coef_iter = product(*an_domain)
 				for a_coef in a_coef_iter:
 					yield a_coef, b_coef
 
