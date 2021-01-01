@@ -13,18 +13,19 @@ from collections.abc import Iterable
 import mpmath
 import sympy
 from sympy import lambdify
-from latex import generate_latex
 from pybloom_live import BloomFilter
-from mobius import GeneralizedContinuedFraction, EfficientGCF
-from convergence_rate import calculate_convergence
-from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
-from utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_coef
-from LHSHashTable import LHSHashTable
-from cached_poly_series_calculator import CachedPolySeriesCalculator
-from cached_series_calculator import CachedSeriesCalculator
-from series_generators import iter_series_items_from_compact_poly
 
-from AbstractGCFEnumerator import *
+from ramanujan.utils.latex import generate_latex
+from ramanujan.mobius import GeneralizedContinuedFraction, EfficientGCF
+from ramanujan.utils.convergence_rate import calculate_convergence
+from ramanujan.series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
+from ramanujan.utils.utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_coef
+from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.cached_poly_series_calculator import CachedPolySeriesCalculator
+from ramanujan.cached_series_calculator import CachedSeriesCalculator
+from ramanujan.series_generators import iter_series_items_from_compact_poly
+
+from .AbstractGCFEnumerator import *
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')

@@ -1,5 +1,5 @@
 import math
-from RelativeGCFEnumerator import *
+from .RelativeGCFEnumerator import *
 
 CONVERGENCE_THRESHOLD = 0.1
 
@@ -75,8 +75,8 @@ class FREnumerator(RelativeGCFEnumerator):
 
         results = []  # list of intermediate results        
         all_items_calculated = []
-        last_lead = -21
-        for an_iter, bn_iter, metadata in self._gcf_series_cached_iters(poly_domains, 1005):
+        last_lead = -1001 # random number that will not pop
+        for an_iter, bn_iter, metadata in self._gcf_series_cached_iters(poly_domains, 100000):
             if metadata.an_coef[0] != last_lead:
                 last_lead = metadata.an_coef[0]
                 print(f"last_lead {last_lead} - {time() - start}")

@@ -2,7 +2,7 @@ import math
 from wolframclient.evaluation import WolframLanguageSession
 from wolframclient.language import wl, wlexpr
 
-from FREnumerator import *
+from .FREnumerator import *
 
 
 class GuessFromFREnumerator(FREnumerator):

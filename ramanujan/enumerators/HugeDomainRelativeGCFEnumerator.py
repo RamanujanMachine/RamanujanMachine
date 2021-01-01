@@ -1,5 +1,5 @@
-from RelativeGCFEnumerator import *
-from HugeLHSHashTable import *
+from ramanujan.HugeLHSHashTable import *
+from .RelativeGCFEnumerator import *
 
 class HugeDomainRelativeGCFEnumerator(RelativeGCFEnumerator):
     """
