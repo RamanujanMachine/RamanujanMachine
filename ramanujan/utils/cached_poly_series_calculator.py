@@ -34,10 +34,5 @@ class CachedPolySeriesCalculator(object):
 			yield i
 
 	def iter_family(self, coef_iter, max_iters=1000, series_iterator=iter_series_items_from_compact_poly):
-#		if self.cached_items == {}:
-		# nothing in cache so far
 		for coef in coef_iter:
 			yield coef, self.iter_series_items(coef, max_iters, series_iterator=series_iterator)
-		# else:
-		# 	for coef in self.cached_items:
-		# 		yield coef, self.iter_series_items(coef, max_iters, series_iterator=iter_series_items_from_compact_poly)

@@ -4,13 +4,15 @@ import argparse
 import pickle
 from time import time
 import sympy
-from enumerate_over_gcf import multi_core_enumeration_wrapper
-from AbstractGCFEnumerator import g_N_verify_terms
+#from enumerate_over_gcf import multi_core_enumeration_wrapper
+#from AbstractGCFEnumerator import g_N_verify_terms
 from enumerate_over_signed_rcf import esma_search_wrapper
+# the file imported here is a static copy of the file held in ramanujan
 import series_generators
 import lhs_generators
-import constants  # declares constants as sympy Singeltons, "not" used is intended
+import ramanujan.constants  # declares constants as sympy Singeltons, "not" used is intended
 
+g_N_verify_terms = 1000
 g_const_dict = {
     'zeta': sympy.zeta,
     'e': sympy.E,

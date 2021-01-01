@@ -5,10 +5,10 @@ import itertools
 import mpmath
 import sympy
 from sympy import lambdify, Rational
-from series_generators import create_series_from_shift_reg
+from ramanujan.series_generators import create_series_from_shift_reg
 from massey import slow_massey
-from mobius import GeneralizedContinuedFraction, EfficientGCF
-from convergence_rate import calculate_convergence
+from ramanujan.utils.mobius import GeneralizedContinuedFraction, EfficientGCF
+from ramanujan.utils.convergence_rate import calculate_convergence
 
 """
 Some important terminology:
