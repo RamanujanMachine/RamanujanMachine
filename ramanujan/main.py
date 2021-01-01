@@ -23,7 +23,7 @@ g_const_dict = {
     'pi-acosh_2': sympy.pi * sympy.acosh(2)
 }
 
-enumerators = ['relative', 'efficent']
+enumerators = ['relative', 'efficent', 'monoms']
    
 
 def get_custom_an_generator(args):
@@ -116,7 +116,6 @@ def init_custom_bn_generator_parser(parser):
                                      help=series_generators.IntegerFactor.help_string)
     custom_bn_exclusive.add_argument('--polynomial_bn', action='store_true',
                                      help=series_generators.CartesianProductBnGenerator.help_string)
-
 
 def get_lhs_generator(generator_name, args):
     """

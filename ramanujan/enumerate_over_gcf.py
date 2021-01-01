@@ -24,10 +24,12 @@ from LHSHashTable import LHSHashTable
 # GCF enumerator type 
 from RelativeGCFEnumerator import RelativeGCFEnumerator
 from EfficentGCFEnumerator import EfficentGCFEnumerator
+from MonomExponentialGCFEnumerator import MonomExponentialGCFEnumerator
 
 enumerators = { 
     'relative': RelativeGCFEnumerator,
-    'efficent': EfficentGCFEnumerator
+    'efficent': EfficentGCFEnumerator,
+    'monoms': MonomExponentialGCFEnumerator
 }
 
 def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, poly_b, num_cores, splits_size,
@@ -65,6 +67,8 @@ def multi_core_enumeration(sym_constant, lhs_search_limit, saved_hash, poly_a, p
                 import ipdb
                 ipdb.set_trace()
 
+    import ipdb
+    ipdb.set_trace()
     enumerator = enumerators[enumerator_type](sym_constant, lhs_search_limit, saved_hash, create_an_series, create_bn_series)
     results = enumerator.find_initial_hits(poly_a, poly_b, index == (num_cores - 1))
     return results
