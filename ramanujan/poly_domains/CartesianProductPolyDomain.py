@@ -1,5 +1,5 @@
-from AbstractPolyDomains import * 
-from series_generators import iter_series_items_from_compact_poly
+from .AbstractPolyDomains import * 
+from ramanujan.series_generators import iter_series_items_from_compact_poly
 from itertools import product 
 
 class CartesianProductPolyDomain(AbstractPolyDomains):

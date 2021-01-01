@@ -1,4 +1,4 @@
-from CartesianProductPolyDomain import * 
+from .CartesianProductPolyDomain import * 
 from itertools import product 
 
 class FixedBNPolyDomain(CartesianProductPolyDomain):

@@ -1,12 +1,16 @@
-from CartesianProductPolyDomain import * 
+from .CartesianProductPolyDomain import * 
 
-class Zeta3Domain2(CartesianProductPolyDomain):
+class PiSqaredDomain2(CartesianProductPolyDomain):
 	'''
 	This domain iters polynomials from this kind:
-	a(n) = x0*n^3 + x0*(n+1)^3 + x1*x2(n+1) + x2
-	b(n) = x3*n^6
+	a(n) = x0*n^2 + x1*n + x2
+	b(n) = -n*(n+2)*(x3*n + x4)*(x5*n + x6)
 
-	where x0, x1, x2, x3 are 4 freedom degrees
+	where x0, x1, x2, x3, x4, x5, x6 are 7 freedom degrees
+
+	to reduce search space- 
+	keep x0 at 3 or 5 ish
+	keep x3, x5 low
 
 	this is a decendent of CartesianProductPolyDomain since an and bn has no
 	praticular relation
@@ -21,8 +25,8 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 		self.coef_ranges = coef_ranges
 
 		super().__init__(
-			a_deg = 3, # deg reffers to degree of freedom, not poly_deg
-			b_deg = 1,
+			a_deg = 2, # deg reffers to degree of freedom, not poly_deg
+			b_deg = 4,
 			a_coef_range = None, # no use, overridden
 			b_coef_range = None
 			,*args, **kwargs)
@@ -30,11 +34,11 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 	def get_calculation_method(self):
 		def an_iterator(free_vars, max_runs, start_n=1):
 			for i in range(start_n, max_runs):
-				yield free_vars[0]*( (i+1)**3 + i**3 ) + free_vars[1]*free_vars[2]*(i+1) + free_vars[2]
+				yield free_vars[0]*(i**2) + free_vars[1]*i + free_vars[2]
 
 		def bn_iterator(free_vars, max_runs, start_n=1):
 			for i in range(start_n, max_runs):
-				yield free_vars[0]*(i**6)
+				yield -1*i*(i+2)*(free_vars[0]*i + free_vars[1])*(free_vars[2]*i + free_vars[3])
 
 		return an_iterator, bn_iterator
 
@@ -47,10 +51,3 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 	def dump_domain_ranges(self):
 		return self.expand_var_ranges_to_domain(self.coef_ranges[:3]), \
 			self.expand_var_ranges_to_domain(self.coef_ranges[3:])
-	
-	def get_individual_polys_generators(self):
-		# skips throught non conveging examples
-		an_domain, bn_domain = self.dump_domain_ranges()
-
-		return product(*an_domain), product(*bn_domain)
-

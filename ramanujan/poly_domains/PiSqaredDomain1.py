@@ -1,4 +1,4 @@
-from CartesianProductPolyDomain import * 
+from .CartesianProductPolyDomain import * 
 
 class PiSqaredDomain1(CartesianProductPolyDomain):
 	'''

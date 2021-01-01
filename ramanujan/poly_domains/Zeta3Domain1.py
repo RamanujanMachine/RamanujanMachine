@@ -1,4 +1,4 @@
-from CartesianProductPolyDomain import * 
+from .CartesianProductPolyDomain import * 
 
 class Zeta3Domain1(CartesianProductPolyDomain):
 	'''
