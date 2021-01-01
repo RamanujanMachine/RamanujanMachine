@@ -1,4 +1,4 @@
-from LHSHashTable import *
+from .LHSHashTable import *
 import csv
 import re
 import os

@@ -1,5 +1,5 @@
 import collections
-from series_generators import iter_series_items_from_compact_poly
+from .series_generators import iter_series_items_from_compact_poly
 
 class CachedSeriesCalculator(object):
 	"""
