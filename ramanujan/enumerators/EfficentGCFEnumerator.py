@@ -16,9 +16,9 @@ from sympy import lambdify
 from pybloom_live import BloomFilter
 
 from ramanujan.utils.latex import generate_latex
-from ramanujan.mobius import GeneralizedContinuedFraction, EfficientGCF
+from ramanujan.utils.mobius import GeneralizedContinuedFraction, EfficientGCF
 from ramanujan.utils.convergence_rate import calculate_convergence
-from ramanujan.series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
+from ramanujan.utils.series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
 from ramanujan.utils.utils import find_polynomial_series_coefficients
 from ramanujan.LHSHashTable import LHSHashTable
 
@@ -49,7 +49,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         coef_list = list(itertools.compress(coef_list, series_filter))
         return coef_list, series_list
 
-    def _first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
+    def _first_enumeration(self, poly_domain, print_results: bool):
         """
         this is usually the bottleneck of the search.
         we calculate general continued fractions of type K(bn,an). 'an' and 'bn' are polynomial series.
@@ -90,11 +90,13 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
                 value = mpmath.mpf(p) / mpmath.mpf(q)
             return int(value * key_factor)  # calculate hash key of gcf value
 
+        poly_a, poly_b = poly_domain.dump_domain_ranges()
+
         start = time()
-        a_coef_iter = self.get_an_iterator(poly_a)  # all coefficients possibilities for 'a_n'
-        b_coef_iter = self.get_bn_iterator(poly_b)
-        size_b = self.get_bn_length(poly_b)
-        size_a = self.get_an_length(poly_a)
+        a_coef_iter = self.get_an_iterator()  # all coefficients possibilities for 'a_n'
+        b_coef_iter = self.get_bn_iterator()
+        size_b = self.get_bn_length()
+        size_a = self.get_an_length()
         num_iterations = size_b * size_a
         key_factor = 1 / self.threshold
 
@@ -105,7 +107,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         if size_a > size_b:  # cache {bn} in RAM, iterate over an
             b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
             real_bn_size = len(bn_list)
-            num_iterations = (num_iterations // self.get_bn_length(poly_b)) * real_bn_size
+            num_iterations = (num_iterations // self.get_bn_length()) * real_bn_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
@@ -134,7 +136,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         else:  # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
             real_an_size = len(an_list)
-            num_iterations = (num_iterations // self.get_an_length(poly_a)) * real_an_size
+            num_iterations = (num_iterations // self.get_an_length()) * real_an_size
             if print_results:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
@@ -170,6 +172,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         :param print_results: if true print status.
         :return: final results.
         """
+
         results = []
         counter = 0
         n_iterations = len(intermediate_results)
