@@ -1,12 +1,6 @@
 import os
 import pickle
-#import itertools
-#import multiprocessing
-#import struct
-#from functools import partial, reduce
-#from datetime import datetime
 from time import time
-#from math import gcd
 from typing import List, Iterator, Callable
 from collections import namedtuple
 from collections.abc import Iterable
@@ -14,31 +8,21 @@ import mpmath
 import sympy
 from sympy import lambdify
 from pybloom_live import BloomFilter
-#from series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
-#from cached_poly_series_calculator import CachedPolySeriesCalculator
-#from cached_series_calculator import CachedSeriesCalculator
 from abc import ABCMeta, abstractmethod
 
-from ramanujan.mobius import GeneralizedContinuedFraction, EfficientGCF # consider removing
-from ramanujan.series_generators import iter_series_items_from_compact_poly, get_series_items_from_iter
-from ramanujan.utils.utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_coef
+from ramanujan.utils.mobius import GeneralizedContinuedFraction, EfficientGCF # consider removing
+from ramanujan.utils.series_generators import iter_series_items_from_compact_poly, get_series_items_from_iter
+from ramanujan.utils.utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_coef, create_mpf_const_generator
 from ramanujan.utils.convergence_rate import calculate_convergence
 from ramanujan.utils.latex import generate_latex
 from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.constants import *
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef iter_counter')
-
-# global hyper-parameters
-g_N_verify_terms = 1000  # number of CF terms to calculate in __refine_results. (verify hits)
-g_N_verify_compare_length = 100  # number of digits to compare in __refine_results. (verify hits)
-g_N_verify_dps = 2000  # working decimal precision in __refine_results. (verify hits)
-g_N_initial_search_terms = 32  # number of CF terms to calculate in __first_enumeration (initial search)
-g_N_initial_key_length = 10  # number of digits to compare in __first_enumeration (initial search)
-g_N_initial_search_dps = 50  # working decimal precision in __refine_results. (verify hits)
 
 
 def get_size_of_nested_list(list_of_elem):
@@ -61,41 +45,39 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
     """
         This is an abstract class for RHS searches 'engines'. 
 
-        basically, this is a 3 step procedure:
-        1) load / initialize lhs hash table.
-        2) first enumeration - enumerate over all rhs combinations, find hits in lhs hash table.
-        3) refine results - take results from (2) and validate them to 100 decimal digits.
+        basically, this is a 2 step procedure:
+        1) first enumeration - enumerate over all rhs combinations, find hits in lhs hash table.
+        2) refine results - take results from (1) and validate them to 100 decimal digits.
         
-        Functions in this class handles initiating the class with
-        constants, the hash table, and printing results
+        Functions implemented in this abstract class will translate the given constants to 
+        execution limits (e.g. cast search limit to convergence threshold), printing results,
+        and making mpmath work on a sufficient precision 
         
         Enumerators should implement the following:
             find_initial_hits
             refine_results
 
     """
-    def __init__(self, sym_constants, lhs_search_limit, saved_hash,
-                 poly_domains_generator):
+    def __init__(self, hash_table, poly_domains_generator, sym_constants, lhs_search_limit):
         """
         initialize search engine.
+        :param hash_table: LHSHashTable object storing the constant's permutations. Used for 
+            quering computed values for 
         :param sym_constants: sympy constants
         :param lhs_search_limit: range of coefficients for left hand side.
         :param saved_hash: path to saved hash.
         :param an_generator: generating function for {an} series
         :param bn_generator: generating function for {bn} series
         """
+        # constants
         self.threshold = 1 * 10 ** (-g_N_initial_key_length)  # key length
         self.enum_dps = g_N_initial_search_dps  # working decimal precision for first enumeration
         self.verify_dps = g_N_verify_dps  # working decimal precision for validating results.
         self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constants
-        self.constants_generator = []
-        for i in range(len(sym_constants)):
-            try:
-                self.constants_generator.append(lambdify((), sym_constants[i], modules="mpmath"))
-            except AttributeError:  # Hackish constant
-                self.constants_generator.append(sym_constants[i].mpf_val)
-
+        self.constants_generator = create_mpf_const_generator(sym_constants)
+        
+        # expand poly domains object
         # there are two methods to generate and iter over domains.
         # the newer one uses poly_domains_generator only, but the old one 
         # still uses the rest of the arguments.
@@ -108,11 +90,18 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             lambda coefs, items: get_series_items_from_iter(b_iterator_func, coefs, items)
         self.get_an_length = poly_domains_generator.get_an_length
         self.get_bn_length = poly_domains_generator.get_bn_length
+        
         self.get_an_iterator = poly_domains_generator.get_a_coef_iterator
         self.get_bn_iterator = poly_domains_generator.get_b_coef_iterator
         
-        self._init_hash_table(saved_hash)
+        #self.get_an_iterator = a_iterator_func
+        #self.get_bn_iterator = b_iterator_func
+        
+        # store lhs_hash_table
+        self.hash_table = hash_table
     
+
+    # depricated, will be deleted soon
     def _init_hash_table(self, saved_hash):
         if not os.path.isfile(saved_hash):
             print('no previous hash table given, initializing hash table...')
