@@ -49,7 +49,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         coef_list = list(itertools.compress(coef_list, series_filter))
         return coef_list, series_list
 
-    def _first_enumeration(self, poly_domain, print_results: bool):
+    def _first_enumeration(self, print_results: bool):
         """
         this is usually the bottleneck of the search.
         we calculate general continued fractions of type K(bn,an). 'an' and 'bn' are polynomial series.
@@ -90,7 +90,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
                 value = mpmath.mpf(p) / mpmath.mpf(q)
             return int(value * key_factor)  # calculate hash key of gcf value
 
-        poly_a, poly_b = poly_domain.dump_domain_ranges()
+        poly_a, poly_b = self.poly_domains_generator.dump_domain_ranges()
 
         start = time()
         a_coef_iter = self.get_an_iterator()  # all coefficients possibilities for 'a_n'
