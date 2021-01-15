@@ -9,6 +9,9 @@ from time import time
 from pybloom_live import BloomFilter
 from functools import partial, reduce
 from math import gcd
+from ramanujan.utils.utils import create_mpf_const_generator
+from sympy import lambdify
+from ramanujan.constants import *
 
 class LHSHashTable(object):
     """
@@ -18,7 +21,7 @@ class LHSHashTable(object):
     The bloom filter is always loaded and used to determine if a LHS value is in the database
     all LHS possibilities within computed domain
     """
-    def __init__(self, name, search_range, const_vals, threshold) -> None:
+    def __init__(self, name, search_range, const_vals, threshold=10**-10) -> None:
         """
         hash table for LHS. storing values in the form of (a + b*x_1 + c*x_2 + ...)/(d + e*x_1 + f*x_2 + ...)
         :param search_range: range for value coefficient values
@@ -33,6 +36,7 @@ class LHSHashTable(object):
         self.threshold = threshold
         key_factor = 1 / threshold
         self.max_key_length = len(str(int(key_factor))) * 2
+        const_vals = [const() for const in create_mpf_const_generator(const_vals)]
         constants = [mpmath.mpf(1)] + const_vals
         self.n_constants = len(constants)
         
@@ -43,11 +47,12 @@ class LHSHashTable(object):
         
         start_time = time()
 
-        self._enumerate_lhs_domain(constants, search_range, key_factor)
+        with mpmath.workdps(g_N_initial_search_dps):
+            self._enumerate_lhs_domain(constants, search_range, key_factor)
 
         with open(self.s_name, 'wb') as f:
             pickle.dump(self.lhs_possibilities, f)
-        
+
         # after init, deleteing self.lhs_possibilities to free unused memory 
         self.lhs_possibilities = None
         print('initializing LHS dict: {}'.format(time() - start_time))
@@ -79,6 +84,7 @@ class LHSHashTable(object):
             if numerator <= 0:  # allow only positive values to avoid duplication
                 continue
             numerator = mpmath.mpf(numerator)
+
             for c_bottom, denominator in zip(coef_bottom_list, denominator_list):
                 if reduce(gcd, c_top + c_bottom) != 1:  # avoid expressions that can be simplified easily
                     continue
@@ -86,6 +92,7 @@ class LHSHashTable(object):
                     continue
                 val = numerator / denominator
                 key = int(val * key_factor)
+
                 if key in rational_blacklist:
                     # don't store values that are independent of the constant (e.g. rational numbers)
                     continue
@@ -179,7 +186,6 @@ class LHSHashTable(object):
     def evaluate(self, key, constant_values):
         stored_values = self._get_by_key(key)
         evaluated_values = []
-        
         for c_top, c_bottom in stored_values:
             numerator = self.prod(c_top, constant_values)
             denominator = self.prod(c_bottom, constant_values)
