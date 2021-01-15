@@ -3,6 +3,7 @@ from typing import List
 import time
 import mpmath
 import matplotlib.pyplot as plt
+from sympy import lambdify
 
 # Measures the amount of time the function takes to run in milliseconds in order to check improvements
 def measure_performance(func):
@@ -66,6 +67,20 @@ def iter_series_items_from_compact_poly(poly_a, max_runs, starting_n=0):
             tmp *= i
             tmp += c
         yield tmp
+
+
+def create_mpf_const_generator(sym_constants):
+    """
+    Returns a generator that creates an mpf objects from sympy constants
+    This allows us to get an object that matches the scope's mpf's workdps
+    """
+    constants_generator = []
+    for i in range(len(sym_constants)):
+        try:
+            constants_generator.append(lambdify((), sym_constants[i], modules="mpmath"))
+        except AttributeError:  # Hackish constant
+            constants_generator.append(sym_constants[i].mpf_val)
+    return constants_generator
 
 
 def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=101, label=None):
