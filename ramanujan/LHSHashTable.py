@@ -13,6 +13,9 @@ from ramanujan.utils.utils import create_mpf_const_generator
 from sympy import lambdify
 from ramanujan.constants import *
 
+# precision required from table
+DEFAULT_THRESHOLD = 10**-10
+
 class LHSHashTable(object):
     """
     This class makes use of bloom filters and a regular representation to improve performance 
@@ -21,7 +24,7 @@ class LHSHashTable(object):
     The bloom filter is always loaded and used to determine if a LHS value is in the database
     all LHS possibilities within computed domain
     """
-    def __init__(self, name, search_range, const_vals, threshold=10**-10) -> None:
+    def __init__(self, name, search_range, const_vals, threshold=DEFAULT_THRESHOLD) -> None:
         """
         hash table for LHS. storing values in the form of (a + b*x_1 + c*x_2 + ...)/(d + e*x_1 + f*x_2 + ...)
         :param search_range: range for value coefficient values
@@ -36,7 +39,8 @@ class LHSHashTable(object):
         self.threshold = threshold
         key_factor = 1 / threshold
         self.max_key_length = len(str(int(key_factor))) * 2
-        const_vals = [const() for const in create_mpf_const_generator(const_vals)]
+        self.constant_generator = create_mpf_const_generator(const_vals)
+        const_vals = [const() for const in self.constant_generator]
         constants = [mpmath.mpf(1)] + const_vals
         self.n_constants = len(constants)
         
@@ -184,11 +188,14 @@ class LHSHashTable(object):
             self.lhs_possibilities[str_key] = [struct.pack(self.pack_format, *[*c_top, *c_bottom])]  # store key and transformation
 
     def evaluate(self, key, constant_values):
+        # this function will usually be called unde a different mpf workdps
+        # generating constant_values again here to match scope's presission
+        const_vals = [const() for const in self.constant_generator]
         stored_values = self._get_by_key(key)
         evaluated_values = []
         for c_top, c_bottom in stored_values:
-            numerator = self.prod(c_top, constant_values)
-            denominator = self.prod(c_bottom, constant_values)
+            numerator = self.prod(c_top, const_vals)
+            denominator = self.prod(c_bottom, const_vals)
             evaluated_values.append(mpmath.mpf(numerator) / mpmath.mpf(denominator))
 
         return evaluated_values
