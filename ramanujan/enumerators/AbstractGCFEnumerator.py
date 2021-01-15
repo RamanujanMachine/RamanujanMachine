@@ -124,7 +124,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             an = self.create_an_series(r.rhs_an_poly, 250)
             bn = self.create_bn_series(r.rhs_bn_poly, 250)
             print_length = max(max(get_size_of_nested_list(r.rhs_an_poly), get_size_of_nested_list(r.rhs_bn_poly)), 5)
-            gcf = GeneralizedContinuedFraction(an, bn)
+            gcf = GeneralizedContinuedFraction(an, bn[1:])
             sym_lhs = self.hash_table.evaluate_sym(r.lhs_key, self.const_sym)[r.lhs_match_idx]
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
         return ret
@@ -153,6 +153,8 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         :param results: list of final results as received from refine_results.
         :param latex: if True print in latex form, otherwise pretty print in unicode.
         """
+        import ipdb
+        ipdb.set_trace()
         formatted_results = self.__get_formatted_results(results)
         for r, raw_r in zip(formatted_results, results):
             result = sympy.Eq(r.LHS, r.RHS)

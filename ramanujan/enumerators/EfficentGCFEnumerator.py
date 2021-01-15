@@ -80,8 +80,8 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
             for i in range(1, len(a_)):
                 tmp_a = q
                 tmp_b = p
-                q = a_[i] * q + b_[i - 1] * prev_q
-                p = a_[i] * p + b_[i - 1] * prev_p
+                q = a_[i] * q + b_[i] * prev_q
+                p = a_[i] * p + b_[i] * prev_p
                 prev_q = tmp_a
                 prev_p = tmp_b
             if q == 0:  # safety check
@@ -105,7 +105,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         results = []  # list of intermediate results
 
         if size_a > size_b:  # cache {bn} in RAM, iterate over an
-            b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series)
+            b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series, filter_from_1=True)
             real_bn_size = len(bn_list)
             num_iterations = (num_iterations // self.get_bn_length()) * real_bn_size
             if print_results:
