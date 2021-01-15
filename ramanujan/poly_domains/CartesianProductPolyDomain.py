@@ -1,5 +1,5 @@
 from .AbstractPolyDomains import * 
-from ramanujan.series_generators import iter_series_items_from_compact_poly
+from ..utils.series_generators import iter_series_items_from_compact_poly
 from itertools import product 
 
 class CartesianProductPolyDomain(AbstractPolyDomains):
@@ -37,10 +37,10 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 		]
 
 	def get_an_length(self):
-		return (self.a_deg + 1) ** (self.a_coef_range[1] - self.a_coef_range[0] + 1)
+		return (self.a_coef_range[1] - self.a_coef_range[0] + 1) ** (self.a_deg + 1)
 	
 	def get_bn_length(self):
-		return(self.b_deg + 1) ** (self.b_coef_range[1] - self.b_coef_range[0] + 1)
+		return(self.b_coef_range[1] - self.b_coef_range[0] + 1) ** (self.b_deg + 1)
 
 	def get_calculation_method(self):
 		# both an and bn are regular compact polys
