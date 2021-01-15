@@ -176,7 +176,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             results_in_latex.append(sympy.latex(equation))
         return results_in_latex
 
-    def find_initial_hits(self, poly_domains, print_results=True):
+    def find_initial_hits(self, print_results=True):
         """
         use search engine to find results (steps (2) and (3) explained in __init__ docstring)
         :param poly_a: explained in docstring of __first_enumeration
@@ -189,7 +189,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                 print('starting preliminary search...')
             start = time()
             # step (2)
-            results = self._first_enumeration(poly_domains, print_results)
+            results = self._first_enumeration(print_results)
             end = time()
             if print_results:
                 print(f'that took {end - start}s')
@@ -214,3 +214,9 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         # override by child
         pass 
     
+    def full_execution(self):
+        first_iteration = self.find_initial_hits()
+        refined_results = self.refine_results(first_iteration)
+        self.print_results(refined_results)
+
+        return refined_results
