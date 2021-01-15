@@ -1,6 +1,7 @@
 import sympy
 import struct
 import mpmath
+import os
 import pickle
 import itertools
 from sympy import lambdify
@@ -11,6 +12,7 @@ from functools import partial, reduce
 from math import gcd
 from ramanujan.utils.utils import create_mpf_const_generator
 from sympy import lambdify
+
 from ramanujan.constants import *
 
 # precision required from table
@@ -51,8 +53,13 @@ class LHSHashTable(object):
         
         start_time = time()
 
-        with mpmath.workdps(g_N_initial_search_dps):
-            self._enumerate_lhs_domain(constants, search_range, key_factor)
+        if os.path.isfile(self.s_name):
+            print(f'loading from {self.s_name}')
+            self._load_from_file(self.s_name)
+        else:
+            print('no existing db found, generating dict')
+            with mpmath.workdps(g_N_initial_search_dps):
+                self._enumerate_lhs_domain(constants, search_range, key_factor)
 
         with open(self.s_name, 'wb') as f:
             pickle.dump(self.lhs_possibilities, f)
@@ -71,6 +78,12 @@ class LHSHashTable(object):
         rational_keys = [int((mpmath.mpf(num) / denom) * key_factor) for num, denom in rational_options]
         # +-1 for numeric errors in keys.
         return set(rational_keys + [x + 1 for x in rational_keys] + [x - 1 for x in rational_keys])
+
+    def _load_from_file(self, db_path):
+        with open(db_path, 'rb') as f:
+            self.lhs_possibilities = pickle.load(f)
+        for key in self.lhs_possibilities.keys():
+            self.bloom.add(key)
 
     def _enumerate_lhs_domain(self, constants, search_range, key_factor):
         rational_blacklist = self._create_ratoinal_numbers_blacklist(search_range, key_factor)
