@@ -20,7 +20,7 @@ from ramanujan.constants import *
 
 # intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
-RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx')
+RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef iter_counter')
 
@@ -153,8 +153,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         :param results: list of final results as received from refine_results.
         :param latex: if True print in latex form, otherwise pretty print in unicode.
         """
-        import ipdb
-        ipdb.set_trace()
         formatted_results = self.__get_formatted_results(results)
         for r, raw_r in zip(formatted_results, results):
             result = sympy.Eq(r.LHS, r.RHS)
