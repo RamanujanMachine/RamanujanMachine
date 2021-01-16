@@ -4,26 +4,22 @@ import argparse
 import pickle
 from time import time
 import sympy
-#from enumerate_over_gcf import multi_core_enumeration_wrapper
-#from AbstractGCFEnumerator import g_N_verify_terms
 from enumerate_over_signed_rcf import esma_search_wrapper
-# the file imported here is a static copy of the file held in ramanujan
 import series_generators
 import lhs_generators
-import ramanujan.constants  # declares constants as sympy Singeltons, "not" used is intended
+import constants  # declares constants as sympy Singeltons, "not" used is intended
 
-g_N_verify_terms = 1000
 g_const_dict = {
     'zeta': sympy.zeta,
     'e': sympy.E,
     'pi': sympy.pi,
-    'pi_sqared': sympy.pi ** 2,
     'catalan': sympy.Catalan,
     'golden_ratio': sympy.GoldenRatio,
     'khinchin': sympy.S.Khinchin,
     'euler-mascheroni': sympy.EulerGamma,
     'pi-acosh_2': sympy.pi * sympy.acosh(2)
 }
+
 
 def get_custom_an_generator(args):
     """
@@ -33,8 +29,6 @@ def get_custom_an_generator(args):
     """
     if args.zeta3_an:
         return series_generators.CartesianProductZeta3An(), 2
-    elif args.zeta3_an_n6_complement:
-        return series_generators.CartesianProductZeta3N6ComplementAn(), 1
     elif args.zeta5_an:
         return series_generators.CartesianProductZeta5An(), 3
     elif args.polynomial_shift1_an:
@@ -56,8 +50,6 @@ def init_custom_an_generator_parser(parser):
     custom_an_exclusive = custom_an_group.add_mutually_exclusive_group()
     custom_an_exclusive.add_argument('--zeta3_an', action='store_true',
                                      help=series_generators.CartesianProductZeta3An.help_string)
-    custom_an_exclusive.add_argument('--zeta3_an_n6_complement', action='store_true',
-                                     help=series_generators.CartesianProductZeta3N6ComplementAn.help_string)
     custom_an_exclusive.add_argument('--zeta5_an', action='store_true',
                                      help=series_generators.CartesianProductZeta5An.help_string)
     custom_an_exclusive.add_argument('--polynomial_shift1_an', action='store_true',
@@ -81,8 +73,6 @@ def get_custom_bn_generator(args):
         return series_generators.CartesianProductZetaBn(args.function_value), 2
     elif args.catalan_bn:
         return series_generators.CartesianProductBnCatalan(), 2
-    elif args.zeta3_n6_bn:
-        return series_generators.CartesianProductZeta3N6Bn(), 1
     elif args.polynomial_shift1_bn:
         return series_generators.CartesianProductBnShift1(), None
     elif args.polynomial_shift2n1_bn:
@@ -103,8 +93,6 @@ def init_custom_bn_generator_parser(parser):
     custom_bn_exclusive = custom_bn_group.add_mutually_exclusive_group()
     custom_bn_exclusive.add_argument('--zeta_bn', action='store_true',
                                      help=series_generators.CartesianProductZetaBn.help_string)
-    custom_bn_exclusive.add_argument('--zeta3_n6_bn', action='store_true',
-                                     help=series_generators.CartesianProductZeta3N6Bn.help_string)
     custom_bn_exclusive.add_argument('--catalan_bn', action='store_true',
                                      help=series_generators.CartesianProductBnCatalan.help_string)
     custom_bn_exclusive.add_argument('--polynomial_shift1_bn', action='store_true',
@@ -115,6 +103,7 @@ def init_custom_bn_generator_parser(parser):
                                      help=series_generators.IntegerFactor.help_string)
     custom_bn_exclusive.add_argument('--polynomial_bn', action='store_true',
                                      help=series_generators.CartesianProductBnGenerator.help_string)
+
 
 def get_lhs_generator(generator_name, args):
     """
@@ -255,8 +244,7 @@ def enumerate_over_gcf_main(args):
         manual_splits_size=None,  # use naive tiling
         saved_hash=os.path.join('hash_tables', hash_table_filename),  # if this doesn't exist, it will be created.
         create_an_series=an_generator,
-        create_bn_series=bn_generator,
-        enumerator_type=args.enumerator
+        create_bn_series=bn_generator
     )
 
     with open('tmp_results', 'wb') as file:

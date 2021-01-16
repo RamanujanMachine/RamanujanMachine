@@ -70,20 +70,14 @@ class CartesianProductAnGenerator(SeriesGeneratorClass):
         return self.function
 
     def get_num_iterations(self, poly_a: List[List[int]]):
-        #return 2 * number_of_cartesian_product_elements(poly_a)
-
-        # TODO - acutally make the following be:
-        # allowing all elements to be negetive beside the leading coef (to save on duplicate runs)
-        return number_of_cartesian_product_elements(poly_a[1:]) * len(poly_a[1])
+        return number_of_cartesian_product_elements(poly_a)
 
     def get_iterator(self, poly_a: List[List[int]]) -> Iterator:
         """
         return cartesian product iterator
         if poly_a = [[1,2,3],[5,6]], permutations will be { [1,5] ; [1,6] ; [2,5] ; [2,6] ; [3,5] ; [3,6] }
         """
-        neg_poly_a = [poly_a[0], *[[-i for i in a] for a in poly_a[1:]]]  # for b_n include negative terms
-        return chain(product(*poly_a), product(*neg_poly_a))
-        #return product(*poly_a)
+        return product(*poly_a)
 
     help_string = 'a[n] = n(n(...(x[1]*n + x[0]) + x[2]) + ...) + x[k]. this is the default generator'
 
@@ -107,11 +101,7 @@ class CartesianProductBnGenerator(SeriesGeneratorClass):
                                                       +   { [-1,-5] ; [-1,-6] ; [-2,-5] ; [-2,-6] ; [-3,-5] ; [-3,-6] }
         """
         neg_poly_b = [[-i for i in b] for b in poly_b]  # for b_n include negative terms
-        #all_possibilites = neg_poly_b + poly_b
-        all_possibilites = [[-i for i in b][1:] + b for b in poly_b]
-
-        return product(*all_possibilites)
-
+        return chain(product(*poly_b), product(*neg_poly_b))
 
 
 class CartesianProductBnShift1(CartesianProductBnGenerator):
@@ -178,21 +168,6 @@ class CartesianProductZeta3An(CartesianProductAnGenerator):
         super().__init__()
         self.function = zeta3_an_generator
 
-class CartesianProductZeta3N6Bn(CartesianProductBnGenerator):
-    help_string = 'Generator3[x0_] := {x_[0]*n^6}.\n' \
-                  'this was found to be useful for zeta3 searches'
-
-    def __init__(self):
-        super().__init__()
-        self.function = zeta3_bn_n6_generator
-
-class CartesianProductZeta3N6ComplementAn(CartesianProductAnGenerator):
-    help_string = 'Generator3[x3_, x0_] := {(2*i - 1) * (i * (i - 1) + (x_[0]**2 + 1)/2)}.\n' \
-                  'this was found to be useful for zeta3 searches'
-
-    def __init__(self):
-        super().__init__()
-        self.function = zeta3_an_n6_complement_generator
 
 class CartesianProductZeta5An(CartesianProductAnGenerator):
     help_string = 'Generator5[x5_, x3_, x0_] := {x0, 2 *x0 + x3 - 2 *x5, 3*x3 - 5*x5, 2*x3, 5*x5, 2*x5}'
@@ -261,23 +236,6 @@ def create_series_from_compact_poly(poly_a, n):
         ret.append(tmp)
     return ret
 
-def get_series_items_from_iter(series_iter, coefs, max_n, start_n = 0):
-    return [i for i in series_iter(coefs, max_n, start_n)]
-    
-def iter_series_items_from_compact_poly(poly_coef, max_runs, start_n=1):
-    """
-    create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
-    :param poly_a: a[k] coefficients
-    :param n: length of series
-    :return: a list of numbers in series
-    """
-    for i in range(start_n, max_runs):
-        tmp = 0
-        for c in poly_coef:
-            tmp *= i
-            tmp += c
-        yield tmp
-
 
 def create_series_from_compact_poly_with_shift1(poly_a, n):
     """
@@ -340,33 +298,6 @@ def zeta3_an_generator(x_, n):
     ret = []
     for i in range(n):
         res = x_[0] + (2 * x_[0] + x_[1]) * i + 3 * x_[1] * (i ** 2) + 2 * x_[1] * (i ** 3)
-        ret.append(res)
-    return ret
-
-
-def zeta3_bn_n6_generator(x_, n):
-    """
-    Generator3_n6[x3_, x0_] := {x0, 2 *x0 + x3, 3*x3, 2*x3}
-    :param x_:
-    :param n:
-    """
-    ret = []
-    for i in range(1, n):
-        res = x_[0] * (i ** 6) 
-        ret.append(res)
-    return ret
-
-
-def zeta3_an_n6_complement_generator(x_, n):
-    """
-    Generator3_n6[x3_, x0_] := {x0, 2 *x0 + x3, 3*x3, 2*x3}
-    :param x_:
-    :param n:
-    """
-    print("="*20)
-    ret = []
-    for i in range(n):
-        res = (2*i - 1) * (i * (i - 1) + (x_[0]**2 + 1)/2)
         ret.append(res)
     return ret
 
