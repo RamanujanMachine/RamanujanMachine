@@ -25,9 +25,6 @@ g_const_dict = {
     'pi-acosh_2': sympy.pi * sympy.acosh(2)
 }
 
-enumerators = ['relative', 'efficent', 'monoms']
-   
-
 def get_custom_an_generator(args):
     """
     custom {an} generators. create a new one and add it here and include in 'init_custom_an_generator_parser'.
@@ -184,8 +181,6 @@ Currently the optional enumeration types are:
                             help='The limit for the LHS coefficients')
     gcf_parser.add_argument('-num_of_cores', type=int,
                             help='The number of cores to run on', default=1)
-    gcf_parser.add_argument('-enumerator', type=str, choices=enumerators, default='efficent',
-                            help=f'enumerator to use for GCF calculations, from {enumerators}')
     gcf_parser.add_argument('-poly_a_order', type=int,
                             help='the number of free coefficients for {a_n} series')
     gcf_parser.add_argument('-poly_a_coefficient_max', type=int,
