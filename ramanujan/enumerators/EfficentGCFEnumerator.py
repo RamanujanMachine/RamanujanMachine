@@ -142,7 +142,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
             start = time()
             for b_coef in b_coef_iter:
                 bn = self.create_bn_series(b_coef, g_N_initial_search_terms)
-                if 0 in bn:
+                if 0 in bn[1:]:
                     counter += real_an_size
                     print_counter += real_an_size
                     continue
@@ -186,7 +186,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
                 all_matches = self.hash_table.evaluate(res.lhs_key, constant_vals)
                 # check if all values enounter are not inf or nan
                 # TODO - consider mpmath.isnormal(val)
-                if not all([ not (mpmath.isinf(val) or mpmath.isnan(val)) for val in all_matches]):  # safety
+                if not all([ not (mpmath.isinf(val) or mpmath.isnan(val)) for val, _, _ in all_matches]):  # safety
                     print('Something wicked happend!')
                     print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
                     continue
@@ -199,12 +199,12 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
             gcf = EfficientGCF(an, bn)
             rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
             
-            for i, val in enumerate(all_matches):
-                val_str = mpmath.nstr(val, g_N_verify_compare_length)
+            for i, match in enumerate(all_matches):
+                val_str = mpmath.nstr(match[0], g_N_verify_compare_length)
                 if val_str == rhs_str:
                     # This patch is ment to allow support for multiple matches for an
                     # LHS key, i will later be used to determind which item in the LHS dict
                     # was matched
-                    results.append(RefinedMatch(*res, i))
+                    results.append(RefinedMatch(*res, i, match[1], match[2]))
 
         return results
