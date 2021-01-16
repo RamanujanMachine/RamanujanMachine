@@ -209,7 +209,9 @@ class LHSHashTable(object):
         for c_top, c_bottom in stored_values:
             numerator = self.prod(c_top, const_vals)
             denominator = self.prod(c_bottom, const_vals)
-            evaluated_values.append(mpmath.mpf(numerator) / mpmath.mpf(denominator))
+            evaluated_values.append(
+                (mpmath.mpf(numerator) / mpmath.mpf(denominator),
+                c_top, c_bottom))
 
         return evaluated_values
 
