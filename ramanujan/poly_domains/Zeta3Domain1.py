@@ -16,20 +16,27 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	praticular relation
 	'''
 
-	def __init__(self, coef_ranges, *args, **kwargs):
+	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
 		'''
 		coef_ranges - the range allowd for each coef from x0,x1,x2,x3
 		in this format-
 			[(x0_min, x0_max), ... ]
 		'''
-		self.coef_ranges = coef_ranges
-
 		super().__init__(
 			a_deg = 4, # deg reffers to degree of freedom, not poly_deg
 			b_deg = 1,
-			a_coef_range = None, # no use, overridden
-			b_coef_range = None
+			a_coef_range = [0,0], # jumk values, will be overriden soon
+			b_coef_range = [0,0]
 			,*args, **kwargs)
+
+		self.a_coef_range = a_coefs_ranges
+		self.b_coef_range = [b_coef_range]
+
+		self.an_length = self.get_an_length()
+		self.bn_length = self.get_bn_length()
+		self.num_iterations = self.an_length * self.bn_length
+
+		self.an_domain_range, self.bn_domain_range = self.dump_domain_ranges()
 
 	def get_calculation_method(self):
 		def an_iterator(free_vars, max_runs, start_n=1):
@@ -41,16 +48,6 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 				yield free_vars[0]*(i**6)
 
 		return an_iterator, bn_iterator
-
-	def get_an_length(self):
-		return self.domain_size_by_var_ranges(self.coef_ranges[:4])
-
-	def get_bn_length(self):
-		return self.domain_size_by_var_ranges(self.coef_ranges[4:])
-
-	def dump_domain_ranges(self):
-		return self.expand_var_ranges_to_domain(self.coef_ranges[:4]), \
-			self.expand_var_ranges_to_domain(self.coef_ranges[4:])
 
 	# allows user to get actual data regarding the polynomals he got
 	@classmethod
@@ -81,6 +78,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 		return bn_coefs[0] * 4 >= -1 * (a_leading_coef**2)
 
 	def iter_polys(self, primary_looped_domain):
+		# TODO - use parent 
 		an_domain, bn_domain = self.dump_domain_ranges()
 
 		if primary_looped_domain == 'a':
@@ -88,19 +86,12 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 			for a_coef in a_coef_iter:
 				b_coef_iter = product(*bn_domain)
 				for b_coef in b_coef_iter:
-					if check_for_convegence(a_coef, b_coef):
+					if self.check_for_convegence(a_coef, b_coef):
 						yield a_coef, b_coef
 		else:
 			b_coef_iter = product(*bn_domain)
 			for b_coef in b_coef_iter:
 				a_coef_iter = product(*an_domain)
 				for a_coef in a_coef_iter:
-					if check_for_convegence(a_coef, b_coef):
+					if self.check_for_convegence(a_coef, b_coef):
 						yield a_coef, b_coef
-
-	def get_individual_polys_generators(self):
-		# skips throught non conveging examples
-		an_domain, bn_domain = self.dump_domain_ranges()
-
-		return product(*an_domain), product(*bn_domain)
-
