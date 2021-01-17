@@ -32,12 +32,6 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 			size *= self._range_size(var_range)
 		return  size
 
-	# def expand_var_ranges_to_domain(self, var_ranges):
-	# 	return [ \
-	# 		[i for i in range(coef[0], coef[1] + 1)] \
-	# 			for coef in var_ranges
-	# 	]
-
 	def get_an_length(self):
 		return self.domain_size_by_var_ranges(self.a_coef_range)
 
