@@ -18,7 +18,6 @@ from ramanujan.utils.latex import generate_latex
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.constants import *
 
-# intermediate result - coefficients of lhs transformation, and compact polynomials for seeding an and bn series.
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
@@ -50,8 +49,8 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         2) refine results - take results from (1) and validate them to 100 decimal digits.
         
         Functions implemented in this abstract class will translate the given constants to 
-        execution limits (e.g. cast search limit to convergence threshold), printing results,
-        and making mpmath work on a sufficient precision 
+        execution limits (e.g. cast search limit to convergence threshold), handle printing 
+        results, and making mpmath work to a sufficient precision on every location
         
         Enumerators should implement the following:
             find_initial_hits
@@ -94,29 +93,8 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         self.get_an_iterator = poly_domains_generator.get_a_coef_iterator
         self.get_bn_iterator = poly_domains_generator.get_b_coef_iterator
         
-        #self.get_an_iterator = a_iterator_func
-        #self.get_bn_iterator = b_iterator_func
-        
         # store lhs_hash_table
         self.hash_table = hash_table
-    
-
-    # depricated, will be deleted soon
-    def _init_hash_table(self, saved_hash):
-        if not os.path.isfile(saved_hash):
-            print('no previous hash table given, initializing hash table...')
-            with mpmath.workdps(self.enum_dps):
-                constants = [const() for const in self.constants_generator]
-                start = time()
-                self.hash_table = LHSHashTable(
-                    saved_hash,
-                    self.lhs_limit,
-                    constants,  # constant
-                    self.threshold)  # length of key
-                end = time()
-                print(f'that took {end - start}s')
-        else:
-            self.hash_table = LHSHashTable.load_from(saved_hash)
 
     def __get_formatted_results(self, results: List[Match]) -> List[FormattedResult]:
         ret = []
@@ -196,7 +174,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         return results
 
     @abstractmethod    
-    def _first_enumeration(self, poly_a: List[List], poly_b: List[List], print_results: bool):
+    def _first_enumeration(self, print_results: bool):
         # override by child
         pass
 

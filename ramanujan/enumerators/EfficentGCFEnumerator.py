@@ -27,8 +27,13 @@ from .AbstractGCFEnumerator import *
 class EfficentGCFEnumerator(AbstractGCFEnumerator):
     """
         This enumerator maximizes on efficiency for calculating GCF to a
-        precise dept. will produce false results when calculating GCFs
-        that converges slowly
+        precise dept. 
+        
+        first enumeration will calculate the GCF to dept g_N_initial_search_terms (about 30),
+        and compare against the lhs table to g_N_initial_key_length (usually 10 digits)
+        results refining will calculate the GCF to dept g_N_verify_terms (usually 1000)
+        and compare it with g_N_verify_compare_length (100) digits of the given expression
+
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -172,7 +177,6 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
         :param print_results: if true print status.
         :return: final results.
         """
-
         results = []
         counter = 0
         n_iterations = len(intermediate_results)
