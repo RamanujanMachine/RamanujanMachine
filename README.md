@@ -6,106 +6,102 @@ For more information, please go to [RamanujanMachine.com](https://www.RamanujanM
 
 ## Installation
 
-Clone the repo and install the requirements in the source/requirements.txt file. If you have pip, it can be done by running
+Clone the repo and install the package. If you have pip, it can be done by running
 ```
-pip install -r requirements.txt
+pip install -e .
 ```
-under the source/ folder. That's it, you are now ready to discover new conjectures.
+under the main folder. That's it, you are now ready to discover new conjectures.
 
 ## Running the code
 
-The source code exists in the source/ folder and should be run from there. Results that are generated in the examples below will be printed on the screen as well as to a LaTeX and a PDF under the source/results/ folder for your convenience.
+To use the RamanujanMachine, you'll have to write a short script that combines three elements:
+
+- Left Hand Side Hash Table (`LHSHashTable`) - A data structure that holds expressions made from the required constant.
+  for example, the following code will generate all Mobius transforms of `e`, keeping the parameters between -5 and 5.
+  Also, it will save the generated domain under `saved_hash`, and will load the data from it on the next execution.
+```python
+ from ramanujan.LHSHashTable import LHSHashTable
+ from ramanujan.constants import g_const_dict
+
+ saved_hash = 'e_lhs_dept5_db'
+ lhs_search_limit = 5
+ lhs = LHSHashTable(
+    saved_hash,
+    lhs_search_limit,
+    [g_const_dict['e']])
+```
+- A Polynomial Domain (Any class under `poly_domains`) - A definition for a family of `an` and `bn` polynomials. 
+Based on those families GCFs will be generated. 
+  
+  The following code will generate the simplest domain, where an and bn are polynomials of degree 2, and the 
+  coefficients have no connection, so every permutation of integers between -5 and 5 for the coefficients will be 
+  generated
+ ```python
+  from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
+  
+  poly_search_domain = CartesianProductPolyDomain(
+    2, [-5, 5],
+    2, [-5, 5])
+```
+
+- An enumerator (any class under `enumerators`) - The glue that holds the two. This is where MITM algorithm resides.
+
+This class will calculate the gcf and decide which conjectures pass the first calculation, and which pass the second,
+as described in our paper.
+For example, creating `EfficientGCFEnumerator` using the `LHSHashTable` and `poly_domain` defined above:
+```python
+from ramanujan.enumerators.EfficentGCFEnumerator import EfficentGCFEnumerator
+
+enumerator = EfficentGCFEnumerator(
+    lhs,
+    poly_search_domain,
+    [g_const_dict['e']],
+    lhs_search_limit
+    )
+```
+
+
+And thats it! start your execution by running:
+```python
+results = enumerator.full_execution()
+```
+
 
 ### Cool examples
-
+Examples given here can be found under `scripts/paper_results`
 #### e
-To find a few formulas for e, run (don't forget to be under the source/ folder when you run it)
+To find a few formulas for e, use the following poly domain:
 ```python
-python main.py MITM_RF -lhs_constant e -num_of_cores 1 -lhs_search_limit 5 -poly_a_order 2 -poly_a_coefficient_max 5 -poly_b_order 2 -poly_b_coefficient_max 5
+poly_search_domain = CartesianProductPolyDomain(
+    2, [-5, 5],
+    2, [-5, 5])
 ```
 
 #### pi
-To find a few formulas for pi, run (don't forget to be under the source/ folder when you run it)
+To find a few formulas for pi, use:
 ```python
-python main.py MITM_RF -lhs_constant pi -num_of_cores 1 -lhs_search_limit 20 -poly_a_order 2 -poly_a_coefficient_max 13 -poly_b_order 3 -poly_b_coefficient_max 11 --polynomial_shift1_bn
+poly_search_domain = CartesianProductPolyDomain(
+    1, [-13, 13],
+    2, [-11, 11])
 ```
 
 #### Riemann Zeta function at 3 (Aépry's constant)
-To find a few formulas related to the Riemann zeta function at 3 (Zeta of 3 is called [Apéry's constant](https://www.wikiwand.com/en/Ap%C3%A9ry%27s_constant) and has a role in the electron's gyromagnetic ratio), run:
+To find a few formulas related to the Riemann zeta function at 3 (Zeta of 3 is called 
+[Apéry's constant](https://www.wikiwand.com/en/Ap%C3%A9ry%27s_constant) and has a role in the electron's gyromagnetic
+ratio), use:
 ```python
-python main.py MITM_RF -lhs_constant zeta -function_value 3 -num_of_cores 2 -lhs_search_limit 14 -poly_a_order 3 -poly_a_coefficient_max 20 -poly_b_order 3 -poly_b_coefficient_max 20 --zeta3_an --zeta_bn
+poly_search_domain = Zeta3Domain1(
+    [(2, 2), (1, 1), (-20, 20), (-20, 20)],
+    (-20, -1))
 ```
 
-#### Catalan constant
-To find a few formulas related to the [catalan constant](https://www.wikiwand.com/en/Catalan%27s_constant), you can run the following code. This one takes a bit longer generate the hash table for and make take a few minutes.
-```python
-python main.py MITM_RF -lhs_constant catalan pi-acosh_2 -num_of_cores 1 -lhs_search_limit 8 -poly_a_order 3 -poly_a_coefficient_max 15 -poly_b_order 2 -poly_b_coefficient_max 5 --catalan_bn
-```
-
-Now that you've seen how to run the basic code, you can tweak the search parameters and find new conjectures of your own. To do so, please read the next section.
+Now that you've seen how to run the basic code, you can tweak the search parameters and find new conjectures of your own.
+To do so, please read the next section.
 
 ### Tweaking the search parameters
 
-Under the source/ folder,
-```python
-python main.py
-```
-runs the code. The infrastructure supports various algorithms for discovery of constants and for now can only be run using the MITM_RF toggle.
+If you wish to tweak the searched series, you can create a new class that extends `AbstractPolyDomains`, and defines
+your new polynomial families. If there is no complex connection between an and bn, you can extend 
+`CartesianProductPolyDomain`.
 
-##### MITM_RF module: 
-this is our new MITM implementation. The program will "mine" new Continued Fraction conjectures of the type:
-![LHS_RHS](images/LHS_RHS.png)
-The code let's you control the equation space scanned by the algorithm. To get more information about what you can control and tweak, run
-```python
-python main.py MITM_RF -h
-```
-
-Parameters that you can currently control without changing the code itself include:
-
-* -lhs_constant {zeta,e,pi,catalan,golden_ratio,khinchin,euler-mascheroni,pi-acosh_2} [{zeta,e,pi,catalan,golden_ratio,khinchin,euler-mascheroni,pi-acosh_2} ...] constants to search for - initializing the left-hand-side hash table
-* -function_value FUNCTION_VALUE Which value of the function are we assessing (assuming LHS constant takes an arguments)
-* -lhs_search_limit LHS_SEARCH_LIMIT The limit for the LHS coefficients
-* -num_of_cores NUM_OF_CORES The number of cores to run on
-* -poly_a_order POLY_A_ORDER the number of free coefficients for {a_n} series
-* -poly_a_coefficient_max POLY_A_COEFFICIENT_MAX The maximum value for the coefficients of the {a_n} polynomial
-* -poly_b_order POLY_B_ORDER the number of free coefficients for {b_n} series
-* -poly_b_coefficient_max POLY_B_COEFFICIENT_MAX The maximum value for the coefficients of the {b_n} polynomial
-* custom {a_n} series generator:
-  if defined, poly_a_order is ignored.if not defined the default polynomial
-  will be used
-
-  - --zeta3_an            Generator3[x3_, x0_] := {x0, 2 *x0 + x3, 3*x3, 2*x3}.
-                        this was found to be useful for zeta3 searches
-  - --zeta5_an            Generator5[x5_, x3_, x0_] := {x0, 2 *x0 + x3 - 2 *x5,
-                        3*x3 - 5*x5, 2*x3, 5*x5, 2*x5}
-  - --polynomial_shift1_an
-                        a[n] = m(m(...(x[1]*m + x[0]) + x[2]) + ...) + x[k],
-                        where m=n+1
-  - --polynomial_an       a[n] = n(n(...(x[1]*n + x[0]) + x[2]) + ...) + x[k].
-                        this is the default generator
-
-* custom {b_n} series generator:
-  if defined, poly_b_order is ignored. if not defined the default polynomial
-  will be used
-
-  - --zeta_bn             b[n] = x[0]*(n+1)^d - x[1]*(n+1)^(d-1). where
-                        d=function_value this was found to be useful for zeta
-                        values searches.
-  - --catalan_bn          x[0]*(2*n+1)^4 + x[1]*(2*n+1)^3
-  - --polynomial_shift1_bn
-                        b[n] = m(m(...(x[1]*m + x[0]) + x[2]) + ...) + x[k],
-                        where m=n+1
-  - --polynomial_shift2n1_bn
-                        b[n] = m(m(...(x[1]*m + x[0]) + x[2]) + ...) + x[k],
-                        where m=2*n+1
-  - --integer_factorization_bn
-                        b[n] = x[0]*(term1)^d1*(term2)^d2*..., where
-                        sum(d)=x[1]this is a unique generator using
-                        combination permutations instead of cartesian product.
-                        current terms are: (n+1), (n+2), (n+3), (2n), (2n-1),
-                        (2n+3), (2n+5)
-  - --polynomial_bn       b[n] = n(n(...(x[1]*n + x[0]) + x[2]) + ...) + x[k].
-                        this is the default generator
-
-
-more detailed information regarding this module can be found in documentation/enumerate_over_gcf.pdf
+I'll add an extended example soon
