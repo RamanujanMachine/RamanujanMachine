@@ -1,19 +1,19 @@
-from .AbstractPolyDomains import * 
+from .AbstractPolyDomains import AbstractPolyDomains
 from ..utils.series_generators import iter_series_items_from_compact_poly
-from itertools import product 
+from itertools import product
+
 
 class CartesianProductPolyDomain(AbstractPolyDomains):
 	"""
-		This poly domain will generate all combinations for a(n) and b(n)
+	This poly domain will generate all combinations for a(n) and b(n) coefs without complex dependence between the two
 	"""
-	def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, 
-		*args, **kwargs):
+	def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, *args, **kwargs):
 		self.a_deg = a_deg
 		# expanding the range to a different range for each coef
 		# allows us to use the same functions for decedent classes
-		self.a_coef_range = [a_coef_range for i in range(a_deg + 1)]
+		self.a_coef_range = [a_coef_range for _ in range(a_deg + 1)]
 		self.b_deg = b_deg
-		self.b_coef_range = [b_coef_range for i in range(b_deg + 1)]
+		self.b_coef_range = [b_coef_range for _ in range(b_deg + 1)]
 
 		self.an_length = self.get_an_length()
 		self.bn_length = self.get_bn_length()
@@ -21,22 +21,28 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
 		self.an_domain_range, self.bn_domain_range = self.dump_domain_ranges()
 
-		super().__init__(*args, **kwargs)
+		super().__init__()
 
-	def _range_size(self, coef_range):
+	@staticmethod
+	def _range_size(coef_range):
 		return coef_range[1] - coef_range[0] + 1
 
-	def domain_size_by_var_ranges(self, var_ranges):
+	@staticmethod
+	def domain_size_by_var_ranges(var_ranges):
 		size = 1
 		for var_range in var_ranges:
-			size *= self._range_size(var_range)
-		return  size
+			size *= CartesianProductPolyDomain._range_size(var_range)
+		return size
+
+	@staticmethod
+	def expand_coef_range_to_full_domain(coef_ranges):
+		return [[i for i in range(coef[0], coef[1] + 1)] for coef in coef_ranges]
 
 	def get_an_length(self):
-		return self.domain_size_by_var_ranges(self.a_coef_range)
+		return CartesianProductPolyDomain.domain_size_by_var_ranges(self.a_coef_range)
 
 	def get_bn_length(self):
-		return self.domain_size_by_var_ranges(self.b_coef_range)
+		return CartesianProductPolyDomain.domain_size_by_var_ranges(self.b_coef_range)
 
 	def get_calculation_method(self):
 		# both an and bn are regular compact polys
@@ -44,15 +50,8 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 			iter_series_items_from_compact_poly
 
 	def dump_domain_ranges(self):
-		an_domain = [ \
-			[i for i in range(coef[0], coef[1] + 1)] \
-				for coef in self.a_coef_range
-		]
-
-		bn_domain = [ \
-			[i for i in range(coef[0], coef[1] + 1)] \
-				for coef in self.b_coef_range
-		]
+		an_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(self.a_coef_range)
+		bn_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(self.b_coef_range)
 
 		return an_domain, bn_domain
 
@@ -79,8 +78,5 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 		return product(*self.bn_domain_range)
 	
 	def get_individual_polys_generators(self):
-		# for backwards competability.
-		an_domain, bn_domain = self.dump_domain_ranges()
-
-		return product(*an_domain), product(*bn_domain)
-
+		# for backwards compatibility.
+		return self.get_a_coef_iterator(), self.get_b_coef_iterator()

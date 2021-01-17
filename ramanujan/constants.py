@@ -20,6 +20,7 @@ class Khinchin(with_metaclass(Singleton, NumberSymbol)):
     def _latex(self, printer):
         return r"\Kai"
 
+
 sympy.S.register(Khinchin)
 
 g_N_verify_terms = 1000  # number of CF terms to calculate in __refine_results. (verify hits)

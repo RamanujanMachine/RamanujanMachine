@@ -1,7 +1,7 @@
-import sympy
-from ramanujan.LHSHashTable import *
-from ramanujan.enumerators.EfficentGCFEnumerator import *
-from ramanujan.poly_domains.CartesianProductPolyDomain import *
+from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.enumerators.EfficentGCFEnumerator import EfficentGCFEnumerator
+from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
+from ramanujan.constants import g_const_dict
 
 # create a LHS table for e
 saved_hash = 'e_lhs_dept5_db'
@@ -11,12 +11,15 @@ lhs = LHSHashTable(
     lhs_search_limit,
     [g_const_dict['e']]) 
 
-# define a poly domain to iter through
+# both an and bn take the following form:
+# Xn = x0 * n^2 + x1 * n + x3
+# all coefs can range from -5 to 5.
+# all coefs are independent and all combinations will be generated.
 poly_search_domain = CartesianProductPolyDomain(
-    2, [-5,5], # an deg 2, coefs ranging from -5 to 5
-    2, [-5,5]) # bn deg 2, coefs ranging from -5 to 5
+    2, [-5, 5],
+    2, [-5, 5])
 
-# create an enumeator to iter thought the poly domain and compare it to the 
+# create an enumerator to iter thought the poly domain and compare it to the
 # lhs table
 enumerator = EfficentGCFEnumerator(
     lhs,

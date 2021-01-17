@@ -1,40 +1,23 @@
-import os
-import pickle
 import itertools
-import multiprocessing
-import struct
-from functools import partial, reduce
-from datetime import datetime
-from time import time
-from math import gcd
-from typing import List, Iterator, Callable
-from collections import namedtuple
-from collections.abc import Iterable
 import mpmath
-import sympy
-from sympy import lambdify
-from pybloom_live import BloomFilter
+from typing import List, Iterator, Callable
+from time import time
 
-from ramanujan.utils.latex import generate_latex
-from ramanujan.utils.mobius import GeneralizedContinuedFraction, EfficientGCF
-from ramanujan.utils.convergence_rate import calculate_convergence
-from ramanujan.utils.series_generators import SeriesGeneratorClass, CartesianProductAnGenerator, CartesianProductBnGenerator
-from ramanujan.utils.utils import find_polynomial_series_coefficients
-from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.utils.mobius import EfficientGCF
+from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms, g_N_verify_compare_length
+from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
 
-from .AbstractGCFEnumerator import *
 
-class EfficentGCFEnumerator(AbstractGCFEnumerator):
+class EfficientGCFEnumerator(AbstractGCFEnumerator):
     """
-        This enumerator maximizes on efficiency for calculating GCF to a
-        precise dept. 
-        
-        first enumeration will calculate the GCF to dept g_N_initial_search_terms (about 30),
-        and compare against the lhs table to g_N_initial_key_length (usually 10 digits)
-        results refining will calculate the GCF to dept g_N_verify_terms (usually 1000)
-        and compare it with g_N_verify_compare_length (100) digits of the given expression
+    This enumerator maximizes on efficiency for calculating GCF to a precise dept.
 
+    first enumeration will calculate the GCF to dept g_N_initial_search_terms (about 30),
+    and compare against the lhs table to g_N_initial_key_length (usually 10 digits)
+    results refining will calculate the GCF to dept g_N_verify_terms (usually 1000)
+    and compare it with g_N_verify_compare_length (100) digits of the given expression
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -56,18 +39,14 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
 
     def _first_enumeration(self, print_results: bool):
         """
-        this is usually the bottleneck of the search.
-        we calculate general continued fractions of type K(bn,an). 'an' and 'bn' are polynomial series.
+        This is usually the bottleneck of the search.
+        We calculate general continued fractions of type K(bn,an). 'an' and 'bn' are polynomial series.
         these polynomials take the form of n(n(..(n*c_1 + c_0) + c_2)..)+c_k.
-        poly parameters are a list of coefficients c_i. then the enumeration takes place on all possible products.
-        for example, if poly_a is [[1,2],[2,3]], then the product polynomials are:
-           possible [c0,c1] = { [1,2] , [1,3], [2,2], [2,3] }.
-        this explodes exponentially -
-        example: fs poly_a.shape = poly_b.shape = [3,5]     (2 polynomials of degree 2), then the number of
-        total permutations is: (a poly possibilities) X (b poly possibilities) = (5X5X5) X (5X5X5) = 5**6
-        we search on all possible gcf with polynomials defined by parameters, and try to find hits in hash table.
-        :param poly_a: compact polynomial form of 'an' (list of lists)
-        :param poly_b: compact polynomial form of 'an' (list of lists)
+        The polynomial families are supplied from self.poly_domains_generator
+
+        For each an and bn pair, a gcf is calculated using efficient_gcf_calculation defined under this scope,
+        and compared self.hash_tables for hits.
+
         :param print_results: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
@@ -94,8 +73,6 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
             else:
                 value = mpmath.mpf(p) / mpmath.mpf(q)
             return int(value * key_factor)  # calculate hash key of gcf value
-
-        poly_a, poly_b = self.poly_domains_generator.dump_domain_ranges()
 
         start = time()
         a_coef_iter = self.get_an_iterator()  # all coefficients possibilities for 'a_n'
@@ -136,7 +113,8 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
                             print(
-                                f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+                                f"passed {counter} out of {num_iterations} " +
+                                f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results")
 
         else:  # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
@@ -164,7 +142,8 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
                             print(
-                                f'passed {counter} out of {num_iterations} ({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results')
+                                f"passed {counter} out of {num_iterations} " +
+                                f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results")
 
         if print_results:
             print(f'created results after {time() - start}s')
@@ -187,14 +166,15 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
                 print('passed {} permutations out of {}. found so far {} matches'.format(
                     counter, n_iterations, len(results)))
             try:
-                all_matches = self.hash_table.evaluate(res.lhs_key, constant_vals)
-                # check if all values enounter are not inf or nan
-                # TODO - consider mpmath.isnormal(val)
-                if not all([ not (mpmath.isinf(val) or mpmath.isnan(val)) for val, _, _ in all_matches]):  # safety
-                    print('Something wicked happend!')
+                all_matches = self.hash_table.evaluate(res.lhs_key)
+                # check if all values encountered are not inf or nan
+                if not all([not (mpmath.isinf(val) or mpmath.isnan(val)) for val, _, _ in all_matches]):  # safety
+                    print('Something wicked happened!')
                     print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
                     continue
-            except (ZeroDivisionError, KeyError) as e:
+            except (ZeroDivisionError, KeyError):
+                # if there was an exeption here, there is no need to halt the entire execution, but only note it to the
+                # user
                 continue
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
@@ -202,7 +182,7 @@ class EfficentGCFEnumerator(AbstractGCFEnumerator):
             bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
             gcf = EfficientGCF(an, bn)
             rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
-            
+
             for i, match in enumerate(all_matches):
                 val_str = mpmath.nstr(match[0], g_N_verify_compare_length)
                 if val_str == rhs_str:

@@ -1,21 +1,14 @@
-import os
-import pickle
 from time import time
-from typing import List, Iterator, Callable
+from typing import List
 from collections import namedtuple
 from collections.abc import Iterable
-import mpmath
-import sympy
 from sympy import lambdify
-from pybloom_live import BloomFilter
 from abc import ABCMeta, abstractmethod
 
-from ramanujan.utils.mobius import GeneralizedContinuedFraction, EfficientGCF # consider removing
-from ramanujan.utils.series_generators import iter_series_items_from_compact_poly, get_series_items_from_iter
-from ramanujan.utils.utils import find_polynomial_series_coefficients, get_poly_deg_and_leading_coef, create_mpf_const_generator
+from ramanujan.utils.mobius import GeneralizedContinuedFraction
+from ramanujan.utils.series_generators import get_series_items_from_iter
+from ramanujan.utils.utils import find_polynomial_series_coefficients, create_mpf_const_generator
 from ramanujan.utils.convergence_rate import calculate_convergence
-from ramanujan.utils.latex import generate_latex
-from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.constants import *
 
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
@@ -37,8 +30,10 @@ def get_size_of_nested_list(list_of_elem):
             count += 1
     return count
 
+
 class ZeroInAn(Exception):
     pass
+
 
 class AbstractGCFEnumerator(metaclass=ABCMeta):
     """
@@ -61,12 +56,11 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         """
         initialize search engine.
         :param hash_table: LHSHashTable object storing the constant's permutations. Used for 
-            quering computed values for 
+            querying computed values for
+        :param poly_domains_generator: An poly_domain object that will generate polynomials to iter through, and
+            supply functions for calculating items in each polynomial given
         :param sym_constants: sympy constants
         :param lhs_search_limit: range of coefficients for left hand side.
-        :param saved_hash: path to saved hash.
-        :param an_generator: generating function for {an} series
-        :param bn_generator: generating function for {bn} series
         """
         # constants
         self.threshold = 1 * 10 ** (-g_N_initial_key_length)  # key length
@@ -77,9 +71,8 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         self.constants_generator = create_mpf_const_generator(sym_constants)
         
         # expand poly domains object
-        # there are two methods to generate and iter over domains.
-        # the newer one uses poly_domains_generator only, but the old one 
-        # still uses the rest of the arguments.
+        # there are two methods to generate and iter over domains.  the newer one uses poly_domains_generator only,
+        # but the old one still uses the rest of the arguments.
         # generating them here to avoid breaking older enumerators
         self.poly_domains_generator = poly_domains_generator
         a_iterator_func, b_iterator_func = poly_domains_generator.get_calculation_method()
@@ -96,7 +89,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         # store lhs_hash_table
         self.hash_table = hash_table
 
-    def __get_formatted_results(self, results: List[Match]) -> List[FormattedResult]:
+    def __get_formatted_results(self, results: List[RefinedMatch]) -> List[FormattedResult]:
         ret = []
         for r in results:
             an = self.create_an_series(r.rhs_an_poly, 250)
@@ -107,7 +100,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             ret.append(FormattedResult(sym_lhs, gcf.sym_expression(print_length), gcf))
         return ret
 
-    def __get_formatted_polynomials(self, result: Match):
+    def __get_formatted_polynomials(self, result: RefinedMatch):
         def sym_poly(poly_deg, poly_terms):
             poly = list(reversed(find_polynomial_series_coefficients(poly_deg, poly_terms, 0)))
             n = sympy.Symbol('n')
@@ -124,7 +117,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         bn_eq = sympy.Eq(sympy.Symbol('b(n)'), sym_poly(bn_poly_max_deg, bn))
         return an_eq, bn_eq
 
-    def print_results(self, results: List[Match], latex=False, convergence_rate=True):
+    def print_results(self, results: List[RefinedMatch], latex=False, convergence_rate=True):
         """
         pretty print the the results.
         :param convergence_rate: if True calculate convergence rate and print it as well.
@@ -146,7 +139,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                     rate = calculate_convergence(r.GCF, lambdify((), r.LHS, 'mpmath')())
                 print("Converged with a rate of {} digits per term".format(mpmath.nstr(rate, 5)))
 
-    def convert_results_to_latex(self, results: List[Match]):
+    def convert_results_to_latex(self, results: List[RefinedMatch]):
         results_in_latex = []
         formatted_results = self.__get_formatted_results(results)
         for r in formatted_results:
@@ -156,9 +149,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
     def find_initial_hits(self, print_results=True):
         """
-        use search engine to find results (steps (2) and (3) explained in __init__ docstring)
-        :param poly_a: explained in docstring of __first_enumeration
-        :param poly_b: explained in docstring of __first_enumeration
+        use search engine to find results (steps (1) explained in __init__ docstring)
         :param print_results: if true, pretty print results at the end.
         :return: initial results results.
         """

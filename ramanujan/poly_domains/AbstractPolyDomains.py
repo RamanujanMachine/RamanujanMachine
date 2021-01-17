@@ -1,20 +1,20 @@
 from abc import ABCMeta
 
+
 class AbstractPolyDomains(metaclass=ABCMeta):
 	"""
-	This is an abstract class, meant to represent the polynomial domains
-	iterated through a run.
+	This is an abstract class, meant to represent the polynomial domains iterated through a run.
 
-	A poly domain is defined here as two families of polynomials. Each family
-	is defined by a function with variables, referred to as coefs. Each
-	coef has it allowed range size.
-	This class will generate all coefs under those restrictions. Each decanted 
-	class must also create a calculation method to use those coefs
+	A poly domain is defined here as two families of polynomials. Each family is defined by a function with variables,
+	referred to as coefs. Each coef has it allowed range size.
+	This class will generate all coefs under those restrictions.
+
+	Each decanted class must create a calculation method to use those coefs
 
 	Examples:
 		A(n) = a*n^2 + b*n + c
 		B(n) = d*n^2 + e*n + f
-		is classical a poly domain, where both a,b has 6 deg of freedom 
+		is classical a poly domain, where both a,b has 3 degrees of freedom, giving us 6 degrees of freedom in total.
 
 		A(n) = a*n^2 + b*n + c
 		B(n) = A(n) * A(n-1)
@@ -26,14 +26,14 @@ class AbstractPolyDomains(metaclass=ABCMeta):
 		pass
 
 	def iter_polys(self, primary_looped_domain):
-		'''
-			On other locations, one might want to choose the nested
-			oreder between both poylnomials (for caching the smaller one)
-			primary_looped_domain is ment to allow a user to choose the nesting
-			order
+		"""
+		On other locations, one might want to choose the nested order between both polynomials
+		(for caching the smaller one)
+		primary_looped_domain is meant to allow a user to choose the nesting
+		order
 
-			primary_looped_domain accepts 'an' or 'bn'
-		'''
+		primary_looped_domain accepts 'an' or 'bn'
+		"""
 		pass
 
 	def get_num_iterations(self):
@@ -44,6 +44,9 @@ class AbstractPolyDomains(metaclass=ABCMeta):
 
 	def dump_domain_ranges(self):
 		"""
-			Backwards compatibility - some enumerators except this format
+		Backwards compatibility - some enumerators except this format.
+		returns a list that contains every possible value for each coef.
+		so [[1,2,3],[1,2,3],[1,2,3]]
+		means that each coef may accept the values 1, 2 or 3
 		"""
 		pass

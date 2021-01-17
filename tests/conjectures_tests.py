@@ -1,17 +1,18 @@
 import unittest
-import sympy
-from ramanujan.LHSHashTable import *
-from ramanujan.enumerators.EfficentGCFEnumerator import *
-from ramanujan.poly_domains.CartesianProductPolyDomain import *
-from ramanujan.poly_domains.Zeta3Domain1 import *
+from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.enumerators.EfficentGCFEnumerator import EfficentGCFEnumerator
+from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
+from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
+from ramanujan.constants import g_const_dict
 
-def get_testable_data(refind_res_list):
+
+def get_testable_data(refined_res_list):
     '''
         On those test we have no use for the bloom key or lhs dict pointers
         exctact the meaning full data for testing
     '''
     data = []
-    for i in refind_res_list:
+    for i in refined_res_list:
         data.append((
             i.rhs_an_poly,
             i.rhs_bn_poly,
@@ -28,20 +29,19 @@ class APITests(unittest.TestCase):
         lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict['e']]) 
 
         poly_search_domain = CartesianProductPolyDomain(
-            2, [-5,5], 
-            2, [-5,5]) 
+            2, [-5, 5],
+            2, [-5, 5])
 
-        enumerator = EfficentGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']],
-            lhs_search_limit)
+        enumerator = EfficentGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']], lhs_search_limit)
 
         results = get_testable_data(enumerator.full_execution())
 
         self.assertEqual(len(results), 42)
         self.assertIn(
-            ((0, 4, 2), (0, 0, 1), (1, 1), (-1,1)), 
+            ((0, 4, 2), (0, 0, 1), (1, 1), (-1, 1)),
             results)
         self.assertIn(
-            ((0, 1, 1), (0, 1, 0), (1, 0), (-2,1)), 
+            ((0, 1, 1), (0, 1, 0), (1, 0), (-2, 1)),
             results)
 
     def test_MITM_api2(self):
@@ -50,8 +50,8 @@ class APITests(unittest.TestCase):
         lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict['zeta'](3)]) 
 
         poly_search_domain = Zeta3Domain1(
-            [(2,2), (1,1), (1,17), (1,5)], # an coefs
-            (-16,-1) # bn coef
+            [(2, 2), (1, 1), (1, 17), (1, 5)], # an coefs
+            (-16, -1) # bn coef
             ) 
 
         enumerator = EfficentGCFEnumerator(

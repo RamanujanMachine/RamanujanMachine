@@ -1,22 +1,19 @@
-import sympy
-import struct
-import mpmath
 import os
+import struct
 import pickle
+import mpmath
 import itertools
-from sympy import lambdify
-from datetime import datetime
 from time import time
 from pybloom_live import BloomFilter
-from functools import partial, reduce
+from functools import reduce
 from math import gcd
 from ramanujan.utils.utils import create_mpf_const_generator
-from sympy import lambdify
 
-from ramanujan.constants import *
+from ramanujan.constants import g_N_initial_search_dps
 
 # precision required from table
 DEFAULT_THRESHOLD = 10**-10
+
 
 class LHSHashTable(object):
     """
@@ -68,8 +65,8 @@ class LHSHashTable(object):
         self.lhs_possibilities = None
         print('initializing LHS dict: {}'.format(time() - start_time))
 
-
-    def _create_ratoinal_numbers_blacklist(self, search_range, key_factor):
+    @staticmethod
+    def _create_rational_numbers_blacklist(search_range, key_factor):
         # LHS numerator and denominator might cancel out and LHS will be rational. 
         # Those options are not relevant  
         coef_possibilities = [i for i in range(-search_range, search_range + 1)]
@@ -86,7 +83,7 @@ class LHSHashTable(object):
             self.bloom.add(key)
 
     def _enumerate_lhs_domain(self, constants, search_range, key_factor):
-        rational_blacklist = self._create_ratoinal_numbers_blacklist(search_range, key_factor)
+        rational_blacklist = LHSHashTable._create_rational_numbers_blacklist(search_range, key_factor)
 
         # Create enumeration lists
         coefs_top = [range(-search_range, search_range + 1)] * self.n_constants  # numerator range
@@ -115,7 +112,7 @@ class LHSHashTable(object):
                     continue
                 
                 str_key = str(key)
-                self._add_to_lhs_possblilites(str_key, c_top, c_bottom)
+                self._add_to_lhs_possibilities(str_key, c_top, c_bottom)
                 self.bloom.add(str_key)
     
     def __contains__(self, item):
@@ -143,13 +140,11 @@ class LHSHashTable(object):
         if type(other) != type(self):
             return False
         ret = self.threshold == other.threshold
-        # ret &= sorted(self.lhs_possibilities.keys()) == sorted(other.s.keys())
         return ret
 
     @staticmethod
     def lhs_hash_name_to_shelve_name(name):
         return name.split('.')[0] + '.db'
-
 
     @staticmethod
     def are_co_prime(integers):
@@ -167,14 +162,10 @@ class LHSHashTable(object):
             ret += consts[i] * coefs[i + 1]
         return ret
 
-    @staticmethod
-    def lhs_hash_name_to_shelve_name(name):
-        return name.split('.')[0] + '.db'
-
     def _get_by_key(self, key):
         with open(self.s_name, 'rb') as f:
             if self.lhs_possibilities is None:
-                    self.lhs_possibilities = pickle.load(f)
+                self.lhs_possibilities = pickle.load(f)
             values = []
             for lhs_match in self.lhs_possibilities[str(key)]:
                 vals = struct.unpack(self.pack_format, lhs_match)
@@ -193,25 +184,23 @@ class LHSHashTable(object):
         ret.s_name = ret.lhs_hash_name_to_shelve_name(name)
         return ret
 
-    def _add_to_lhs_possblilites(self, str_key, c_top, c_bottom):
-        # TODO - consider using collections 
+    def _add_to_lhs_possibilities(self, str_key, c_top, c_bottom):
+        # store key and transformation
         if str_key in self.lhs_possibilities:
-            self.lhs_possibilities[str_key].append(struct.pack(self.pack_format, *[*c_top, *c_bottom]))  # store key and transformation
+            self.lhs_possibilities[str_key].append(struct.pack(self.pack_format, *[*c_top, *c_bottom]))
         else:
-            self.lhs_possibilities[str_key] = [struct.pack(self.pack_format, *[*c_top, *c_bottom])]  # store key and transformation
+            self.lhs_possibilities[str_key] = [struct.pack(self.pack_format, *[*c_top, *c_bottom])]
 
-    def evaluate(self, key, constant_values):
-        # this function will usually be called unde a different mpf workdps
-        # generating constant_values again here to match scope's presission
+    def evaluate(self, key):
+        # this function will usually be called under a different mpf workdps
+        # generating constant_values again here to match scope's precision
         const_vals = [const() for const in self.constant_generator]
         stored_values = self._get_by_key(key)
         evaluated_values = []
         for c_top, c_bottom in stored_values:
             numerator = self.prod(c_top, const_vals)
             denominator = self.prod(c_bottom, const_vals)
-            evaluated_values.append(
-                (mpmath.mpf(numerator) / mpmath.mpf(denominator),
-                c_top, c_bottom))
+            evaluated_values.append((mpmath.mpf(numerator) / mpmath.mpf(denominator), c_top, c_bottom))
 
         return evaluated_values
 
