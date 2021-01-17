@@ -6,8 +6,6 @@ setuptools.setup(
     description="Ramanujan Machine",
     packages=['ramanujan'],
     install_requires=[
-#        'llvmlite>=0.32.0',
-#        'numba>=0.49.0',
         'cycler>=0.10.0',
         'kiwisolver>=1.1.0',
         'matplotlib>=3.2.0',
