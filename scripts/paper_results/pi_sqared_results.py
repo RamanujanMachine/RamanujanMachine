@@ -4,7 +4,7 @@ from ramanujan.enumerators.EfficentGCFEnumerator import *
 from ramanujan.poly_domains.Zeta3Domain1 import *
 from constants import g_const_dict
 
-# create a LHS table for e
+# create a LHS table for pi^2
 saved_hash = 'pi_sqared.lhs.dept20.db'
 lhs_search_limit = 20
 lhs = LHSHashTable(
