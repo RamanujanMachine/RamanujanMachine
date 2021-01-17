@@ -12,20 +12,20 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	keep x0 and x1 low
 	keep x4 negative
 
-	this is a decendent of CartesianProductPolyDomain since an and bn has no
-	praticular relation
+	this is a decedent of CartesianProductPolyDomain since an and bn has no
+	particular relation
 	'''
 
 	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
 		'''
-		coef_ranges - the range allowd for each coef from x0,x1,x2,x3
+		a_coefs_ranges - the range allowed for each coef from x0,x1,x2,x3
 		in this format-
 			[(x0_min, x0_max), ... ]
 		'''
 		super().__init__(
-			a_deg = 4, # deg reffers to degree of freedom, not poly_deg
+			a_deg = 4, # deg refers to degree of freedom, not poly_deg
 			b_deg = 1,
-			a_coef_range = [0,0], # jumk values, will be overriden soon
+			a_coef_range = [0,0], # junk values, will override soon
 			b_coef_range = [0,0]
 			,*args, **kwargs)
 
@@ -72,6 +72,8 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 		return bn_coefs[0]
 	
 	def check_for_convegence(self, an_coefs, bn_coefs):
+		# see Ramanujan paper for convergence condition on balanced 
+		# an & bn degrees
 		a_leading_coef = an_coefs[0] * an_coefs[2]
 
 		# checking for >= as well as >, might be overkill
