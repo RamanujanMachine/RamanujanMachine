@@ -1,5 +1,5 @@
 from ramanujan.LHSHashTable import LHSHashTable
-from ramanujan.enumerators.EfficentGCFEnumerator import EfficentGCFEnumerator
+from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.constants import g_const_dict
 
@@ -21,7 +21,7 @@ poly_search_domain = CartesianProductPolyDomain(
 
 # create an enumerator to iter thought the poly domain and compare it to the
 # lhs table
-enumerator = EfficentGCFEnumerator(
+enumerator = EfficientGCFEnumerator(
     lhs,
     poly_search_domain,
     [g_const_dict['e']],

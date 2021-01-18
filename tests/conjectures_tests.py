@@ -1,6 +1,6 @@
 import unittest
 from ramanujan.LHSHashTable import LHSHashTable
-from ramanujan.enumerators.EfficentGCFEnumerator import EfficentGCFEnumerator
+from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
 from ramanujan.constants import g_const_dict
