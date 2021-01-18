@@ -15,13 +15,20 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 		self.b_deg = b_deg
 		self.b_coef_range = [b_coef_range for _ in range(b_deg + 1)]
 
+		self._setup_metadata()
+		super().__init__()
+
+	def _setup_metadata(self):
+		"""
+		This function generates and stores values that should not change throughout the run.
+		It continues __init__'s job, but holds code that is used in classes that extend this class, so it was
+		moved to a separate function.
+		"""
 		self.an_length = self.get_an_length()
 		self.bn_length = self.get_bn_length()
 		self.num_iterations = self.an_length * self.bn_length
 
 		self.an_domain_range, self.bn_domain_range = self.dump_domain_ranges()
-
-		super().__init__()
 
 	@staticmethod
 	def _range_size(coef_range):
