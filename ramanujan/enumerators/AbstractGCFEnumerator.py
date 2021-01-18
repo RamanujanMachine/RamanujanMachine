@@ -52,7 +52,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             refine_results
 
     """
-    def __init__(self, hash_table, poly_domains_generator, sym_constants, lhs_search_limit):
+    def __init__(self, hash_table, poly_domains_generator, sym_constants):
         """
         initialize search engine.
         :param hash_table: LHSHashTable object storing the constant's permutations. Used for 
@@ -66,7 +66,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         self.threshold = 1 * 10 ** (-g_N_initial_key_length)  # key length
         self.enum_dps = g_N_initial_search_dps  # working decimal precision for first enumeration
         self.verify_dps = g_N_verify_dps  # working decimal precision for validating results.
-        self.lhs_limit = lhs_search_limit
         self.const_sym = sym_constants
         self.constants_generator = create_mpf_const_generator(sym_constants)
         

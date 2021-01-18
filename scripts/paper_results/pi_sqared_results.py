@@ -23,8 +23,7 @@ poly_search_domain = Zeta3Domain1(
 enumerator = EfficentGCFEnumerator(
 	lhs,
 	poly_search_domain,
-	[g_const_dict['zeta'](3)],
-	lhs_search_limit
+	[g_const_dict['zeta'](3)]
 	)
 
 results = enumerator.full_execution()
