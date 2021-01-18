@@ -29,8 +29,7 @@ class AbstractPolyDomains(metaclass=ABCMeta):
 		"""
 		On other locations, one might want to choose the nested order between both polynomials
 		(for caching the smaller one)
-		primary_looped_domain is meant to allow a user to choose the nesting
-		order
+		primary_looped_domain is meant to allow a user to choose the nesting order
 
 		primary_looped_domain accepts 'an' or 'bn'
 		"""
