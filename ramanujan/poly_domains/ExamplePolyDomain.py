@@ -18,14 +18,17 @@ class ExampleDomain(CartesianProductPolyDomain):
         Under this function you'll need to create 2 objects:
         1. a_coef_range
         2. b_coef_range
-        both are a list that contains the range for each coef. so in our case, an should look like this
+        both are lists that contains the range for each coef. so in our case, an should look like this
         [[c_0_min, c_0_max], [c_1_min, c_1_max]], and bn like [[c_3_min, c_3_max]]
         :param a_coefs_ranges:  ranges for an coefs, as described above
-        :param b_coef_range:  bn has only one coef, so this is the range for it. [c_3_min, c_3_max]
+        :param b_coef_range:  bn has only one coef, so this is the range for it - [c_3_min, c_3_max]
         """
         self.a_coef_range = a_coefs_ranges
         # bn's coef range is converted to the expected form.
         self.b_coef_range = [b_coef_range]
+
+        # make sure to call this function at the end of __init__. It will calculate an_size and bn_size, and
+        # other data relevant to the algorithm
         self._setup_metadata()
 
     def get_calculation_method(self):
