@@ -18,9 +18,10 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	"""
 	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
 		"""
-		a_coefs_ranges - the range allowed for each coef from x0,x1,x2,x3
+		:param a_coefs_ranges: the range allowed for each coef from x0,x1,x2,x3
 		in this format-
 			[(x0_min, x0_max), ... ]
+		:param b_coefs_ranges: b has only one coef, so this will hold (x4_min, x4_max)
 		"""
 		# a_coef_range and b_coef_range are given blank values. they are initialized again afterwards
 		super().__init__(a_deg=4, b_deg=1, a_coef_range=[0, 0], b_coef_range=[0, 0], *args, **kwargs)
@@ -68,8 +69,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	
 	@staticmethod
 	def check_for_convergence(an_coefs, bn_coefs):
-		# see Ramanujan paper for convergence condition on balanced 
-		# an & bn degrees
+		# see Ramanujan paper for convergence condition on balanced an & bn degrees
 		a_leading_coef = an_coefs[0] * an_coefs[2]
 
 		# checking for >= as well as >, might be overkill
