@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="ramanujan", # Replace with your own username
+    name="ramanujan",
     version="0.0.1",
     description="Ramanujan Machine",
     packages=['ramanujan'],
