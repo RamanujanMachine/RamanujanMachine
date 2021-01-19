@@ -3,9 +3,7 @@ import sys
 import argparse
 import pickle
 from time import time
-import sympy
 from enumerate_over_signed_rcf import esma_search_wrapper
-import ramanujan.utils.series_generators as series_generators
 import lhs_generators
 import ramanujan.constants  # declares constants as sympy Singeltons, "not" used is intended
 from ramanujan.constants import g_const_dict
