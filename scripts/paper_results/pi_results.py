@@ -1,3 +1,8 @@
+from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
+from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
+from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.constants import g_const_dict
+
 """
 This script enumerates GCFs for pi.
 
@@ -7,11 +12,6 @@ bn = x0 * n^2 + x1 * n + x3
 When an coefs can range between -13 and 13, bn coefs can range from -11 to 11.
 All coefs are independent from one another and all combinations will be generated.
 """
-
-from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
-from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
-from ramanujan.LHSHashTable import LHSHashTable
-from ramanujan.constants import g_const_dict
 
 # create a LHS table for pi
 saved_hash = 'pi.lhs.dept20.db'

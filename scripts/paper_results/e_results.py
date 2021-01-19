@@ -1,3 +1,8 @@
+from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
+from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
+from ramanujan.constants import g_const_dict
+
 """
 This script enumerates GCFs for e.
 
@@ -6,11 +11,6 @@ Xn = x0 * n^2 + x1 * n + x3
 All coefs can range from -5 to 5.
 All coefs are independent from one another and all combinations will be generated.
 """
-
-from ramanujan.LHSHashTable import LHSHashTable
-from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
-from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
-from ramanujan.constants import g_const_dict
 
 # create a LHS table for e
 saved_hash = 'e_lhs_dept5_db'

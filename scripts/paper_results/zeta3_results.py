@@ -1,3 +1,8 @@
+from ramanujan.LHSHashTable import LHSHashTable
+from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
+from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
+from ramanujan.constants import g_const_dict
+
 """
 This script enumerates GCFs for zeta(3).
 It uses a specific family of series that tends to generate conjectures for zeta(3)
@@ -12,11 +17,6 @@ x4 is set to range from -10 to -1
 
 Also, Zeta3Domain1 will check for a convergence condition for the GCF, as described in http://www.ramanujanmachine.com/
 """
-
-from ramanujan.LHSHashTable import LHSHashTable
-from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
-from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
-from ramanujan.constants import g_const_dict
 
 # create a LHS table for zeta
 saved_hash = 'zeta3.lhs.dept20.db'
