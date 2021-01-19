@@ -1,6 +1,8 @@
 # MasseyRamanujan
 
-The Ramanujan Machine is an algorithmic approach to discover new mathematical conjectures. For the time being, the project is focused in number theory, specifically on finding formulas relating fundamental constants like pi, e, and the Riemann zeta function values to various continued fractions.
+The Ramanujan Machine is an algorithmic approach to discover new mathematical conjectures. For the time being, the 
+project is focused in number theory, specifically on finding formulas relating fundamental constants like pi, e, and 
+the Riemann zeta function values to various continued fractions.
 
 For more information, please go to [RamanujanMachine.com](https://www.RamanujanMachine.com).
 
@@ -10,56 +12,85 @@ Clone the repo and install the package. If you have pip, it can be done by runni
 ```
 pip install -e .
 ```
-under the main folder. That's it, you are now ready to discover new conjectures.
+under the same folder as `setup.py`. That's it, you are now ready to discover new conjectures.
+
+## The MITM_RF algorithm: 
+The MITM algorithm will "mine" new Continued Fraction conjectures of the type:
+![LHS_RHS](images/LHS_RHS.png)
+This project lets you control the equation space scanned by the algorithm.
+
+To start a new execution, you'll need to configure three parts:
+1. What LHS do you wish to scan
+2. What structure does `an` and `bn` take, and what range do you wish to scan for each coefficient
+3. How to decide if there was a match (precission wise) 
+
+you can see examples under `scripts/` folder 
 
 ## Running the code
 
-To use the RamanujanMachine, you'll have to write a short script that combines three elements:
+As stated above, you'll need to create three objects:
 
-- Left Hand Side Hash Table (`LHSHashTable`) - A data structure that holds expressions made from the required constant.
-  for example, the following code will generate all Mobius transforms of `e`, keeping the parameters between -5 and 5.
-  Also, it will save the generated domain under `saved_hash`, and will load the data from it on the next execution.
+#### Left Hand Side Hash Table (`LHSHashTable`) 
+A data structure that holds expressions made from the required constant.
+To create a LHS object, you'll need to choose a constant, and a range for all coefficients in the expression.
+The values generated are saved to a file to reduce execution time.
+
+For example, the following code will generate all Mobius transforms of `e`, with coefficients between -5 and 5.
+The generated domain is saved to `e_lhs_dept5`
 ```python
  from ramanujan.LHSHashTable import LHSHashTable
  from ramanujan.constants import g_const_dict
 
- saved_hash = 'e_lhs_dept5_db'
- lhs_search_limit = 5
+ saved_hash = 'e_lhs_dept5'
+ lhs_coefs_range = 5
  lhs = LHSHashTable(
     saved_hash,
-    lhs_search_limit,
+    lhs_coefs_range,
     [g_const_dict['e']])
 ```
-- A Polynomial Domain (Any class under `poly_domains`) - A definition for a family of `an` and `bn` polynomials. 
-Based on those families GCFs will be generated. 
-  
-  The following code will generate the simplest domain, where an and bn are polynomials of degree 2, and the 
-  coefficients have no connection, so every permutation of integers between -5 and 5 for the coefficients will be 
-  generated
+
+#### `an` and `bn` Structures (any class under `poly_domains`) 
+An objects that generates pairs of `an` and `bn` series.
+
+The simplest structure you can choose will be `Xn = c_0 + c_1 * n + c_2 * n^2 + ...`, when each coefficient is 
+independent of the rest. 
+
+This type of domain can be defined as follows:
  ```python
   from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
   
   poly_search_domain = CartesianProductPolyDomain(
-    2, [-5, 5],
-    2, [-5, 5])
+    2, [-5, 5], # an coefs
+    2, [-5, 5]) # bn coefs
 ```
+In this example, we've chosen both `an` and `bn` to be of degree 2, and the coefficients are integers that range from
+-5 to 5.
 
-- An enumerator (any class under `enumerators`) - The glue that holds the two. This is where MITM algorithm resides.
+To create more intricate structures, you may create a class that extents `CartesianProductPolyDomain` or 
+`AbstractPolyDomains`. You can take a look at `ExampleDomain` or `Zeta3Domain1` as an example that expand this logic
 
-This class will calculate the gcf and decide which conjectures pass the first calculation, and which pass the second,
-as described in our paper.
+#### The Enumerator (any class under `enumerators`)
+Last but not least, you'll need to choose an algorithm that compares the two. 
+
+The simplest, and fastest approach is implemented under `EfficentGCFEnumerator`. It follows a two-step process:
+1. For any pair `an` and `bn` calculate the GCF to a dept of 30. Compare each result to values in LHSHashTable, using 
+   low precision and store matches.
+2. The matches are re-evaluated to a dept of 1000, and compared again for higher precision, thus eliminating false 
+   positives. The final results are then presented as new conjectures.
+   
+For farther information regarding this algorithm, please refer to our paper 'the Ramanujan machine' under 
+the 'MITM-RF algorithm' chapter, or visit our website [RamanujanMachine.com](https://www.RamanujanMachine.com).
+
 For example, creating `EfficientGCFEnumerator` using the `LHSHashTable` and `poly_domain` defined above:
 ```python
-from ramanujan.enumerators.EfficentGCFEnumerator import EfficentGCFEnumerator
+from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 
 enumerator = EfficentGCFEnumerator(
     lhs,
     poly_search_domain,
-    [g_const_dict['e']],
-    lhs_search_limit
+    [g_const_dict['e']]
     )
 ```
-
 
 And thats it! start your execution by running:
 ```python
@@ -68,40 +99,12 @@ results = enumerator.full_execution()
 
 
 ### Cool examples
-Examples given here can be found under `scripts/paper_results`
-#### e
-To find a few formulas for e, use the following poly domain:
-```python
-poly_search_domain = CartesianProductPolyDomain(
-    2, [-5, 5],
-    2, [-5, 5])
-```
-
-#### pi
-To find a few formulas for pi, use:
-```python
-poly_search_domain = CartesianProductPolyDomain(
-    1, [-13, 13],
-    2, [-11, 11])
-```
-
-#### Riemann Zeta function at 3 (Aépry's constant)
-To find a few formulas related to the Riemann zeta function at 3 (Zeta of 3 is called 
-[Apéry's constant](https://www.wikiwand.com/en/Ap%C3%A9ry%27s_constant) and has a role in the electron's gyromagnetic
-ratio), use:
-```python
-poly_search_domain = Zeta3Domain1(
-    [(2, 2), (1, 1), (-20, 20), (-20, 20)],
-    (-20, -1))
-```
-
-Now that you've seen how to run the basic code, you can tweak the search parameters and find new conjectures of your own.
-To do so, please read the next section.
+Examples for conjectures can be found under `scripts/paper_results`. Just run every script there and start finding
+conjectures!
 
 ### Tweaking the search parameters
 
-If you wish to tweak the searched series, you can create a new class that extends `AbstractPolyDomains`, and defines
-your new polynomial families. If there is no complex connection between an and bn, you can extend 
-`CartesianProductPolyDomain`.
+Now that you've seen how to run the basic code, you can tweak the search parameters and find new conjectures of your own.
 
-I'll add an extended example soon
+If you wish to change the searched series, you can create a new class that extends `CartesianProductPolyDomain`,
+and defines your new polynomial families. Please see `poly_domains\ExampleDomain` for a detailed example.
