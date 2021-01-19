@@ -1,3 +1,11 @@
+"""
+This script enumerates GCFs for e.
+
+Both an and bn take the following form:
+Xn = x0 * n^2 + x1 * n + x3
+All coefs can range from -5 to 5.
+All coefs are independent from one another and all combinations will be generated.
+"""
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
@@ -11,16 +19,12 @@ lhs = LHSHashTable(
     lhs_search_limit,
     [g_const_dict['e']]) 
 
-# both an and bn take the following form:
-# Xn = x0 * n^2 + x1 * n + x3
-# all coefs can range from -5 to 5.
-# all coefs are independent and all combinations will be generated.
+# define the poly domain
 poly_search_domain = CartesianProductPolyDomain(
     2, [-5, 5],
     2, [-5, 5])
 
-# create an enumerator to iter thought the poly domain and compare it to the
-# lhs table
+# create an enumerator that iters thought the poly domain and compare GCFs to the lhs table
 enumerator = EfficientGCFEnumerator(
     lhs,
     poly_search_domain,
