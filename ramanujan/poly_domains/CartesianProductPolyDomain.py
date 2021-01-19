@@ -1,5 +1,5 @@
 from .AbstractPolyDomains import AbstractPolyDomains
-from ..utils.series_generators import iter_series_items_from_compact_poly
+from ..utils.utils import iter_series_items_from_compact_poly
 from itertools import product
 
 

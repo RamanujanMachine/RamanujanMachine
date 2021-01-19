@@ -83,6 +83,25 @@ def create_mpf_const_generator(sym_constants):
     return constants_generator
 
 
+def get_series_items_from_iter(series_iter, coefs, max_n, start_n = 0):
+    return [i for i in series_iter(coefs, max_n, start_n)]
+
+
+def iter_series_items_from_compact_poly(poly_coef, max_runs, start_n=1):
+    """
+    create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
+    :param poly_a: a[k] coefficients
+    :param n: length of series
+    :return: a list of numbers in series
+    """
+    for i in range(start_n, max_runs):
+        tmp = 0
+        for c in poly_coef:
+            tmp *= i
+            tmp += c
+        yield tmp
+
+
 def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=101, label=None):
     computed_values = []
     label = f'an {an_poly_coef} bn {bn_poly_coef}' if not label else label

@@ -6,8 +6,8 @@ from sympy import lambdify
 from abc import ABCMeta, abstractmethod
 
 from ramanujan.utils.mobius import GeneralizedContinuedFraction
-from ramanujan.utils.series_generators import get_series_items_from_iter
-from ramanujan.utils.utils import find_polynomial_series_coefficients, create_mpf_const_generator
+from ramanujan.utils.utils import find_polynomial_series_coefficients, create_mpf_const_generator, \
+    get_series_items_from_iter
 from ramanujan.utils.convergence_rate import calculate_convergence
 from ramanujan.constants import *
 
