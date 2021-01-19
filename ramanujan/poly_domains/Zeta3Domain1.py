@@ -15,6 +15,9 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	keep x4 negative
 
 	this is a decedent of CartesianProductPolyDomain since an and bn has no	particular relation
+
+	NOTICE - Since every coeffiecnt is given explicitly, we do not enforce that the leading coef of an will always be
+	positive. (See CartesianProductPolyDomain documnetation regarding an_leading_coef_positive for more information)
 	"""
 	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
 		"""

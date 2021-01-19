@@ -8,8 +8,8 @@ from ramanujan.constants import g_const_dict
 
 def get_testable_data(refined_res_list):
     '''
-        On those test we have no use for the bloom key or lhs dict pointers
-        exctact the meaning full data for testing
+    On those test we have no use for the bloom key or lhs dict pointers
+    exctact the meaning full data for testing
     '''
     data = []
     for i in refined_res_list:
@@ -24,30 +24,26 @@ def get_testable_data(refined_res_list):
 class APITests(unittest.TestCase):
 
     def test_MITM_api1(self):
-        saved_hash = 'e_lhs_dept5_db'
-        lhs_search_limit = 5
-        lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict['e']]) 
+        lhs = LHSHashTable('e_lhs_dept5_db', 5, [g_const_dict['e']])
 
         poly_search_domain = CartesianProductPolyDomain(
-            2, [-5, 5],
-            2, [-5, 5])
+            1, [-5, 5],
+            1, [-5, 5])
 
         enumerator = EfficientGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']])
 
         results = get_testable_data(enumerator.full_execution())
 
-        self.assertEqual(len(results), 42)
+        self.assertEqual(len(results), 20)
         self.assertIn(
-            ((0, 4, 2), (0, 0, 1), (1, 1), (-1, 1)),
+            ((4, 2), (0, 1), (1, 1), (-1, 1)),
             results)
         self.assertIn(
-            ((0, 1, 1), (0, 1, 0), (1, 0), (-2, 1)),
+            ((1, 1), (1, 0), (1, 0), (-2, 1)),
             results)
 
     def test_MITM_api2(self):
-        saved_hash = 'zeta3.lhs.dept14.db'
-        lhs_search_limit = 14
-        lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict['zeta'](3)]) 
+        lhs = LHSHashTable('zeta3.lhs.dept14.db', 14, [g_const_dict['zeta'](3)])
 
         poly_search_domain = Zeta3Domain1(
             [(2, 2), (1, 1), (1, 17), (1, 5)], # an coefs
@@ -94,7 +90,7 @@ class APITests(unittest.TestCase):
             )
 
         results = enumerator.full_execution()
-        self.assertEqual(len(results), 92)
+        self.assertEqual(len(results), 46)
 
 
 if __name__ == '__main__':

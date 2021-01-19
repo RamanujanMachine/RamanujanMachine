@@ -22,8 +22,8 @@ lhs = LHSHashTable(
 
 # define the poly domain
 poly_search_domain = CartesianProductPolyDomain(
-    2, [-5, 5],
-    2, [-5, 5])
+    1, [-5, 5],
+    1, [-5, 5])
 
 # create an enumerator that iters thought the poly domain and compare GCFs to the lhs table
 enumerator = EfficientGCFEnumerator(
@@ -33,3 +33,4 @@ enumerator = EfficientGCFEnumerator(
     )
 
 results = enumerator.full_execution()
+print(len(results))

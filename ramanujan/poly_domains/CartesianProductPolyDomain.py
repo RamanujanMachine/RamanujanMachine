@@ -7,11 +7,20 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 	"""
 	This poly domain will generate all combinations for a(n) and b(n) coefs without complex dependence between the two
 	"""
-	def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, *args, **kwargs):
+	def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, an_leading_coef_positive=True, *args, **kwargs):
+		"""
+		If all of an's coefs can get both positive and negative values, then we might get two iterations for any set of
+		coefs, with opposite signs. Those two series will converge to the same value, but with a different sign, hence
+		it is a redundant run we can skip. Based on an_leading_coef_positive we will try to detect those cases and skip
+		them
+		"""
 		self.a_deg = a_deg
 		# expanding the range to a different range for each coef
 		# allows us to use the same functions for decedent classes
-		self.a_coef_range = [a_coef_range for _ in range(a_deg + 1)]
+		self.a_coef_range = [list(a_coef_range) for _ in range(a_deg + 1)]
+		if an_leading_coef_positive and self.a_coef_range[-1][0] <= 0:
+			self.a_coef_range[0][0] = 1
+
 		self.b_deg = b_deg
 		self.b_coef_range = [b_coef_range for _ in range(b_deg + 1)]
 
