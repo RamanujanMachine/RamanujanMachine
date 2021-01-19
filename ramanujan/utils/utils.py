@@ -128,7 +128,7 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
         print('\tsub expo')
     an_items_iterator = iter_series_items_from_compact_poly(an_poly_coef, max_iters)
     bn_items_iterator = iter_series_items_from_compact_poly(bn_poly_coef, max_iters, 1)
-    
+
     prev_q = 0
     q = 1
     prev_p = 1
@@ -141,7 +141,7 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
 
         q = a_i_1 * q + b_i * prev_q
         p = a_i_1 * p + b_i * prev_p
-        
+
         prev_q = tmp_a
         prev_p = tmp_b
 
@@ -154,9 +154,13 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
         else:
             computed_values.append((mpmath.mpf(0), i))
 
-    global current_fig
-    current_fig += 1 
-    plt.figure(current_fig)
+    # if you wish to have several different figures open, you'll need to give each a distinct name.
+    # to keep a state of the number of windows open, and index the ones opened, we use a global variable
+    global g_current_fig
+    if 'g_current_fig' not in globals():
+        g_current_fig = 0
+    g_current_fig += 1
+    plt.figure(g_current_fig)
     plt.plot([i[1] for i in computed_values], [i[0] for i in computed_values], '+')
     plt.ion()
     plt.title(label=label)
