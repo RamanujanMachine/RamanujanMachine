@@ -69,7 +69,7 @@ class APITests(unittest.TestCase):
             ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)),
             results)
 
-    def test_MITM_api4(self):
+    def test_MITM_api3(self):
         saved_hash = 'pi_lhs_dept20'
         lhs_search_limit = 20
         lhs = LHSHashTable(
