@@ -2,6 +2,12 @@ import ramanujan.utils.mobius
 
 
 class EfficientGCF(ramanujan.utils.mobius.EfficientGCF):
+    """
+    In MITM we refer to the first item in bn as b1, while in ESMA it is b0.
+    This class allows ESMA to use EfficientGCF without enforcing the use of b1 as the first item.
+
+    TODO - change ESMA to use b1 as the first item, and use ramanujan.utils.mobius.EfficientGCF without This patch
+    """
     def __init__(self, a_, b_):
         self.prev_A = 0
         self.A = 1
