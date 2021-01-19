@@ -50,8 +50,8 @@ The generated domain is saved to `e_lhs_dept5`
 #### `an` and `bn` Structures (any class under `poly_domains`) 
 An objects that generates pairs of `an` and `bn` series.
 
-The simplest structure you can choose will be `Xn = c_0 + c_1 * n + c_2 * n^2 + ...` for both `an` and `bn`, when each 
-coefficient is independent of the rest. 
+The simplest structure you can choose will be `Xn = c0 * n^k + c1 * n^(k-1) + ... + ck` for both `an` and `bn` (with the
+matching degree for each), when coefficient is independent of the rest. 
 
 This type of domain can be defined as follows:
  ```python
