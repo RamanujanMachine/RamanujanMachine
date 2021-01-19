@@ -29,7 +29,7 @@ To start a new execution, you'll need to configure three parts:
 you can see examples under `scripts/` folder
 
 #### Left Hand Side Hash Table (`LHSHashTable`) 
-A data structure that holds expressions made from the required constant.
+This is a data structure that holds expressions made from the required constant.
 To create a LHS object, you'll need to choose a constant, and a range for all coefficients in the expression.
 The values generated are saved to a file to reduce execution time.
 
@@ -50,8 +50,8 @@ The generated domain is saved to `e_lhs_dept5`
 #### `an` and `bn` Structures (any class under `poly_domains`) 
 An objects that generates pairs of `an` and `bn` series.
 
-The simplest structure you can choose will be `Xn = c_0 + c_1 * n + c_2 * n^2 + ...`, when each coefficient is 
-independent of the rest. 
+The simplest structure you can choose will be `Xn = c_0 + c_1 * n + c_2 * n^2 + ...` for both `an` and `bn`, when each 
+coefficient is independent of the rest. 
 
 This type of domain can be defined as follows:
  ```python
@@ -62,10 +62,10 @@ This type of domain can be defined as follows:
     2, [-5, 5]) # bn coefs
 ```
 In this example, we've chosen both `an` and `bn` to be of degree 2, and the coefficients are integers that range from
--5 to 5.
+-5 to 5. All combination of coefficients under those restriction will be generated.
 
 To create more intricate structures, you may create a class that extents `CartesianProductPolyDomain` or 
-`AbstractPolyDomains`. You can take a look at `ExampleDomain` or `Zeta3Domain1` as an example that expand this logic
+`AbstractPolyDomains`. You can take a look at `ExampleDomain` or `Zeta3Domain1` as an example that expand this logic.
 
 #### The Enumerator (any class under `enumerators`)
 Last but not least, you'll need to choose an algorithm that compares the two. 
