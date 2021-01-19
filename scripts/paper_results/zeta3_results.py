@@ -12,6 +12,7 @@ x4 is set to range from -10 to -1
 
 Also, Zeta3Domain1 will check for a convergence condition for the GCF, as described in http://www.ramanujanmachine.com/
 """
+
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
