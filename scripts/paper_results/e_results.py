@@ -29,8 +29,7 @@ poly_search_domain = CartesianProductPolyDomain(
 enumerator = EfficientGCFEnumerator(
     lhs,
     poly_search_domain,
-    [g_const_dict['e']],
-    lhs_search_limit
+    [g_const_dict['e']]
     )
 
 results = enumerator.full_execution()
