@@ -19,16 +19,14 @@ The MITM algorithm will "mine" new Continued Fraction conjectures of the type:
 ![LHS_RHS](images/LHS_RHS.png)
 This project lets you control the equation space scanned by the algorithm.
 
+## Running the code
+
 To start a new execution, you'll need to configure three parts:
 1. What LHS do you wish to scan
 2. What structure does `an` and `bn` take, and what range do you wish to scan for each coefficient
 3. How to decide if there was a match (precission wise) 
 
-you can see examples under `scripts/` folder 
-
-## Running the code
-
-As stated above, you'll need to create three objects:
+you can see examples under `scripts/` folder
 
 #### Left Hand Side Hash Table (`LHSHashTable`) 
 A data structure that holds expressions made from the required constant.
