@@ -2,7 +2,7 @@ import unittest
 import main
 import os
 import pickle
-from sympy import E as e
+import sympy
 from lhs_generators import create_standard_lhs
 
 
@@ -17,8 +17,8 @@ class APITests(unittest.TestCase):
         results = main.enumerate_over_signed_rcf_main(args)
         self.assertEqual(len(results), 13)
         adjusted = [[res[0], res[1], list(res[3])] for res in results]
-        self.assertIn([(e / (e - 1)), [1, -1], [1, 0, -2, 0, 1]], adjusted)
-        self.assertIn([-1 + e, [-1, 1], [1, 0, -2, 0, 1]], adjusted)
+        self.assertIn([(sympy.E / (sympy.E - 1)), [1, -1], [1, 0, -2, 0, 1]], adjusted)
+        self.assertIn([-1 + sympy.E, [-1, 1], [1, 0, -2, 0, 1]], adjusted)
         print('Search results are as expected.')
         files_there = os.path.exists('./tmp/res_list_0') and os.path.exists('./tmp/recurring_by_value_0')
         self.assertTrue(files_there)
@@ -58,8 +58,8 @@ class APITests(unittest.TestCase):
         print('Deleted temporary generic LHS enumeration from disk')
         self.assertEqual(len(results), 13)
         adjusted = [[res[0], res[1], list(res[3])] for res in results]
-        self.assertIn([(e / (e - 1)), [1, -1], [1, 0, -2, 0, 1]], adjusted)
-        self.assertIn([(e / (-2 + e)), [1, 1], [1, 0, 0, -1, 0, 0, -1, 0, 0, 1]], adjusted)
+        self.assertIn([(sympy.E / (sympy.E - 1)), [1, -1], [1, 0, -2, 0, 1]], adjusted)
+        self.assertIn([(sympy.E / (-2 + sympy.E)), [1, 1], [1, 0, 0, -1, 0, 0, -1, 0, 0, 1]], adjusted)
         print('Search results are as expected.')
 
 
