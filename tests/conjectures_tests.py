@@ -32,7 +32,7 @@ class APITests(unittest.TestCase):
             2, [-5, 5],
             2, [-5, 5])
 
-        enumerator = EfficentGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']], lhs_search_limit)
+        enumerator = EfficientGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']])
 
         results = get_testable_data(enumerator.full_execution())
 
@@ -54,11 +54,10 @@ class APITests(unittest.TestCase):
             (-16, -1) # bn coef
             ) 
 
-        enumerator = EfficentGCFEnumerator(
+        enumerator = EfficientGCFEnumerator(
             lhs,
             poly_search_domain,
-            [g_const_dict['zeta'](3)],
-            lhs_search_limit
+            [g_const_dict['zeta'](3)]
             )
 
         results = get_testable_data(enumerator.full_execution())
@@ -88,27 +87,15 @@ class APITests(unittest.TestCase):
 
         # create an enumeator to iter thought the poly domain and compare it to the 
         # lhs table
-        enumerator = EfficentGCFEnumerator(
+        enumerator = EfficientGCFEnumerator(
             lhs,
             poly_search_domain,
-            [g_const_dict['pi']],
-            lhs_search_limit
+            [g_const_dict['pi']]
             )
 
         results = enumerator.full_execution()
         self.assertEqual(len(results), 92)
 
-    # def test_MITM_api5(self):
-        
-    #     cmd = 'python main.py MITM_RF -lhs_constant catalan -num_of_cores 2 -lhs_search_limit 20 -poly_a_order 3' +\
-    #           ' -poly_a_coefficient_max 7 -poly_b_order 4 -poly_b_coefficient_max 2 --integer_factorization_bn'
-    #     cmd = cmd.split(' ')[2:]
-    #     parser = main.init_parser()
-    #     args = parser.parse_args(cmd)
-    #     results = main.enumerate_over_gcf_main(args)
-    #     print(results)
-    #     self.assertEqual(len(results), 1)
-    #     self.assertIn('\\frac{2}{-1 + 2 Catalan\\left(\\right)} = 3 - \\frac{6}{13 - \\frac{64}{29 - \\frac{270}{51 - \\frac{768}{79 - \\frac{1750}{..}}}}}', results)
 
 if __name__ == '__main__':
     unittest.main()
