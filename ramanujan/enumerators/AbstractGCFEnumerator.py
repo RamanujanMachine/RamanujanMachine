@@ -182,9 +182,9 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         # override by child
         pass 
     
-    def full_execution(self):
+    def full_execution(self, print_latex=False, print_convergence_rate=True):
         first_iteration = self.find_initial_hits()
         refined_results = self.refine_results(first_iteration)
-        self.print_results(refined_results)
+        self.print_results(refined_results, print_latex, print_convergence_rate)
 
         return refined_results

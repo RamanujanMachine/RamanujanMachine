@@ -32,7 +32,7 @@ class APITests(unittest.TestCase):
 
         enumerator = EfficientGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']])
 
-        results = get_testable_data(enumerator.full_execution())
+        results = get_testable_data(enumerator.full_execution(print_convergence_rate=False))
 
         self.assertEqual(len(results), 20)
         self.assertIn(
@@ -56,7 +56,7 @@ class APITests(unittest.TestCase):
             [g_const_dict['zeta'](3)]
             )
 
-        results = get_testable_data(enumerator.full_execution())
+        results = get_testable_data(enumerator.full_execution(print_convergence_rate=False))
 
         self.assertEqual(len(results), 3)
         self.assertIn(
@@ -78,8 +78,8 @@ class APITests(unittest.TestCase):
             [g_const_dict['pi']]) 
 
         poly_search_domain = CartesianProductPolyDomain(
-            1, [-13,13], # an deg 2, coefs ranging from -5 to 5
-            2, [-11,11]) # bn deg 2, coefs ranging from -5 to 5
+            1, [-13,13],
+            2, [-11,11])
 
         # create an enumeator to iter thought the poly domain and compare it to the 
         # lhs table
@@ -89,7 +89,7 @@ class APITests(unittest.TestCase):
             [g_const_dict['pi']]
             )
 
-        results = enumerator.full_execution()
+        results = enumerator.full_execution(print_convergence_rate=False)
         self.assertEqual(len(results), 46)
 
 
