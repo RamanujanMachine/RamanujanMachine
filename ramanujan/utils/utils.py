@@ -126,7 +126,7 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
         print('\tsuper expo')
     else:
         print('\tsub expo')
-    an_items_iterator = iter_series_items_from_compact_poly(an_poly_coef, max_iters)
+    an_items_iterator = iter_series_items_from_compact_poly(an_poly_coef, max_iters, 0)
     bn_items_iterator = iter_series_items_from_compact_poly(bn_poly_coef, max_iters, 1)
 
     prev_q = 0
