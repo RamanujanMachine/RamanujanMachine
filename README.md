@@ -83,7 +83,7 @@ For example, creating `EfficientGCFEnumerator` using the `LHSHashTable` and `pol
 ```python
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 
-enumerator = EfficentGCFEnumerator(
+enumerator = EfficientGCFEnumerator(
     lhs,
     poly_search_domain,
     [g_const_dict['e']]
