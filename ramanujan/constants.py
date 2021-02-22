@@ -41,5 +41,6 @@ g_const_dict = {
     'khinchin': sympy.S.Khinchin,
     'euler-mascheroni': sympy.EulerGamma,
     'pi-acosh_2': sympy.pi * sympy.acosh(2),
-    'pi_d_e':sympy.pi/sympy.E
+    'pi_d_e':sympy.pi/sympy.E,
+    'pimtwo':sympy.pi*2
 }
