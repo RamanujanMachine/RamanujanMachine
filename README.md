@@ -94,7 +94,10 @@ And thats it! start your execution by running:
 ```python
 results = enumerator.full_execution()
 ```
-
+and print your results by running:
+```python
+enumerator.print_results(results)
+```
 
 ### Cool examples
 Examples for conjectures can be found under `scripts/paper_results`. Just run every script there and start finding
