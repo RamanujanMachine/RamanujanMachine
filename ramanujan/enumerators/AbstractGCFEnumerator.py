@@ -60,7 +60,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         :param poly_domains_generator: An poly_domain object that will generate polynomials to iter through, and
             supply functions for calculating items in each polynomial given
         :param sym_constants: sympy constants
-        :param lhs_search_limit: range of coefficients for left hand side.
         """
         # constants
         self.threshold = 1 * 10 ** (-g_N_initial_key_length)  # key length
@@ -116,17 +115,21 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         bn_eq = sympy.Eq(sympy.Symbol('b(n)'), sym_poly(bn_poly_max_deg, bn))
         return an_eq, bn_eq
 
-    def print_results(self, results: List[RefinedMatch], latex=False, convergence_rate=True):
+    def print_results(self, results: List[RefinedMatch], formatting='unicode', convergence_rate=True):
         """
         pretty print the the results.
         :param convergence_rate: if True calculate convergence rate and print it as well.
         :param results: list of final results as received from refine_results.
-        :param latex: if True print in latex form, otherwise pretty print in unicode.
+        :param formatting: allowed print formats are 'unicode' and 'latex'
         """
+        allowed_formats = ['unicode', 'latex']
         formatted_results = self.__get_formatted_results(results)
+        if formatting not in allowed_formats:
+            print("unknown format, allowed formats are: {}".format(allowed_formats))
+            return
         for r, raw_r in zip(formatted_results, results):
             result = sympy.Eq(r.LHS, r.RHS)
-            if latex:
+            if formatting == 'latex':
                 print(f'$$ {sympy.latex(result)} $$')
                 print(f'$$ {sympy.latex(self.__get_formatted_polynomials(raw_r))} $$\n')
             else:
@@ -146,25 +149,25 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             results_in_latex.append(sympy.latex(equation))
         return results_in_latex
 
-    def find_initial_hits(self, print_results=True):
+    def find_initial_hits(self, verbose=True):
         """
         use search engine to find results (steps (1) explained in __init__ docstring)
-        :param print_results: if true, pretty print results at the end.
+        :param verbose: if true, pretty print results at the end.
         :return: initial results results.
         """
         with mpmath.workdps(self.enum_dps):
-            if print_results:
+            if verbose:
                 print('starting preliminary search...')
             start = time()
             # step (2)
-            results = self._first_enumeration(print_results)
+            results = self._first_enumeration(verbose)
             end = time()
-            if print_results:
+            if verbose:
                 print(f'that took {end - start}s')
         return results
 
     @abstractmethod    
-    def _first_enumeration(self, print_results: bool):
+    def _first_enumeration(self, verbose: bool):
         # override by child
         pass
 
@@ -178,13 +181,11 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         return refined_results
 
     @abstractmethod
-    def _refine_results(self, intermediate_results: List[Match], print_results=True):
+    def _refine_results(self, intermediate_results: List[Match], verbose=True):
         # override by child
         pass 
     
-    def full_execution(self, print_latex=False, print_convergence_rate=True):
+    def full_execution(self):
         first_iteration = self.find_initial_hits()
         refined_results = self.refine_results(first_iteration)
-        self.print_results(refined_results, print_latex, print_convergence_rate)
-
         return refined_results

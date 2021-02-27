@@ -33,4 +33,5 @@ enumerator = EfficientGCFEnumerator(
     )
 
 results = enumerator.full_execution()
-print(len(results))
+print("{} results found!".format(len(results)))
+enumerator.print_results(results, 'unicode', convergence_rate=False)

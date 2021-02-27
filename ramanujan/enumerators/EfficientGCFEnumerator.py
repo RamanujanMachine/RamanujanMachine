@@ -37,7 +37,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         coef_list = list(itertools.compress(coef_list, series_filter))
         return coef_list, series_list
 
-    def _first_enumeration(self, print_results: bool):
+    def _first_enumeration(self, verbose: bool):
         """
         This is usually the bottleneck of the search.
         We calculate general continued fractions of type K(bn,an). 'an' and 'bn' are polynomial series.
@@ -47,7 +47,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         For each an and bn pair, a gcf is calculated using efficient_gcf_calculation defined under this scope,
         and compared self.hash_tables for hits.
 
-        :param print_results: if True print the status of calculation.
+        :param verbose: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
 
@@ -90,7 +90,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
             b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series, filter_from_1=True)
             real_bn_size = len(bn_list)
             num_iterations = (num_iterations // self.get_bn_length()) * real_bn_size
-            if print_results:
+            if verbose:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
             for a_coef in a_coef_iter:
@@ -107,20 +107,21 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
 
                     if key in self.hash_table:  # find hits in hash table
                         results.append(Match(key, a_coef, bn_coef[1]))
-                    if print_results:
+                    if verbose:
                         counter += 1
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
                             print_counter = 0
                             print(
                                 f"passed {counter} out of {num_iterations} " +
-                                f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results")
+                                f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} initial "
+                                f"results")
 
         else:  # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
             real_an_size = len(an_list)
             num_iterations = (num_iterations // self.get_an_length()) * real_an_size
-            if print_results:
+            if verbose:
                 print(f'created final enumerations filters after {time() - start}s')
             start = time()
             for b_coef in b_coef_iter:
@@ -136,7 +137,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
 
                     if key in self.hash_table:  # find hits in hash table
                         results.append(Match(key, an_coef[1], b_coef))
-                    if print_results:
+                    if verbose:
                         counter += 1
                         print_counter += 1
                         if print_counter >= 100000:  # print status.
@@ -145,15 +146,15 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                                 f"passed {counter} out of {num_iterations} " +
                                 f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results")
 
-        if print_results:
+        if verbose:
             print(f'created results after {time() - start}s')
         return results
 
-    def _refine_results(self, intermediate_results: List[Match], print_results=True):
+    def _refine_results(self, intermediate_results: List[Match], verbose=True):
         """
         validate intermediate results to 100 digit precision
         :param intermediate_results:  list of results from first enumeration
-        :param print_results: if true print status.
+        :param verbose: if true print status.
         :return: final results.
         """
         results = []
@@ -162,7 +163,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         constant_vals = [const() for const in self.constants_generator]
         for res in intermediate_results:
             counter += 1
-            if (counter % 50) == 0 and print_results:
+            if (counter % 50) == 0 and verbose:
                 print('passed {} permutations out of {}. found so far {} matches'.format(
                     counter, n_iterations, len(results)))
             try:
