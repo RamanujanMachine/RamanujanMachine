@@ -1,3 +1,4 @@
+import math
 import itertools
 import mpmath
 from typing import List, Iterator, Callable
@@ -6,6 +7,13 @@ from time import time
 from ramanujan.utils.mobius import EfficientGCF
 from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms, g_N_verify_compare_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
+
+
+def trunc_division(p, q):
+    """ Integer division, rounding towards zero """
+    sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
+    div = abs(p) // abs(q)
+    return -div if sign else div
 
 
 class EfficientGCFEnumerator(AbstractGCFEnumerator):
@@ -50,7 +58,6 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         :param verbose: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
         """
-
         def efficient_gcf_calculation():
             """
             enclosure. a_, b_, and key_factor are used from outer scope.
@@ -68,11 +75,8 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                 p = a_[i] * p + b_[i] * prev_p
                 prev_q = tmp_a
                 prev_p = tmp_b
-            if q == 0:  # safety check
-                value = 0
-            else:
-                value = mpmath.mpf(p) / mpmath.mpf(q)
-            return int(value * key_factor)  # calculate hash key of gcf value
+            # calculate hash key of gcf value
+            return trunc_division(key_factor * p, q) if q != 0 else 0
 
         start = time()
         a_coef_iter = self.get_an_iterator()  # all coefficients possibilities for 'a_n'
@@ -80,7 +84,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         size_b = self.get_bn_length()
         size_a = self.get_an_length()
         num_iterations = size_b * size_a
-        key_factor = 1 / self.threshold
+        key_factor = round(1 / self.threshold)
 
         counter = 0  # number of permutations passed
         print_counter = counter
@@ -91,7 +95,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
             real_bn_size = len(bn_list)
             num_iterations = (num_iterations // self.get_bn_length()) * real_bn_size
             if verbose:
-                print(f'created final enumerations filters after {time() - start}s')
+                print(f'created final enumerations filters after {time() - start:.2f}s')
             start = time()
             for a_coef in a_coef_iter:
                 an = self.create_an_series(a_coef, g_N_initial_search_terms)
@@ -110,19 +114,21 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     if verbose:
                         counter += 1
                         print_counter += 1
-                        if print_counter >= 100000:  # print status.
+                        if print_counter >= 1_000_000:  # print status.
                             print_counter = 0
-                            print(
-                                f"passed {counter} out of {num_iterations} " +
-                                f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} initial "
-                                f"results")
+                            prediction = (time() - start)*(num_iterations / counter)
+                            time_left = (time() - start)*(num_iterations / counter - 1)
+                            print(f"Passed {counter} out of {num_iterations} " +
+                                  f"({round(100. * counter / num_iterations, 2)}%). "
+                                  f"Found so far {len(results)} results. "
+                                  f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
 
         else:  # cache {an} in RAM, iterate over bn
             a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
             real_an_size = len(an_list)
             num_iterations = (num_iterations // self.get_an_length()) * real_an_size
             if verbose:
-                print(f'created final enumerations filters after {time() - start}s')
+                print(f'created final enumerations filters after {time() - start:.2f}s')
             start = time()
             for b_coef in b_coef_iter:
                 bn = self.create_bn_series(b_coef, g_N_initial_search_terms)
@@ -140,14 +146,17 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     if verbose:
                         counter += 1
                         print_counter += 1
-                        if print_counter >= 100000:  # print status.
+                        if print_counter >= 1_000_000:  # print status.
                             print_counter = 0
-                            print(
-                                f"passed {counter} out of {num_iterations} " +
-                                f"({round(100. * counter / num_iterations, 2)}%). found so far {len(results)} results")
+                            prediction = (time() - start)*(num_iterations / counter)
+                            time_left = (time() - start)*(num_iterations / counter - 1)
+                            print(f"Passed {counter} out of {num_iterations} " +
+                                  f"({round(100. * counter / num_iterations, 2)}%). "
+                                  f"Found so far {len(results)} results. "
+                                  f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
 
         if verbose:
-            print(f'created results after {time() - start}s')
+            print(f'created results after {time() - start:.2f}s')
         return results
 
     def _refine_results(self, intermediate_results: List[Match], verbose=True):
@@ -163,8 +172,8 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         constant_vals = [const() for const in self.constants_generator]
         for res in intermediate_results:
             counter += 1
-            if (counter % 50) == 0 and verbose:
-                print('passed {} permutations out of {}. found so far {} matches'.format(
+            if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
+                print('Passed {} permutations out of {}. Found so far {} matches'.format(
                     counter, n_iterations, len(results)))
             try:
                 all_matches = self.hash_table.evaluate(res.lhs_key)
