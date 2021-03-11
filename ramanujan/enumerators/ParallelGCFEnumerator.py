@@ -71,10 +71,11 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
             q = np.ones(shape, dtype=np.float64)
             next_q = np.empty(shape, dtype=np.float64)
             prev_p = np.ones(shape, dtype=np.float64)
-            p = np.full(shape, a_[0, ..., np.newaxis], dtype=np.float64)  # newaxis for broadcasting
+            p = np.full(shape, a_[0, ..., np.newaxis], dtype=np.float64)
             next_p = np.empty(shape, dtype=np.float64)
             temp1 = np.empty(shape, dtype=np.float64)
             temp2 = np.empty(shape, dtype=np.float64)
+            # new axis for numpy broadcasting
             
             for i in range(1, length):
                 temp1 = np.multiply(a_[i, ..., np.newaxis], q, out=temp1)
@@ -128,7 +129,8 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
         if verbose:
             chunks_total = round(np.ceil(asize / achunk) * np.ceil(bsize / bchunk))
             print(f'Created final enumerations filters after {time() - start:.2f}s')
-            print(f"Doing {num_iterations} searches in up to {chunks_total} chunks. This might take some time. ")
+            print(f"Doing {num_iterations} searches in up to {chunks_total} chunks. "
+                  f"This might take some time. ")
             start_results = time()    
         
         if aiters < biters:
@@ -153,13 +155,13 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
                     large_iter, large_series, filter_from_1=True, iterations=large_chunk)
             if len(large_poly["series"]) == 0:  # exhausted or all 0
                 continue
-                
+            
             small_iter = small_iterator()
             for _ in range(0, small_size, small_chunk):
                 start = time()
                 
                 small_poly["coef"], small_poly["series"] = self.__create_series_list(
-                    small_iter, small_series, filter_from_1=True, iterations=bchunk)
+                    small_iter, small_series, filter_from_1=True, iterations=small_chunk)
                 if len(small_poly["series"]) == 0:  # exhausted or all 0
                     continue 
                 
@@ -188,9 +190,11 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
                         print_counter += shape[1]
                         if print_counter >= 1_000_000:  # print status.
                             print_counter = 0
-                            prediction = ((time() - start_results - calc_time)*(num_iterations / counter)
+                            prediction = ((time() - start_results - calc_time)
+                                            *(num_iterations / counter)
                                             + calc_time * chunks_total / chunks_done)
-                            time_left = ((time() - start_results - calc_time)*(num_iterations / counter - 1)
+                            time_left = ((time() - start_results - calc_time)
+                                            *(num_iterations / counter - 1)
                                             + calc_time * (chunks_total / chunks_done - 1))
                             print(f"Passed {counter:n} out of {num_iterations:n} "
                                   f"({round(100. * counter / num_iterations, 2)}%). "
