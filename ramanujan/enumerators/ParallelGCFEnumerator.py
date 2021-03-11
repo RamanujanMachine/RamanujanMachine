@@ -1,11 +1,30 @@
 import itertools
+import mpmath as mp
 import numpy as np
 from time import time
-from typing import List, Iterator, Callable
+from typing import List, Iterator, Callable, Optional
 
 from ramanujan.constants import g_N_initial_search_terms
 from .AbstractGCFEnumerator import Match, RefinedMatch
 from .EfficientGCFEnumerator import EfficientGCFEnumerator
+
+
+MAX_RAM = 1. * 2.**30  # 1 GB
+
+
+def calculate_RAM_usage(shape):
+    """ 
+    Calculate a lower bound to the RAM needed to allocate the arrays for efficient_gcf_calculation
+    
+    8 arrays of shape full of 64-bit floats. 
+    There are also some lists whose space is hard to estimate. 
+    
+    :param shape: see efficient_gcf_calculation
+    :param length: see efficient_gcf_calculation
+    :return float: RAM usage in bytes
+    """
+    c = 200.
+    return 8. * mp.fprod(shape) * 8. + c * mp.fsum(shape) * 8.
 
 
 class ParallelGCFEnumerator(EfficientGCFEnumerator):
@@ -16,20 +35,25 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    @staticmethod  # Copied from EfficientGCFEnumerator, as it is a private method
+    @staticmethod
     def __create_series_list(coefficient_iter: Iterator,
                              series_generator: Callable[[List[int], int], List[int]],
-                             filter_from_1=False) -> [List[int], List[int]]:
-        coef_list = list(coefficient_iter)
-        # create a_n and b_n series fro coefficients.
-        series_list = [series_generator(coef_list[i], g_N_initial_search_terms) for i in range(len(coef_list))]
-        # filter out all options resulting in '0' in any series term.
-        if filter_from_1:
-            series_filter = [0 not in an[1:] for an in series_list]
-        else:
-            series_filter = [0 not in an for an in series_list]
-        series_list = list(itertools.compress(series_list, series_filter))
-        coef_list = list(itertools.compress(coef_list, series_filter))
+                             filter_from_1=False,
+                             iterations: Optional[int]=None) -> [List[int], List[int]]:
+        """ Generate coefficients and respective series """
+        coef_list = list()
+        series_list = list()
+        # create a_n and b_n series for coefficients.
+        for i, coef in enumerate(coefficient_iter):
+            if i == iterations:
+                break
+            an = series_generator(coef, g_N_initial_search_terms)
+            # filter out all options resulting in '0' in any series term.
+            series_filter = 0 not in an[1:] if filter_from_1 else 0 not in an
+            if series_filter:
+                coef_list.append(coef)
+                series_list.append(an)
+            
         return coef_list, series_list
 
 
@@ -71,53 +95,116 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
             
         start = time()
         key_factor = round(1 / self.threshold)
-        counter = print_counter = 0  # number of permutations passed
+        counter = 0  # number of permutations passed
+        print_counter = calc_time = chunks_done = 0
         results = []  # list of intermediate results
 
-        a_coef_list, an_list = self.__create_series_list(
-            self.get_an_iterator(), self.create_an_series, filter_from_1=True)
-        b_coef_list, bn_list = self.__create_series_list(
-            self.get_bn_iterator(), self.create_bn_series, filter_from_1=True)
+        asize = self.get_an_length()
+        bsize = self.get_bn_length()
         
-        num_iterations = len(an_list) * len(bn_list)
+        # Estimate number of iterations using better estimates than asize/bsize  
+        aiters = 0
+        for an in self.get_an_iterator():
+            if 0 not in an:
+                aiters += 1
+        biters = 0
+        for bn in self.get_bn_iterator():
+            if 0 not in bn:
+                biters += 1
+        num_iterations = aiters * biters
         if num_iterations == 0:
             print("Nothing to iterate over!")
             return []
     
-        a_ = np.array(an_list, dtype=np.float64).T
-        b_ = np.array(bn_list, dtype=np.float64).T
+        # Split task into chunks
+        min_chunks = round(np.ceil(calculate_RAM_usage((aiters, biters)) / MAX_RAM))
+        if min_chunks < max(asize, bsize):  # Iterate over intervals on the longer axis
+            achunk = asize if asize < bsize else np.int(np.ceil(asize / min_chunks))
+            bchunk = bsize if asize >= bsize else np.int(np.ceil(bsize / min_chunks))
+        else:  # Iterate over intervals on the longer axis for each on the shorter axis
+            achunk = 1 if asize < bsize else np.int(np.ceil(asize * bsize / min_chunks))
+            bchunk = 1 if asize >= bsize else np.int(np.ceil(asize * bsize / min_chunks))
         
         if verbose:
+            chunks_total = round(np.ceil(asize / achunk) * np.ceil(bsize / bchunk))
             print(f'Created final enumerations filters after {time() - start:.2f}s')
-            start = time()
-            
-        # calculate hash key of gcf value    
-        many_keys = efficient_gcf_calculation((*a_.shape[1:], *b_.shape[1:]), a_.shape[0])
-        print(type(many_keys[0,0]))
-            
-        if verbose:
-            print(f"Calculations in {time() - start:.2f}s")
-            start = time()
-            
-        for bind, b_coef in enumerate(b_coef_list):
-            for aind, a_coef in enumerate(a_coef_list):
-                key = int(many_keys[aind, bind])
-                if key in self.hash_table:  # find hits in hash table (bottleneck)
-                    results.append(Match(key, a_coef, b_coef))
-            
-            if verbose:
-                counter += len(an_list)
-                print_counter += len(an_list)
-                if print_counter >= 1_000_000:  # print status.
+            print(f"Doing {num_iterations} searches in up to {chunks_total} chunks. This might take some time. ")
+            start_results = time()    
+        
+        # Compute matches
+        an_iter = self.get_an_iterator()
+        for ai in range(0, asize, achunk):
+            a_coef_list, an_list = self.__create_series_list(
+                    an_iter, self.create_an_series, filter_from_1=True, iterations=achunk)
+            if len(an_list) == 0:  # an_iter exhausted or all 0
+                continue
+                
+            bn_iter = self.get_bn_iterator()
+            for bi in range(0, bsize, bchunk):
+                start = time()
+                
+                b_coef_list, bn_list = self.__create_series_list(
+                    bn_iter, self.create_bn_series, filter_from_1=True, iterations=bchunk)
+                if len(bn_list) == 0:  # bn_iter exhausted or all 0
+                    continue 
+                
+                shape = (len(an_list), len(bn_list))
+                a_ = np.array(an_list, dtype=np.float64).T
+                b_ = np.array(bn_list, dtype=np.float64).T
+                
+                # calculate hash key of gcf value  
+                many_keys = efficient_gcf_calculation(shape, a_.shape[0])
+                    
+                if verbose:
+                    calc_time += time() - start
+                    print(f"Calculations in {time() - start:.2f}s")
+                    start = time()
                     print_counter = 0
-                    prediction = (time() - start)*(num_iterations / counter)
-                    time_left = (time() - start)*(num_iterations / counter - 1)
-                    print(f"Passed {counter} out of {num_iterations} " +
-                          f"({round(100. * counter / num_iterations, 2)}%). "
-                          f"Found so far {len(results)} results. "
-                          f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
+                    chunks_done += 1
+                    
+                for aind in range(shape[0]):
+                    for bind in range(shape[1]):
+                        key = int(many_keys[aind, bind])
+                        if key in self.hash_table:  # find hits in hash table (bottleneck)
+                            results.append(Match(key, a_coef_list[aind], b_coef_list[bind]))
+                    
+                    if verbose:
+                        counter += shape[1]
+                        print_counter += shape[1]
+                        if print_counter >= 1_000_000:  # print status.
+                            print_counter = 0
+                            prediction = (time() - start_results - calc_time)*(num_iterations / counter)\
+                                            + calc_time * chunks_total
+                            time_left = (time() - start_results - calc_time)*(num_iterations / counter - 1)\
+                                            + calc_time * (chunks_total - chunks_done) 
+                            print(f"Passed {counter:n} out of {num_iterations:n} "
+                                  f"({round(100. * counter / num_iterations, 2)}%). "
+                                  f"Found so far {len(results)} results. \n"
+                                  f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
+                
+                if verbose: # Chunk complete
+                    prediction = (time() - start_results)*(num_iterations / counter)
+                    if prediction < 120:
+                        prediction = f"{prediction:.0f}s"
+                    elif prediction < 60*60:
+                        prediction = f"{prediction//60:.0f}min {prediction%60:.0f}s"
+                    else:
+                        prediction = f"{prediction//3600:.0f}h {prediction%3600//60:.0f}min"
+                    
+                    time_left = (time() - start_results)*(num_iterations / counter - 1)
+                    if time_left < 120:
+                        time_left = f"{time_left:.0f}s"
+                    elif time_left < 60*60:
+                        time_left = f"{time_left//60:.0f}min {time_left%60:.0f}s"
+                    else:
+                        time_left = f"{time_left//3600:.0f}h {time_left%3600//60:.0f}min"
+                    
+                    print(f"Chunk {chunks_done}/{chunks_total} done. "
+                          f"({round(100. * chunks_done / chunks_total, 2)}%). "
+                          f"Time left {time_left} of a total of {prediction}")
+                            
 
         if verbose:
-            print(f'created results after {time() - start:.2f}s')
+            print(f'created results after {time() - start_results:.2f}s')
         return results
             
