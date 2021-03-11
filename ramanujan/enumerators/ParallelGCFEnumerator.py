@@ -148,19 +148,19 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
         
         # Compute matches
         large_iter = large_iterator()
-        for ai in range(0, large_size, large_chunk):
+        for _ in range(0, large_size, large_chunk):
             large_poly["coef"], large_poly["series"] = self.__create_series_list(
                     large_iter, large_series, filter_from_1=True, iterations=large_chunk)
             if len(large_poly["series"]) == 0:  # exhausted or all 0
                 continue
                 
             small_iter = small_iterator()
-            for bi in range(0, small_size, small_chunk):
+            for _ in range(0, small_size, small_chunk):
                 start = time()
                 
                 small_poly["coef"], small_poly["series"] = self.__create_series_list(
                     small_iter, small_series, filter_from_1=True, iterations=bchunk)
-                if len(small_poly["series"]) == 0:  # bn_iter exhausted or all 0
+                if len(small_poly["series"]) == 0:  # exhausted or all 0
                     continue 
                 
                 a_ = np.array(a_poly["series"], dtype=np.float64).T
