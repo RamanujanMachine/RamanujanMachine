@@ -9,7 +9,7 @@ from .AbstractGCFEnumerator import Match, RefinedMatch
 from .EfficientGCFEnumerator import EfficientGCFEnumerator
 
 
-MAX_RAM = 1. * 2.**30  # 1 GB
+MAX_RAM = 0.1 * 2.**30  # 0.1 GB
 
 
 def calculate_RAM_usage(shape):
@@ -131,26 +131,41 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
             print(f"Doing {num_iterations} searches in up to {chunks_total} chunks. This might take some time. ")
             start_results = time()    
         
+        if aiters < biters:
+            small_chunk, large_chunk = achunk, bchunk
+            small_size, large_size = asize, bsize
+            small_iterator, large_iterator = self.get_an_iterator, self.get_bn_iterator
+            small_series, large_series = self.create_an_series, self.create_bn_series
+            small_poly, large_poly = {"coef": 0, "series": 0}, {"coef": 0, "series": 0}
+            a_poly, b_poly = small_poly, large_poly  # Link the dictionaries
+        else:
+            small_chunk, large_chunk = bchunk, achunk
+            small_size, large_size = bsize, asize
+            small_iterator, large_iterator = self.get_bn_iterator, self.get_an_iterator
+            small_series, large_series = self.create_bn_series, self.create_an_series
+            small_poly, large_poly = {"coef": 0, "series": 0}, {"coef": 0, "series": 0}
+            b_poly, a_poly = small_poly, large_poly  # Link the dictionaries
+        
         # Compute matches
-        an_iter = self.get_an_iterator()
-        for ai in range(0, asize, achunk):
-            a_coef_list, an_list = self.__create_series_list(
-                    an_iter, self.create_an_series, filter_from_1=True, iterations=achunk)
-            if len(an_list) == 0:  # an_iter exhausted or all 0
+        large_iter = large_iterator()
+        for ai in range(0, large_size, large_chunk):
+            large_poly["coef"], large_poly["series"] = self.__create_series_list(
+                    large_iter, large_series, filter_from_1=True, iterations=large_chunk)
+            if len(large_poly["series"]) == 0:  # exhausted or all 0
                 continue
                 
-            bn_iter = self.get_bn_iterator()
-            for bi in range(0, bsize, bchunk):
+            small_iter = small_iterator()
+            for bi in range(0, small_size, small_chunk):
                 start = time()
                 
-                b_coef_list, bn_list = self.__create_series_list(
-                    bn_iter, self.create_bn_series, filter_from_1=True, iterations=bchunk)
-                if len(bn_list) == 0:  # bn_iter exhausted or all 0
+                small_poly["coef"], small_poly["series"] = self.__create_series_list(
+                    small_iter, small_series, filter_from_1=True, iterations=bchunk)
+                if len(small_poly["series"]) == 0:  # bn_iter exhausted or all 0
                     continue 
                 
-                shape = (len(an_list), len(bn_list))
-                a_ = np.array(an_list, dtype=np.float64).T
-                b_ = np.array(bn_list, dtype=np.float64).T
+                a_ = np.array(a_poly["series"], dtype=np.float64).T
+                b_ = np.array(b_poly["series"], dtype=np.float64).T
+                shape = (a_.shape[1], b_.shape[1])
                 
                 # calculate hash key of gcf value  
                 many_keys = efficient_gcf_calculation(shape, a_.shape[0])
@@ -166,17 +181,17 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
                     for bind in range(shape[1]):
                         key = int(many_keys[aind, bind])
                         if key in self.hash_table:  # find hits in hash table (bottleneck)
-                            results.append(Match(key, a_coef_list[aind], b_coef_list[bind]))
+                            results.append(Match(key, a_poly["coef"][aind], b_poly["coef"][bind]))
                     
                     if verbose:
                         counter += shape[1]
                         print_counter += shape[1]
                         if print_counter >= 1_000_000:  # print status.
                             print_counter = 0
-                            prediction = (time() - start_results - calc_time)*(num_iterations / counter)\
-                                            + calc_time * chunks_total
-                            time_left = (time() - start_results - calc_time)*(num_iterations / counter - 1)\
-                                            + calc_time * (chunks_total - chunks_done) 
+                            prediction = ((time() - start_results - calc_time)*(num_iterations / counter)
+                                            + calc_time * chunks_total / chunks_done)
+                            time_left = ((time() - start_results - calc_time)*(num_iterations / counter - 1)
+                                            + calc_time * (chunks_total / chunks_done - 1))
                             print(f"Passed {counter:n} out of {num_iterations:n} "
                                   f"({round(100. * counter / num_iterations, 2)}%). "
                                   f"Found so far {len(results)} results. \n"
