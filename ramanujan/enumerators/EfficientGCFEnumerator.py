@@ -4,7 +4,8 @@ from typing import List, Iterator, Callable
 from time import time
 
 from ramanujan.utils.mobius import EfficientGCF
-from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms, g_N_verify_compare_length
+from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms,
+                                g_N_verify_compare_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
 
 
@@ -33,8 +34,9 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                              series_generator: Callable[[List[int], int], List[int]],
                              filter_from_1=False) -> [List[int], List[int]]:
         coef_list = list(coefficient_iter)
-        # create a_n and b_n series fro coefficients.
-        series_list = [series_generator(coef_list[i], g_N_initial_search_terms) for i in range(len(coef_list))]
+        # create a_n and b_n series for coefficients.
+        series_list = [series_generator(coef_list[i], g_N_initial_search_terms)
+                       for i in range(len(coef_list))]
         # filter out all options resulting in '0' in any series term.
         if filter_from_1:
             series_filter = [0 not in an[1:] for an in series_list]
@@ -47,12 +49,13 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
     def _first_enumeration(self, verbose: bool):
         """
         This is usually the bottleneck of the search.
-        We calculate general continued fractions of type K(bn,an). 'an' and 'bn' are polynomial series.
-        these polynomials take the form of n(n(..(n*c_1 + c_0) + c_2)..)+c_k.
+        We calculate general continued fractions of type K(bn,an).
+        'an' and 'bn' are polynomial series.
+        These polynomials take the form of n(n(..(n*c_1 + c_0) + c_2)..)+c_k.
         The polynomial families are supplied from self.poly_domains_generator
 
-        For each an and bn pair, a gcf is calculated using efficient_gcf_calculation defined under this scope,
-        and compared self.hash_tables for hits.
+        For each an and bn pair, a gcf is calculated using efficient_gcf_calculation
+        defined under this scope, and compared self.hash_tables for hits.
 
         :param verbose: if True print the status of calculation.
         :return: intermediate results (list of 'Match')
@@ -90,7 +93,8 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         results = []  # list of intermediate results
 
         if size_a > size_b:  # cache {bn} in RAM, iterate over an
-            b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series, filter_from_1=True)
+            b_coef_list, bn_list = self.__create_series_list(b_coef_iter, self.create_bn_series,
+                                                             filter_from_1=True)
             real_bn_size = len(bn_list)
             num_iterations = (num_iterations // self.get_bn_length()) * real_bn_size
             if verbose:
@@ -103,7 +107,6 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     print_counter += real_bn_size
                     continue
                 for bn_coef in zip(bn_list, b_coef_list):
-                    # evaluation of GCF: taken from mobius.EfficientGCF and moved here to avoid function call overhead.
                     a_ = an
                     b_ = bn_coef[0]
                     key = efficient_gcf_calculation()  # calculate hash key of gcf value
@@ -117,13 +120,14 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                             print_counter = 0
                             prediction = (time() - start)*(num_iterations / counter)
                             time_left = (time() - start)*(num_iterations / counter - 1)
-                            print(f"Passed {counter} out of {num_iterations} " +
-                                  f"({round(100. * counter / num_iterations, 2)}%). "
-                                  f"Found so far {len(results)} results. \n"
-                                  f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
+                            print(f'Passed {counter} out of {num_iterations} '
+                                  f'({round(100. * counter / num_iterations, 2)}%). '
+                                  f'Found so far {len(results)} results. \n'
+                                  f'Time left ~{time_left:.0f}s of a total of {prediction:.0f}s')
 
         else:  # cache {an} in RAM, iterate over bn
-            a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series, filter_from_1=True)
+            a_coef_list, an_list = self.__create_series_list(a_coef_iter, self.create_an_series,
+                                                             filter_from_1=True)
             real_an_size = len(an_list)
             num_iterations = (num_iterations // self.get_an_length()) * real_an_size
             if verbose:
@@ -149,10 +153,10 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                             print_counter = 0
                             prediction = (time() - start)*(num_iterations / counter)
                             time_left = (time() - start)*(num_iterations / counter - 1)
-                            print(f"Passed {counter} out of {num_iterations} " +
-                                  f"({round(100. * counter / num_iterations, 2)}%). "
-                                  f"Found so far {len(results)} results. \n"
-                                  f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
+                            print(f'Passed {counter} out of {num_iterations} '
+                                  f'({round(100. * counter / num_iterations, 2)}%). '
+                                  f'Found so far {len(results)} results. \n'
+                                  f'Time left ~{time_left:.0f}s of a total of {prediction:.0f}s')
 
         if verbose:
             print(f'created results after {time() - start:.2f}s')
@@ -177,13 +181,14 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
             try:
                 all_matches = self.hash_table.evaluate(res.lhs_key)
                 # check if all values encountered are not inf or nan
-                if not all([not (mpmath.isinf(val) or mpmath.isnan(val)) for val, _, _ in all_matches]):  # safety
+                if not all([not (mpmath.isinf(val) or mpmath.isnan(val))
+                            for val, _, _ in all_matches]):  # safety
                     print('Something wicked happened!')
                     print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
                     continue
             except (ZeroDivisionError, KeyError):
-                # if there was an exeption here, there is no need to halt the entire execution, but only note it to the
-                # user
+                # if there was an exeption here, there is no need to halt the entire execution,
+                # but only note it to the user
                 continue
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
