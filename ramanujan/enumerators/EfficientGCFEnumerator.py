@@ -4,8 +4,7 @@ from typing import List, Iterator, Callable
 from time import time
 
 from ramanujan.utils.mobius import EfficientGCF
-from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms,
-                                g_N_verify_compare_length
+from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms, g_N_verify_compare_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
 
 
