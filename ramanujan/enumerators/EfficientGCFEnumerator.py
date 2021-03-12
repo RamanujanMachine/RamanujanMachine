@@ -1,4 +1,3 @@
-import math
 import itertools
 import mpmath
 from typing import List, Iterator, Callable
@@ -120,7 +119,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                             time_left = (time() - start)*(num_iterations / counter - 1)
                             print(f"Passed {counter} out of {num_iterations} " +
                                   f"({round(100. * counter / num_iterations, 2)}%). "
-                                  f"Found so far {len(results)} results. "
+                                  f"Found so far {len(results)} results. \n"
                                   f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
 
         else:  # cache {an} in RAM, iterate over bn
@@ -152,7 +151,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                             time_left = (time() - start)*(num_iterations / counter - 1)
                             print(f"Passed {counter} out of {num_iterations} " +
                                   f"({round(100. * counter / num_iterations, 2)}%). "
-                                  f"Found so far {len(results)} results. "
+                                  f"Found so far {len(results)} results. \n"
                                   f"Time left ~{time_left:.0f}s of a total of {prediction:.0f}s")
 
         if verbose:
