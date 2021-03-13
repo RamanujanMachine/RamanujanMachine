@@ -103,22 +103,13 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
         asize = self.get_an_length()
         bsize = self.get_bn_length()
         
-        # Estimate number of iterations using better estimates than asize/bsize  
-        aiters = 0
-        for an in self.get_an_iterator():
-            if 0 not in an:
-                aiters += 1
-        biters = 0
-        for bn in self.get_bn_iterator():
-            if 0 not in bn:
-                biters += 1
-        num_iterations = aiters * biters
+        num_iterations = asize * bsize
         if num_iterations == 0:
             print("Nothing to iterate over!")
             return []
     
         # Split task into chunks
-        min_chunks = round(np.ceil(calculate_RAM_usage((aiters, biters)) / MAX_RAM))
+        min_chunks = round(np.ceil(calculate_RAM_usage((asize, bsize)) / MAX_RAM))
         if min_chunks < max(asize, bsize):  # Iterate over intervals on the longer axis
             achunk = asize if asize < bsize else np.int(np.ceil(asize / min_chunks))
             bchunk = bsize if asize >= bsize else np.int(np.ceil(bsize / min_chunks))
@@ -133,7 +124,7 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
                   f"This might take some time. ")
             start_results = time()    
         
-        if aiters < biters:
+        if asize < bsize:
             small_chunk, large_chunk = achunk, bchunk
             small_size, large_size = asize, bsize
             small_iterator, large_iterator = self.get_an_iterator, self.get_bn_iterator
@@ -153,7 +144,7 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
         for _ in range(0, large_size, large_chunk):
             large_poly["coef"], large_poly["series"] = self.__create_series_list(
                     large_iter, large_series, filter_from_1=True, iterations=large_chunk)
-            if len(large_poly["series"]) == 0:  # exhausted or all 0
+            if len(large_poly["series"]) == 0:  # exhausted or all include 0
                 continue
             
             small_iter = small_iterator()
@@ -162,7 +153,7 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
                 
                 small_poly["coef"], small_poly["series"] = self.__create_series_list(
                     small_iter, small_series, filter_from_1=True, iterations=small_chunk)
-                if len(small_poly["series"]) == 0:  # exhausted or all 0
+                if len(small_poly["series"]) == 0:  # exhausted or all include 0
                     continue 
                 
                 a_ = np.array(a_poly["series"], dtype=np.float64).T
@@ -176,7 +167,7 @@ class ParallelGCFEnumerator(EfficientGCFEnumerator):
                     calc_time += time() - start
                     print(f"Calculations in {time() - start:.2f}s")
                     start = time()
-                    print_counter = 0
+                    print_counter = 0  # Less prints with many chunks
                     chunks_done += 1
                     
                 for aind in range(shape[0]):
