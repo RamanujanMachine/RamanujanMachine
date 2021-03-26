@@ -1,4 +1,4 @@
-from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
+from ramanujan.enumerators.ParallelGCFEnumerator import ParallelGCFEnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.constants import g_const_dict
@@ -27,7 +27,7 @@ poly_search_domain = CartesianProductPolyDomain(
     2, [-11, 11])
 
 # create an enumerator that iters thought the poly domain and compare GCFs to the lhs table
-enumerator = EfficientGCFEnumerator(
+enumerator = ParallelGCFEnumerator(
     lhs,
     poly_search_domain,
     [g_const_dict['pi']])
