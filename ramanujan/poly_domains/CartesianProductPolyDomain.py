@@ -129,9 +129,6 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 			for i in range(number_of_instances-1)]
 		splitted_range.append([range_start+(number_of_instances-1)*chunk_size, range_end])
 
-		import ipdb
-		ipdb.set_trace()
-
 		sub_domains = []
 		for i, chunk_range in zip(range(number_of_instances), splitted_range):
 			next_instance = deepcopy(self)
