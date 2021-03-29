@@ -44,8 +44,6 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
     lean_lhs.bloom = lhs.bloom
 
     # Creating arguments for each process function
-    # At this point, only the bloom filter shuold be loaded to lhs, so duplicating it 
-    # should not be a problem 
     splitted_domain = poly_search_domain.split_domains_to_processes(number_of_processes)
     for domain_chunk in splitted_domain:
         arguments.append((
