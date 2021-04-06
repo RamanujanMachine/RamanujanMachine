@@ -161,7 +161,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
             print(f'created results after {time() - start:.2f}s')
         return results
 
-    def _calculate_results_to_higher_dept(self, intermediate_results: List[Match], dept=g_N_verify_terms, verbose=True):
+    def _calculate_results_to_higher_dept(self, intermediate_results: List[Match], verbose=True):
         """
         For each results, calculate the GCD to a higher dept, and return the calculated result 
         with the original result.
@@ -176,13 +176,23 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     counter, n_iterations))
 
             # create a_n, b_n with huge length, calculate gcf, and verify result.
-            an = self.create_an_series(res.rhs_an_poly, dept)
-            bn = self.create_bn_series(res.rhs_bn_poly, dept)
+            an = self.create_an_series(res.rhs_an_poly, g_N_verify_terms)
+            bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
             gcf = EfficientGCF(an, bn)
             rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
 
             precise_results.append((res, rhs_str))
 
+        return precise_results
+
+    def _mutliprocessed_first_enumeration_additions(self, intermediate_results, verbose: bool):
+        """
+        When multiprocessing, only the first step is distributed across processes. To make full use 
+        of the multiprocessing, we'll add actions to the first enumeration that will also be distributed.
+        We'll calculate the intermediate results to a higher dept here, since it's a costly process that 
+        can be easily distributed.
+        """
+        precise_results = self._calculate_results_to_higher_dept(intermediate_results, verbose=verbose)
         return precise_results
 
     def _compare_to_lhs(self, precise_intermediate_results, verbose=True):
@@ -196,6 +206,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         counter = 0
         n_iterations = len(precise_intermediate_results)
         constant_vals = [const() for const in self.constants_generator]
+
         for res, rhs_str in precise_intermediate_results:
             counter += 1
             if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
@@ -234,3 +245,10 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
         precise_results = self._calculate_results_to_higher_dept(intermediate_results, verbose=verbose)
         refined_results = self._compare_to_lhs(precise_results, verbose=verbose)
         return refined_results
+
+    def _multiprocessed_refine_results(self, precise_intermediate_results, verbose):
+        """
+        When multiprocessing, we slightly change the actions done in the first and second process.
+        See EfficientGCFEnumerator._mutliprocessed_first_enumeration_additions for more information.
+        """
+        return self._compare_to_lhs(precise_intermediate_results, verbose=verbose)
