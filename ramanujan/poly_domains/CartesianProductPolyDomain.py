@@ -3,6 +3,7 @@ from ..utils.utils import iter_series_items_from_compact_poly
 from itertools import product
 from copy import deepcopy
 
+
 class CartesianProductPolyDomain(AbstractPolyDomains):
 	"""
 	This poly domain will generate all combinations for a(n) and b(n) coefs without complex dependence between the two
@@ -89,10 +90,10 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
 	def get_a_coef_iterator(self):
 		return product(*self.an_domain_range)
-	
+
 	def get_b_coef_iterator(self):
 		return product(*self.bn_domain_range)
-	
+
 	def get_individual_polys_generators(self):
 		# for backwards compatibility.
 		return self.get_a_coef_iterator(), self.get_b_coef_iterator()
@@ -100,7 +101,7 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 	@staticmethod
 	def _get_metadata_on_var_ranges(ranges, series):
 		ranges_metadata = []
-		for i,v in enumerate(ranges):
+		for i, v in enumerate(ranges):
 			ranges_metadata.append({
 				'range': v,
 				'size': v[1]-v[0]+1,
@@ -120,17 +121,16 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 		all_coef_ranges += self._get_metadata_on_var_ranges(self.b_coef_range, 'b')
 
 		biggest_range = max(all_coef_ranges, key=lambda x: x['size'])
-		
+
 		# split the range to chunks here, modify the last chunk so it will cover the last value,
-		# avoiding off by 1 errors 
+		# avoiding off by 1 errors
 		chunk_size = biggest_range['size'] // number_of_instances
 		range_start, range_end = biggest_range['range']
-		splitted_range = [[range_start+i*chunk_size, range_start+(i+1)*chunk_size-1]
-			for i in range(number_of_instances-1)]
-		splitted_range.append([range_start+(number_of_instances-1)*chunk_size, range_end])
+		split_range = [[range_start+i*chunk_size, range_start+(i+1)*chunk_size-1] for i in range(number_of_instances-1)]
+		split_range.append([range_start+(number_of_instances-1)*chunk_size, range_end])
 
 		sub_domains = []
-		for i, chunk_range in zip(range(number_of_instances), splitted_range):
+		for i, chunk_range in zip(range(number_of_instances), split_range):
 			next_instance = deepcopy(self)
 			if biggest_range['series'] == 'a':
 				next_instance.a_coef_range[biggest_range['index']] = chunk_range
