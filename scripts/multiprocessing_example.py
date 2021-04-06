@@ -25,7 +25,7 @@ def main():
     # The domain definition stays the same. We will split it later to chunks and enumerate each chink
     # in a different process
     poly_search_domain = Zeta3Domain1(
-        [(2, 2), (1, 1), (-100, 100), (-100, 100)],
+        [(2, 2), (1, 1), (1, 100), (1, 100)],
         (-50, -1))
 
     # Instead of creating the enumerator yourself, pass the type of enumerator you wish to use, and

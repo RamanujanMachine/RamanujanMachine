@@ -4,13 +4,14 @@ from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
 from ramanujan.constants import g_const_dict
+from ramanujan.multiprocess_enumeration import multiprocess_enumeration
 
 
 def get_testable_data(refined_res_list):
-    '''
+    """
     On those test we have no use for the bloom key or lhs dict pointers
-    exctact the meaning full data for testing
-    '''
+    extract the meaning full data for testing
+    """
     data = []
     for i in refined_res_list:
         data.append((
@@ -22,7 +23,6 @@ def get_testable_data(refined_res_list):
 
 
 class APITests(unittest.TestCase):
-
     def test_MITM_api1(self):
         lhs = LHSHashTable('e_lhs_dept5_db', 5, [g_const_dict['e']])
 
@@ -46,9 +46,9 @@ class APITests(unittest.TestCase):
         lhs = LHSHashTable('zeta3.lhs.dept14.db', 14, [g_const_dict['zeta'](3)])
 
         poly_search_domain = Zeta3Domain1(
-            [(2, 2), (1, 1), (1, 17), (1, 5)], # an coefs
-            (-16, -1) # bn coef
-            ) 
+            [(2, 2), (1, 1), (1, 17), (1, 5)],  # an coefs
+            (-16, -1)  # bn coef
+            )
 
         enumerator = EfficientGCFEnumerator(
             lhs,
@@ -60,10 +60,10 @@ class APITests(unittest.TestCase):
 
         self.assertEqual(len(results), 3)
         self.assertIn(
-            ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)), 
+            ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)),
             results)
         self.assertIn(
-            ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)), 
+            ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)),
             results)
         self.assertIn(
             ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)),
@@ -75,11 +75,11 @@ class APITests(unittest.TestCase):
         lhs = LHSHashTable(
             saved_hash,
             lhs_search_limit,
-            [g_const_dict['pi']]) 
+            [g_const_dict['pi']])
 
         poly_search_domain = CartesianProductPolyDomain(
-            1, [-13,13],
-            2, [-11,11])
+            1, [-13, 13],
+            2, [-11, 11])
 
         # create an enumerator to iter thought the poly domain and compare it to the
         # lhs table
@@ -91,6 +91,52 @@ class APITests(unittest.TestCase):
 
         results = enumerator.full_execution()
         self.assertEqual(len(results), 46)
+
+    def test_MITM_multiprocessing(self):
+        """
+        This is the same test as test_MITM_api2, but using multiprocessing and expanding the search domain.
+        This causes some 'code duplicate' warnings.
+        This tested domain is large, and will scan duplicates (two scaled results). This is not a mistake, since we're
+        interested in the way the poly domain is split, and we want to test that no part of the domain is missed out.
+        """
+        lhs = LHSHashTable('zeta3_lhs_dept20.db', 20, [g_const_dict['zeta'](3)])
+
+        poly_search_domain = Zeta3Domain1(
+            [(2, 2), (1, 1), (1, 100), (1, 100)],  # an coefs
+            (-50, -1)  # bn coef
+            )
+
+        results = multiprocess_enumeration(
+            EfficientGCFEnumerator,
+            lhs,
+            poly_search_domain,
+            [g_const_dict['zeta'](3)],
+            4)
+
+        results = get_testable_data(results)
+
+        self.assertEqual(len(results), 7)
+        self.assertIn(
+            ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)),
+            results)
+        self.assertIn(
+            ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)),
+            results)
+        self.assertIn(
+            ((2, 1, 6, 2), (-4,), (16, 0), (0, 7)),
+            results)
+        self.assertIn(
+            ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)),
+            results)
+        self.assertIn(
+            ((2, 1, 21, 7), (-49,), (8, 0), (0, 1)),
+            results)
+        self.assertIn(
+            ((2, 1, 34, 10), (-4,), (12, 0), (0, 1)),
+            results)
+        self.assertIn(
+            ((2, 1, 51, 15), (-9,), (18, 0), (0, 1)),
+            results)
 
 
 if __name__ == '__main__':
