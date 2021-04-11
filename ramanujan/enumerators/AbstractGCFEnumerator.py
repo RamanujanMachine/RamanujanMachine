@@ -41,6 +41,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
         basically, this is a 2 step procedure:
         1) first enumeration - enumerate over all rhs combinations, find hits in lhs hash table.
+            For each hit, calculate the GCF to a higher dept.
         2) refine results - take results from (1) and validate them to 100 decimal digits.
         
         Functions implemented in this abstract class will translate the given constants to 
@@ -168,7 +169,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             if verbose:
                 print('calculating intermediate results to a higher precision...')
             start = time()
-            # step (2)
             results = self._improve_results_precision(intermediate_results)
             end = time()
             if verbose:
