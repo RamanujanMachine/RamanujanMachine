@@ -161,7 +161,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
             print(f'created results after {time() - start:.2f}s')
         return results
 
-    def _calculate_results_to_higher_dept(self, intermediate_results: List[Match], verbose=True):
+    def _improve_results_precision(self, intermediate_results: List[Match], verbose=True):
         """
         For each results, calculate the GCD to a higher dept, and return the calculated result 
         with the original result.
@@ -185,22 +185,12 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
 
         return precise_results
 
-    def _mutliprocessed_first_enumeration_additions(self, intermediate_results, verbose: bool):
+    def _refine_results(self, precise_intermediate_results, verbose=True):
         """
-        When multiprocessing, only the first step is distributed across processes. To make full use 
-        of the multiprocessing, we'll add actions to the first enumeration that will also be distributed.
-        We'll calculate the intermediate results to a higher dept here, since it's a costly process that 
-        can be easily distributed.
-        """
-        precise_results = self._calculate_results_to_higher_dept(intermediate_results, verbose=verbose)
-        return precise_results
-
-    def _compare_to_lhs(self, precise_intermediate_results, verbose=True):
-        """
-        Compare each result to it's respected LHS match. 
-        :param precise_intermediate_results: A list of results, with a precise calculation of the GCF 
-        in the following format- [(Match, rhs_str), (Match, rhs_str), ...]
+        validate intermediate results to 100 digit precision
+        :param intermediate_results:  list of results from first enumeration
         :param verbose: if true print status.
+        :return: final results.
         """
         results = []
         counter = 0
@@ -234,21 +224,3 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     results.append(RefinedMatch(*res, i, match[1], match[2]))
 
         return results
-
-    def _refine_results(self, intermediate_results: List[Match], verbose=True):
-        """
-        validate intermediate results to 100 digit precision
-        :param intermediate_results:  list of results from first enumeration
-        :param verbose: if true print status.
-        :return: final results.
-        """
-        precise_results = self._calculate_results_to_higher_dept(intermediate_results, verbose=verbose)
-        refined_results = self._compare_to_lhs(precise_results, verbose=verbose)
-        return refined_results
-
-    def _multiprocessed_refine_results(self, precise_intermediate_results, verbose):
-        """
-        When multiprocessing, we slightly change the actions done in the first and second process.
-        See EfficientGCFEnumerator._mutliprocessed_first_enumeration_additions for more information.
-        """
-        return self._compare_to_lhs(precise_intermediate_results, verbose=verbose)

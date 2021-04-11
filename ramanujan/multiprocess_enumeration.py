@@ -19,7 +19,7 @@ def _single_process_execution(enumerator_class, lhs, poly_search_domain, const_v
         poly_search_domain,
         const_vals)
     
-    return enumerator.multiprocessed_find_initial_hits()
+    return enumerator.find_initial_hits()
 
 
 def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_vals, number_of_processes):
@@ -61,6 +61,6 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
     # Create another enumerator (should not take time to initiate) and preforme 
     # the second step using only it
     enumerator = enumerator_class(lhs, poly_search_domain, const_vals)
-    refined_results = enumerator.multiprocessed_refine_results(unified_results)
+    refined_results = enumerator.refine_results(unified_results)
 
     return refined_results

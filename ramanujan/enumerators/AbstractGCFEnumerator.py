@@ -50,15 +50,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         Enumerators should implement the following:
             find_initial_hits
             refine_results
-
-        When splitting the execution to different processes (or hosts), we only distibute the first
-        step across processes. We can move some of the functionality of the second step to the first, 
-        and improve the execution time by a lot.
-        This is done by calling the multiprocessed versions of the seach functions:
-            multiprocessed_find_initial_hits
-            multiprocessed_refine_results
-        To define what exactly is done on each step, you'll need to override _mutliprocessed_first_enumeration_additions
-        and _multiprocessed_refine_results. 
     """
     def __init__(self, hash_table, poly_domains_generator, sym_constants):
         """
@@ -168,10 +159,21 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                 print('starting preliminary search...')
             start = time()
             # step (2)
-            results = self._first_enumeration(verbose)
+            intermediate_results = self._first_enumeration(verbose)
             end = time()
             if verbose:
                 print(f'that took {end - start}s')
+
+        with mpmath.workdps(self.verify_dps * 2):
+            if verbose:
+                print('calculating intermediate results to a higher precision...')
+            start = time()
+            # step (2)
+            results = self._improve_results_precision(intermediate_results)
+            end = time()
+            if verbose:
+                print(f'that took {end - start}s')
+        
         return results
 
     @abstractmethod    
@@ -179,31 +181,11 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         # override by child
         pass
 
-    def _mutliprocessed_first_enumeration_additions(self, intermediate_results, verbose: bool):
+    def _improve_results_precision(self, intermediate_results, verbose: bool):
         """
-        When splitting the execution to different processes (or hosts), we only distibute the first
-        step across processes. We can move some of the functionality of the second step to the first, 
-        and improve the execution time by a lot.
+        Calculates intermediate results GCFs to a higher dept, yeilding more precise results.
         """
-        return intermediate_results
-
-    def multiprocessed_find_initial_hits(self, verbose=True):
-        """
-        See class docs for more information.
-        """
-        first_results = self.find_initial_hits()
-
-        # under a higher precission, preform actions taken from refine_results
-        with mpmath.workdps(self.verify_dps * 2):
-            if verbose:
-                print('calculating intermediate results to a higher precision...')
-            start = time()
-            # step (2)
-            results = self._mutliprocessed_first_enumeration_additions(first_results, verbose)
-            end = time()
-            if verbose:
-                print(f'that took {end - start}s')
-        return results
+        pass
 
     def refine_results(self, results):
         with mpmath.workdps(self.verify_dps * 2):
@@ -218,18 +200,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
     def _refine_results(self, intermediate_results: List[Match], verbose=True):
         # override by child
         pass 
-
-    def _multiprocessed_refine_results(self, intermediate_results: List[Match], verbose=True):
-        self._refine_results(intermediate_results, verbose=verbose)
-    
-    def multiprocessed_refine_results(self, results):
-        with mpmath.workdps(self.verify_dps * 2):
-            print('starting to verify results...')
-            start = time()
-            refined_results = self._multiprocessed_refine_results(results, True)  # step (3)
-            end = time()
-            print(f'that took {end - start}s')
-        return refined_results
 
     def full_execution(self):
         first_iteration = self.find_initial_hits()
