@@ -169,7 +169,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             if verbose:
                 print('calculating intermediate results to a higher precision...')
             start = time()
-            results = self._improve_results_precision(intermediate_results)
+            results = self._improve_results_precision(intermediate_results, verbose)
             end = time()
             if verbose:
                 print(f'that took {end - start}s')
@@ -183,7 +183,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
     def _improve_results_precision(self, intermediate_results, verbose: bool):
         """
-        Calculates intermediate results GCFs to a higher dept, yeilding more precise results.
+        Calculates intermediate results GCFs to a higher dept, yielding more precise results.
         """
         pass
 

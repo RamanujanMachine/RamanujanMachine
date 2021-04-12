@@ -188,7 +188,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
     def _refine_results(self, precise_intermediate_results, verbose=True):
         """
         validate intermediate results to 100 digit precision
-        :param intermediate_results:  list of results from first enumeration
+        :param precise_intermediate_results:  list of results from first enumeration
         :param verbose: if true print status.
         :return: final results.
         """
@@ -211,15 +211,15 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
                     continue
             except (ZeroDivisionError, KeyError):
-                # if there was an exeption here, there is no need to halt the entire execution,
+                # if there was an exception here, there is no need to halt the entire execution,
                 # but only note it to the user
                 continue
 
             for i, match in enumerate(all_matches):
                 val_str = mpmath.nstr(match[0], g_N_verify_compare_length)
                 if val_str == rhs_str:
-                    # This patch is ment to allow support for multiple matches for an
-                    # LHS key, i will later be used to determind which item in the LHS dict
+                    # This patch is meant to allow support for multiple matches for an
+                    # LHS key, i will later be used to determine which item in the LHS dict
                     # was matched
                     results.append(RefinedMatch(*res, i, match[1], match[2]))
 
