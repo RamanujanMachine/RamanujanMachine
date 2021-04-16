@@ -55,7 +55,7 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
 
     process_results = pool.starmap(_single_process_execution, arguments)
     pool.close()
-    
+
     unified_results = []
     for r in process_results:
         unified_results += r

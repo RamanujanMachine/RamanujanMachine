@@ -14,7 +14,6 @@ from ramanujan.constants import *
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
-IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef iter_counter')
 
 
 def get_size_of_nested_list(list_of_elem):
@@ -52,12 +51,12 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             find_initial_hits
             refine_results
     """
-    def __init__(self, hash_table, poly_domains_generator, sym_constants):
+    def __init__(self, hash_table, poly_domains, sym_constants):
         """
         initialize search engine.
         :param hash_table: LHSHashTable object storing the constant's permutations. Used for 
             querying computed values for
-        :param poly_domains_generator: An poly_domain object that will generate polynomials to iter through, and
+        :param poly_domains: An poly_domain object that will generate polynomials to iter through, and
             supply functions for calculating items in each polynomial given
         :param sym_constants: sympy constants
         """
@@ -69,20 +68,20 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         self.constants_generator = create_mpf_const_generator(sym_constants)
         
         # expand poly domains object
-        # there are two methods to generate and iter over domains.  the newer one uses poly_domains_generator only,
+        # there are two methods to generate and iter over domains.  the newer one uses poly_domains only,
         # but the old one still uses the rest of the arguments.
         # generating them here to avoid breaking older enumerators
-        self.poly_domains_generator = poly_domains_generator
-        a_iterator_func, b_iterator_func = poly_domains_generator.get_calculation_method()
+        self.poly_domains = poly_domains
+        a_iterator_func, b_iterator_func = poly_domains.get_calculation_method()
         self.create_an_series = \
             lambda coefs, items: get_series_items_from_iter(a_iterator_func, coefs, items)
         self.create_bn_series = \
             lambda coefs, items: get_series_items_from_iter(b_iterator_func, coefs, items)
-        self.get_an_length = poly_domains_generator.get_an_length
-        self.get_bn_length = poly_domains_generator.get_bn_length
+        self.get_an_length = poly_domains.get_an_length
+        self.get_bn_length = poly_domains.get_bn_length
         
-        self.get_an_iterator = poly_domains_generator.get_a_coef_iterator
-        self.get_bn_iterator = poly_domains_generator.get_b_coef_iterator
+        self.get_an_iterator = poly_domains.get_a_coef_iterator
+        self.get_bn_iterator = poly_domains.get_b_coef_iterator
         
         # store lhs_hash_table
         self.hash_table = hash_table
