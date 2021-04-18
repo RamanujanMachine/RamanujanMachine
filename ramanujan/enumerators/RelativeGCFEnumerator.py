@@ -4,7 +4,7 @@ from collections import namedtuple
 import mpmath
 
 from ramanujan.CachedSeries import CachedSeries
-from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms, g_N_verify_compare_length, g_N_initial_key_length 
+from ramanujan.constants import g_N_verify_terms, g_N_verify_compare_length, g_N_initial_key_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
 
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef')
@@ -12,6 +12,7 @@ IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef')
 
 class ZeroInAn(Exception):
     pass
+
 
 class NotConverging(Exception):
     pass
@@ -23,7 +24,6 @@ def trunc_division(p, q):
     sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
     div = abs(p) // abs(q)
     return -div if sign else div
-
 
 
 def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min_iters=7, burst_number=7):
@@ -49,8 +49,8 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
     q = 1
     prev_p = 1
     # This is a ugly hack but it works. a[0] is handled before the rest here:
-    p = an_iterator.__next__() # will place a[0] to p
-    bn_iterator.__next__() # b0 is discarded
+    p = an_iterator.__next__()  # will place a[0] to p
+    bn_iterator.__next__()  # b0 is discarded
 
     if p == 0:
         raise ZeroInAn()
@@ -72,7 +72,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
         if i == next_gcf_calculation:
             next_gcf_calculation += burst_number * (len(computed_values) + 1)
             if q != 0:  # safety check
-                computed_values.append(trunc_division(precision_factor * p,q))
+                computed_values.append(trunc_division(precision_factor * p, q))
                 items_computed += 1
             else:
                 raise ZeroDivisionError()
@@ -89,7 +89,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
     else:
         # GCF didn't converge in time. guessing the avg between the
         # last two calculations    
-        avg = trunc_division(computed_values[-1] + computed_values[-2],2)
+        avg = trunc_division(computed_values[-1] + computed_values[-2], 2)
         return avg
 
 
@@ -104,21 +104,21 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         print('using relative enumerator')
         super().__init__(*args, **kwargs)
 
-    def _iter_domains_with_cache(self, poly_domains, max_iters):
+    def _iter_domains_with_cache(self, max_iters):
         """
         Yields an and bn pairs in the given domain while keeping cache for one of the series (an or bn)
         to avoid double calculations.  
         """
-        size_a = poly_domains.an_length
-        size_b = poly_domains.bn_length
+        size_a = self.poly_domains.an_length
+        size_b = self.poly_domains.bn_length
 
-        an_series_iter, bn_series_iter = poly_domains.get_calculation_method()
+        an_series_iter, bn_series_iter = self.poly_domains.get_calculation_method()
 
         # We'll cache the smaller series.
-        if size_a > size_b: # cache bn
+        if size_a > size_b:  # cache bn
             bn_cache = {}
-            an_cache = CachedSeries((0), an_series_iter)
-            for an_coefs, bn_coefs in poly_domains.iter_polys(primary_looped_domain='a'):
+            an_cache = CachedSeries((0,), an_series_iter)
+            for an_coefs, bn_coefs in self.poly_domains.iter_polys(primary_looped_domain='a'):
                 if bn_coefs not in bn_cache:
                     bn_cache[bn_coefs] = CachedSeries(bn_coefs, bn_series_iter)
                 if an_cache.poly_coefs != an_coefs:
@@ -129,10 +129,10 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                     bn_cache[bn_coefs].iter_series_items(max_iters=max_iters), 
                     IterationMetadata(an_coefs, bn_coefs))
 
-        else: # cache an
+        else:  # cache an
             an_cache = {}
-            bn_cache = CachedSeries((0), bn_series_iter)
-            for an_coefs, bn_coefs in poly_domains.iter_polys(primary_looped_domain='b'):
+            bn_cache = CachedSeries((0,), bn_series_iter)
+            for an_coefs, bn_coefs in self.poly_domains.iter_polys(primary_looped_domain='b'):
                 if an_coefs not in an_cache:
                     an_cache[an_coefs] = CachedSeries(an_coefs, an_series_iter)
                 if bn_cache.poly_coefs != bn_coefs:
@@ -144,14 +144,11 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                     IterationMetadata(an_coefs, bn_coefs))
 
     def _first_enumeration(self, verbose: bool):
-        num_iterations = self.poly_domains.num_iterations
-
         start = time()
-        key_factor = 1 / self.threshold
 
         results = []  # list of intermediate results        
         next_status_print = 100_000
-        for i, (an_iter, bn_iter, metadata) in enumerate(self._iter_domains_with_cache(self.poly_domains, 100)):
+        for i, (an_iter, bn_iter, metadata) in enumerate(self._iter_domains_with_cache(100)):
             try:
                 key = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length)
             except (ZeroInAn, NotConverging, ZeroDivisionError):
@@ -163,8 +160,8 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
             if i == next_status_print:  # print status.
                 next_status_print += 100_000
                 print(
-                    f'passed {i} out of {self.poly_domains.num_iterations} ' + \
-                    f'({round(100. * i / self.poly_domains.num_iterations, 2)}%). ' + \
+                    f'passed {i} out of {self.poly_domains.num_iterations} ' +
+                    f'({round(100. * i / self.poly_domains.num_iterations, 2)}%). ' +
                     f' found so far {len(results)} results')
                 print(f'currently at an = {metadata.an_coef} bn = {metadata.bn_coef}')
  
@@ -190,22 +187,22 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                 print('Calculated {} matches out of {} to a more precise value.'.format(
                     counter, n_iterations))
 
-            if res.rhs_an_poly==(2, 1, 17, 5):
-                import ipdb
-                ipdb.set_trace()
-
             an_iter = an_series_iter(res.rhs_an_poly, g_N_verify_terms*2, start_n=0)
             bn_iter = bn_series_iter(res.rhs_bn_poly, g_N_verify_terms*2, start_n=0)
-            long_key = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length, min_iters=100, burst_number=51)
+            long_key = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length, min_iters=100,
+                                                    burst_number=51)
             rhs_val = mpmath.mpf(long_key) / key_factor
             rhs_str = mpmath.nstr(rhs_val, g_N_verify_compare_length)
             
             precise_results.append((res, rhs_str))
         return precise_results
 
-
     def _refine_results(self, precise_intermediate_results, verbose=True):
         """
+        This step is identical to the one in Efficient enumerator. The two we're quite different in the
+        rest of the implementation, so it didn't feel right to extend EfficientGCFEnumerator in this class.
+        Hence, there is some code duplication here
+        
         validate intermediate results to 100 digit precision
         :param precise_intermediate_results:  list of results from first enumeration
         :param verbose: if true print status.
@@ -235,10 +232,6 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                 # but only note it to the user
                 continue
 
-            if res.rhs_an_poly==(2, 1, 17, 5):
-                import ipdb
-                ipdb.set_trace()
-
             for i, match in enumerate(all_matches):
                 # TODO - trunc_division will flat to 0, while nstr will do the right thing
                 # this forces the value to be flatted to zero.
@@ -250,25 +243,3 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                     results.append(RefinedMatch(*res, i, match[1], match[2]))
 
         return results
-
-    # def _refine_results(self, precise_intermediate_results: List[Match], print_results=True):
-    #     """
-    #     validate intermediate results to 100 digit precision
-    #     :param intermediate_results:  list of results from first enumeration
-    #     :param print_results: if true print status.
-    #     :return: final results.
-    #     """
-    #     results = []
-    #     counter = 0
-    #     n_iterations = len(intermediate_results)
-    #     constant_vals = [const() for const in self.constants_generator]
-    #     for res, rhs_str in precise_intermediate_results:
-    #         for i, val in enumerate(all_matches):
-    #             val_str = mpmath.nstr(val, g_N_verify_compare_length)
-    #             if val_str == rhs_str:
-    #                 # This patch is ment to allow support for multiple matches for an
-    #                 # LHS key, i will later be used to determind which item in the LHS dict
-    #                 # was matched
-    #                 results.append(RefinedMatch(*res, i))
-
-    #     return results
