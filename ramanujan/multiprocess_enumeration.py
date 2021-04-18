@@ -13,16 +13,17 @@ class Dummy(object):
     pass
 
 
-def _single_process_execution(enumerator_class, lhs, poly_search_domain, const_vals):
+def _single_process_execution(enumerator_class, lhs, poly_search_domain, const_vals, *args):
     enumerator = enumerator_class(
         lhs,
         poly_search_domain,
-        const_vals)
+        const_vals,
+        *args)
     
     return enumerator.find_initial_hits()
 
 
-def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_vals, number_of_processes):
+def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_vals, number_of_processes, *args):
     """
     This function will split an execution to number_of_processes different processes the poly_domain will be split, and
     for each chunk an instance of lhs and enumerator will be created. Each instance will preform the first enumeration.
@@ -50,7 +51,8 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
             enumerator_class,
             deepcopy(lean_lhs.bloom),
             domain_chunk,
-            const_vals
+            const_vals,
+            *args
             ))
 
     process_results = pool.starmap(_single_process_execution, arguments)
@@ -62,7 +64,7 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
 
     # Create another enumerator (should not take time to initiate) and preforme 
     # the second step using only it
-    enumerator = enumerator_class(lhs, poly_search_domain, const_vals)
+    enumerator = enumerator_class(lhs, poly_search_domain, const_vals, *args)
     refined_results = enumerator.refine_results(unified_results)
 
     return refined_results
