@@ -83,19 +83,34 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
 
             if items_computed >= 2:
                 if computed_values[-1] == computed_values[-2]:
-                    return computed_values[-1]
+                    return computed_values[-1], precision_factor
 
                 if items_computed >= 3:
                     # there was no progress in convergence
                     if abs(computed_values[-2] - computed_values[-1]) > abs(computed_values[-3] - computed_values[-2]):
                         # not converging
                         raise NotConverging()
-    else:
-        # GCF didn't converge in time. guessing the avg between the
-        # last two calculations    
-        avg = trunc_division(computed_values[-1] + computed_values[-2], 2)
-        return avg
 
+    else:
+        if i != next_gcf_calculation:
+            computed_values.append(trunc_division(precision_factor * p, q))
+            items_computed += 1
+
+        # we'll take the last two calculations, and check for matching digits.
+        # Once the two dont match, we'll know that we cannot trust the following digits.
+        matching_vals = 0
+        res = ''
+        for i, (c1, c2) in enumerate(zip(str(computed_values[-2]), str(computed_values[-1]))):
+            if c1 != c2:
+                break
+            res += c1
+
+        # import ipdb
+        # ipdb.set_trace()
+        # MB off by one
+        res += '0' * (len(str(computed_values[-1]))-i)
+        return int(res), i
+        
 
 class RelativeGCFEnumerator(AbstractGCFEnumerator):
     """
@@ -154,7 +169,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         next_status_print = 100_000
         for i, (an_iter, bn_iter, metadata) in enumerate(self._iter_domains_with_cache(100)):
             try:
-                key = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length, FIRST_STEP_MIN_ITERS,
+                key, precision = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length, FIRST_STEP_MIN_ITERS,
                                                    FIRST_STEP_BURST_NUMBER)
             except (ZeroInAn, NotConverging, ZeroDivisionError):
                 continue
@@ -163,7 +178,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                 results.append(Match(key, metadata.an_coef, metadata.bn_coef))
 
             if i == next_status_print:  # print status.
-                next_status_print += 100_000
+                next_status_print += 1000
                 print(
                     f'passed {i} out of {self.poly_domains.num_iterations} ' +
                     f'({round(100. * i / self.poly_domains.num_iterations, 2)}%). ' +
@@ -188,19 +203,25 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
 
         for res in intermediate_results:
             counter += 1
+            
             if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
                 print('Calculated {} matches out of {} to a more precise value.'.format(
                     counter, n_iterations))
 
-            an_iter = an_series_iter(res.rhs_an_poly, g_N_verify_terms * 2, start_n=0)
-            bn_iter = bn_series_iter(res.rhs_bn_poly, g_N_verify_terms * 2, start_n=0)
-            long_key = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length,
-                                                    min_iters=SECOND_STEP_MIN_ITERS,
-                                                    burst_number=SECOND_STEP_BURST_NUMBER)
+            an_iter = an_series_iter(res.rhs_an_poly, 10_000   , start_n=0)
+            bn_iter = bn_series_iter(res.rhs_bn_poly, 10_000, start_n=0)
+            try:
+                long_key, precision = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length,
+                                                        min_iters=SECOND_STEP_MIN_ITERS,
+                                                        burst_number=SECOND_STEP_BURST_NUMBER)
+            except (ZeroInAn, NotConverging, ZeroDivisionError) as e:
+                print(f" exception for {res}")
+                print(e)
+                continue
             rhs_val = mpmath.mpf(long_key) / key_factor
-            rhs_str = mpmath.nstr(rhs_val, g_N_verify_compare_length)
+            rhs_str = mpmath.nstr(rhs_val, precision)
 
-            precise_results.append((res, rhs_str))
+            precise_results.append((res, rhs_str, precision))
         return precise_results
 
     def _refine_results(self, precise_intermediate_results, verbose=True):
@@ -219,7 +240,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         n_iterations = len(precise_intermediate_results)
         constant_vals = [const() for const in self.constants_generator]
 
-        for res, rhs_str in precise_intermediate_results:
+        for res, rhs_str, precision in precise_intermediate_results:
             counter += 1
             if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
                 print('Passed {} permutations out of {}. Found so far {} matches'.format(
@@ -240,11 +261,11 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
             for i, match in enumerate(all_matches):
                 # TODO - trunc_division will flat to 0, while nstr will do the right thing
                 # this forces the value to be flatted to zero.
-                val_str = mpmath.nstr(match[0], g_N_verify_compare_length + 1)[:-1]
+                val_str = mpmath.nstr(match[0], precision + 1)[:-1]
                 if val_str == rhs_str:
                     # This patch is meant to allow support for multiple matches for an
                     # LHS key, i will later be used to determine which item in the LHS dict
                     # was matched
-                    results.append(RefinedMatch(*res, i, match[1], match[2]))
+                    results.append(RefinedMatch(*res, i, match[1], match[2]), precision)
 
         return results
