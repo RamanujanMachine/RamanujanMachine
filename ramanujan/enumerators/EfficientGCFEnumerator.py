@@ -163,7 +163,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
 
     def _improve_results_precision(self, intermediate_results: List[Match], verbose=True):
         """
-        For each results, calculate the GCD to a higher dept, and return the calculated result 
+        For each results, calculate the GCF to a higher dept, and return the calculated result 
         with the original result.
         """
         precise_results = []
@@ -219,7 +219,7 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                 val_str = mpmath.nstr(match[0], g_N_verify_compare_length)
                 if val_str == rhs_str:
                     # This patch is meant to allow support for multiple matches for an
-                    # LHS key, i will later be used to determine which item in the LHS dict
+                    # LHS key, it will later be used to determine which item in the LHS dict
                     # was matched
                     results.append(RefinedMatch(*res, i, match[1], match[2]))
 
