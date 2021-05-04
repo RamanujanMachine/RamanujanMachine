@@ -48,7 +48,7 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
     for domain_chunk in split_domain:
         arguments.append((
             enumerator_class,
-            deepcopy(lean_lhs.bloom),
+            lean_lhs.bloom,
             domain_chunk,
             const_vals
             ))
