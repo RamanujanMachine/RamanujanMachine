@@ -41,6 +41,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
         basically, this is a 2 step procedure:
         1) first enumeration - enumerate over all rhs combinations, find hits in lhs hash table.
+            For each hit, calculate the GCF to a higher dept.
         2) refine results - take results from (1) and validate them to 100 decimal digits.
         
         Functions implemented in this abstract class will translate the given constants to 
@@ -50,7 +51,6 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         Enumerators should implement the following:
             find_initial_hits
             refine_results
-
     """
     def __init__(self, hash_table, poly_domains_generator, sym_constants):
         """
@@ -160,15 +160,31 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                 print('starting preliminary search...')
             start = time()
             # step (2)
-            results = self._first_enumeration(verbose)
+            intermediate_results = self._first_enumeration(verbose)
             end = time()
             if verbose:
                 print(f'that took {end - start}s')
+
+        with mpmath.workdps(self.verify_dps * 2):
+            if verbose:
+                print('calculating intermediate results to a higher precision...')
+            start = time()
+            results = self._improve_results_precision(intermediate_results, verbose)
+            end = time()
+            if verbose:
+                print(f'that took {end - start}s')
+        
         return results
 
     @abstractmethod    
     def _first_enumeration(self, verbose: bool):
         # override by child
+        pass
+
+    def _improve_results_precision(self, intermediate_results, verbose: bool):
+        """
+        Calculates intermediate results GCFs to a higher dept, yielding more precise results.
+        """
         pass
 
     def refine_results(self, results):
@@ -184,7 +200,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
     def _refine_results(self, intermediate_results: List[Match], verbose=True):
         # override by child
         pass 
-    
+
     def full_execution(self):
         first_iteration = self.find_initial_hits()
         refined_results = self.refine_results(first_iteration)

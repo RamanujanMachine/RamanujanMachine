@@ -1,6 +1,7 @@
 from .AbstractPolyDomains import AbstractPolyDomains
 from ..utils.utils import iter_series_items_from_compact_poly
 from itertools import product
+from copy import deepcopy
 
 
 class CartesianProductPolyDomain(AbstractPolyDomains):
@@ -89,10 +90,53 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
 	def get_a_coef_iterator(self):
 		return product(*self.an_domain_range)
-	
+
 	def get_b_coef_iterator(self):
 		return product(*self.bn_domain_range)
-	
+
 	def get_individual_polys_generators(self):
 		# for backwards compatibility.
 		return self.get_a_coef_iterator(), self.get_b_coef_iterator()
+
+	@staticmethod
+	def _get_metadata_on_var_ranges(ranges, series):
+		ranges_metadata = []
+		for i, v in enumerate(ranges):
+			ranges_metadata.append({
+				'range': v,
+				'size': v[1]-v[0]+1,
+				'series': series,
+				'index': i
+				})
+		return ranges_metadata
+
+	def split_domains_to_processes(self, number_of_instances):
+		"""
+		When using multiprocessing, we'll split the search domain to several polyDomain and iter over each one
+		in a different process.
+		This function will split the domain to number_of_instances sub-domains. To do so, we'll find the coef
+		with the biggest range, and split it as evenly as possible to different instances.
+		"""
+		all_coef_ranges = self._get_metadata_on_var_ranges(self.a_coef_range, 'a')
+		all_coef_ranges += self._get_metadata_on_var_ranges(self.b_coef_range, 'b')
+
+		biggest_range = max(all_coef_ranges, key=lambda x: x['size'])
+
+		# split the range to chunks here, modify the last chunk so it will cover the last value,
+		# avoiding off by 1 errors
+		chunk_size = biggest_range['size'] // number_of_instances
+		range_start, range_end = biggest_range['range']
+		split_range = [[range_start+i*chunk_size, range_start+(i+1)*chunk_size-1] for i in range(number_of_instances-1)]
+		split_range.append([range_start+(number_of_instances-1)*chunk_size, range_end])
+
+		sub_domains = []
+		for i, chunk_range in zip(range(number_of_instances), split_range):
+			next_instance = deepcopy(self)
+			if biggest_range['series'] == 'a':
+				next_instance.a_coef_range[biggest_range['index']] = chunk_range
+			else:
+				next_instance.b_coef_range[biggest_range['index']] = chunk_range
+
+			next_instance._setup_metadata()
+			sub_domains.append(next_instance)
+		return sub_domains

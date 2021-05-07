@@ -161,18 +161,43 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
             print(f'created results after {time() - start:.2f}s')
         return results
 
-    def _refine_results(self, intermediate_results: List[Match], verbose=True):
+    def _improve_results_precision(self, intermediate_results: List[Match], verbose=True):
+        """
+        For each results, calculate the GCF to a higher dept, and return the calculated result 
+        with the original result.
+        """
+        precise_results = []
+        counter = 0
+        n_iterations = len(intermediate_results)
+        for res in intermediate_results:
+            counter += 1
+            if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
+                print('Calculated {} matches out of {} to a more precise value.'.format(
+                    counter, n_iterations))
+
+            # create a_n, b_n with huge length, calculate gcf, and verify result.
+            an = self.create_an_series(res.rhs_an_poly, g_N_verify_terms)
+            bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
+            gcf = EfficientGCF(an, bn)
+            rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
+
+            precise_results.append((res, rhs_str))
+
+        return precise_results
+
+    def _refine_results(self, precise_intermediate_results, verbose=True):
         """
         validate intermediate results to 100 digit precision
-        :param intermediate_results:  list of results from first enumeration
+        :param precise_intermediate_results:  list of results from first enumeration
         :param verbose: if true print status.
         :return: final results.
         """
         results = []
         counter = 0
-        n_iterations = len(intermediate_results)
+        n_iterations = len(precise_intermediate_results)
         constant_vals = [const() for const in self.constants_generator]
-        for res in intermediate_results:
+
+        for res, rhs_str in precise_intermediate_results:
             counter += 1
             if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
                 print('Passed {} permutations out of {}. Found so far {} matches'.format(
@@ -186,21 +211,15 @@ class EfficientGCFEnumerator(AbstractGCFEnumerator):
                     print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
                     continue
             except (ZeroDivisionError, KeyError):
-                # if there was an exeption here, there is no need to halt the entire execution,
+                # if there was an exception here, there is no need to halt the entire execution,
                 # but only note it to the user
                 continue
-
-            # create a_n, b_n with huge length, calculate gcf, and verify result.
-            an = self.create_an_series(res.rhs_an_poly, g_N_verify_terms)
-            bn = self.create_bn_series(res.rhs_bn_poly, g_N_verify_terms)
-            gcf = EfficientGCF(an, bn)
-            rhs_str = mpmath.nstr(gcf.evaluate(), g_N_verify_compare_length)
 
             for i, match in enumerate(all_matches):
                 val_str = mpmath.nstr(match[0], g_N_verify_compare_length)
                 if val_str == rhs_str:
-                    # This patch is ment to allow support for multiple matches for an
-                    # LHS key, i will later be used to determind which item in the LHS dict
+                    # This patch is meant to allow support for multiple matches for an
+                    # LHS key, it will later be used to determine which item in the LHS dict
                     # was matched
                     results.append(RefinedMatch(*res, i, match[1], match[2]))
 
