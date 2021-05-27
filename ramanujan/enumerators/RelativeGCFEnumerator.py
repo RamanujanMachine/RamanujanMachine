@@ -8,6 +8,8 @@ from ramanujan.constants import g_N_verify_terms, g_N_verify_compare_length, g_N
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
 
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef')
+RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot precision')
+
 FIRST_STEP_MIN_ITERS = 7
 FIRST_STEP_BURST_NUMBER = 7
 SECOND_STEP_MIN_ITERS = 7
@@ -83,13 +85,14 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
 
             if items_computed >= 2:
                 if computed_values[-1] == computed_values[-2]:
-                    return computed_values[-1], precision_factor
+                    print(computed_values[-1], result_precision)
+                    return computed_values[-1], result_precision
 
                 if items_computed >= 3:
                     # there was no progress in convergence
                     if abs(computed_values[-2] - computed_values[-1]) > abs(computed_values[-3] - computed_values[-2]):
                         # not converging
-                        raise NotConverging()
+                        raise NotConverging("Not converging")
 
     else:
         if i != next_gcf_calculation:
@@ -105,9 +108,6 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
                 break
             res += c1
 
-        # import ipdb
-        # ipdb.set_trace()
-        # MB off by one
         res += '0' * (len(str(computed_values[-1]))-i)
         return int(res), i
         
@@ -169,7 +169,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         next_status_print = 100_000
         for i, (an_iter, bn_iter, metadata) in enumerate(self._iter_domains_with_cache(100)):
             try:
-                key, precision = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length, FIRST_STEP_MIN_ITERS,
+                key, _ = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length, FIRST_STEP_MIN_ITERS,
                                                    FIRST_STEP_BURST_NUMBER)
             except (ZeroInAn, NotConverging, ZeroDivisionError):
                 continue
@@ -208,16 +208,20 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                 print('Calculated {} matches out of {} to a more precise value.'.format(
                     counter, n_iterations))
 
-            an_iter = an_series_iter(res.rhs_an_poly, 10_000   , start_n=0)
+            an_iter = an_series_iter(res.rhs_an_poly, 10_000, start_n=0)
             bn_iter = bn_series_iter(res.rhs_bn_poly, 10_000, start_n=0)
             try:
                 long_key, precision = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length,
                                                         min_iters=SECOND_STEP_MIN_ITERS,
                                                         burst_number=SECOND_STEP_BURST_NUMBER)
-            except (ZeroInAn, NotConverging, ZeroDivisionError) as e:
-                print(f" exception for {res}")
+            except NotConverging as e:
+                print(f"{res} does not converge. Continuing...")
+                continue
+            except (ZeroInAn, ZeroDivisionError) as e:
+                print(f" exception for {res}. Continuing...")
                 print(e)
                 continue
+
             rhs_val = mpmath.mpf(long_key) / key_factor
             rhs_str = mpmath.nstr(rhs_val, precision)
 
@@ -266,6 +270,6 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                     # This patch is meant to allow support for multiple matches for an
                     # LHS key, i will later be used to determine which item in the LHS dict
                     # was matched
-                    results.append(RefinedMatch(*res, i, match[1], match[2]), precision)
+                    results.append(RefinedMatch(*res, i, match[1], match[2], precision))
 
         return results
