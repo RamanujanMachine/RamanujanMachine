@@ -1,9 +1,12 @@
 import unittest
+import mpmath
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
-from ramanujan.enumerators.RelativeGCFEnumerator import RelativeGCFEnumerator
+from ramanujan.enumerators.RelativeGCFEnumerator import RelativeGCFEnumerator, gcf_calculation_to_precision, \
+    NotConverging
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
+from ramanujan.poly_domains.Zeta3Domain2 import Zeta3Domain2
 from ramanujan.constants import g_const_dict
 from ramanujan.multiprocess_enumeration import multiprocess_enumeration
 
@@ -180,5 +183,39 @@ class APITests(unittest.TestCase):
                     self.assertIn(polys, all_zeta_polys)
 
         self.assertEqual(len(all_zeta_polys), 0)
+
+    def test_gcf_calculation_to_precision(self):
+        with mpmath.workdps(200):
+            # "regular" GCF that converges quickly
+            an_iter_func, bn_iter_func = Zeta3Domain2.get_calculation_method()
+            an_iter = an_iter_func((3, -2), 200, start_n=0)
+            bn_iter = bn_iter_func((-1,), 200, start_n=0)
+            key, precision = gcf_calculation_to_precision(an_iter, bn_iter, 100, 1, 7)
+
+            self.assertEqual(
+                key,
+                9507512829493799642092871757960351250480644545528320906053375232736661476255405586529893359885317761)
+            self.assertEqual(precision, 100)
+
+            # GCF that converges slowly
+            an_iter = an_iter_func((1, 0), 40_000, start_n=0)
+            bn_iter = bn_iter_func((-1,), 40_000, start_n=0)
+            key, precision = gcf_calculation_to_precision(an_iter, bn_iter, 100, 1, 7)
+            self.assertEqual(
+                key,
+                8319073720000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+            self.assertEqual(precision, 9)
+
+            # GCF that doesn't converge at all
+            an_iter = an_iter_func((1, 0), 200, start_n=0)
+            bn_iter = bn_iter_func((-2,), 200, start_n=0)
+            exception_caught = False
+            try:
+                _, _ = gcf_calculation_to_precision(an_iter, bn_iter, 100, 1, 7)
+            except NotConverging:
+                exception_caught = True
+            self.assertTrue(exception_caught)
+
+
 if __name__ == '__main__':
     unittest.main()
