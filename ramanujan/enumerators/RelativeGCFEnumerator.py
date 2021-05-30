@@ -5,7 +5,9 @@ import mpmath
 
 from ramanujan.CachedSeries import CachedSeries
 from ramanujan.constants import g_N_verify_compare_length, g_N_initial_key_length
-from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
+from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match
+
+RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot precision')
 
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef')
 
@@ -110,7 +112,6 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
 
     # we'll take the last two calculations, and check for matching digits.
     # Once the two doesn't match, we'll know that we cannot trust the following digits.
-    matching_vals = 0
     res = ''
     for i, (c1, c2) in enumerate(zip(str(computed_values[-2]), str(computed_values[-1]))):
         if c1 != c2:
@@ -186,7 +187,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         for i, (an_iter, bn_iter, metadata) in enumerate(self._iter_domains_with_cache(FIRST_STEP_MAX_ITERS)):
             try:
                 key, _ = gcf_calculation_to_precision(an_iter, bn_iter, g_N_initial_key_length, FIRST_STEP_MIN_ITERS,
-                                                   FIRST_STEP_BURST_NUMBER)
+                                                      FIRST_STEP_BURST_NUMBER)
             except (ZeroInAn, NotConverging, ZeroDivisionError):
                 continue
 
@@ -287,7 +288,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
                 if val_str == rhs_str:
                     # This patch is meant to allow support for multiple matches for an
                     # LHS key, i will later be used to determine which item in the LHS dict
-                    # was matched
+                    # was matched]
                     results.append(RefinedMatch(*res, i, match[1], match[2], precision))
 
         return results
