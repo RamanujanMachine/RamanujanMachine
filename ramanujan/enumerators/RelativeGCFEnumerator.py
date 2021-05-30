@@ -4,11 +4,10 @@ from collections import namedtuple
 import mpmath
 
 from ramanujan.CachedSeries import CachedSeries
-from ramanujan.constants import g_N_verify_terms, g_N_verify_compare_length, g_N_initial_key_length
+from ramanujan.constants import g_N_verify_compare_length, g_N_initial_key_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
 
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef')
-RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot precision')
 
 FIRST_STEP_MIN_ITERS = 7
 FIRST_STEP_MAX_ITERS = 100
@@ -98,8 +97,8 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
 
                 if items_computed >= 3:
                     # if the GCF oscillates between two sub-series - we expect the distance between the two to 
-                    # monotonically decrease. If the GCF doesn't oscillate, we expect the distance between two following values to
-                    # monotonically decrease as well. If none of those apply, we halt the calculation here.
+                    # monotonically decrease. If the GCF doesn't oscillate, we expect the distance between two following
+                    # values to monotonically decrease as well. If none of those apply, we halt the calculation here.
                     if abs(computed_values[-2] - computed_values[-1]) > abs(computed_values[-3] - computed_values[-2]):
                         raise NotConverging("Not converging")
 
@@ -227,12 +226,14 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
 
             an_iter = an_series_iter(res.rhs_an_poly, SECOND_STEP_MAX_ITERS, start_n=0)
             bn_iter = bn_series_iter(res.rhs_bn_poly, SECOND_STEP_MAX_ITERS, start_n=0)
+
             try:
                 long_key, precision = gcf_calculation_to_precision(an_iter, bn_iter, g_N_verify_compare_length,
-                                                        min_iters=SECOND_STEP_MIN_ITERS,
-                                                        burst_number=SECOND_STEP_BURST_NUMBER)
+                                                                   min_iters=SECOND_STEP_MIN_ITERS,
+                                                                   burst_number=SECOND_STEP_BURST_NUMBER)
             except NotConverging as e:
                 print(f"{res} does not converge. Continuing...")
+                print(e)
                 continue
             except (ZeroInAn, ZeroDivisionError) as e:
                 print(f" exception for {res}. Continuing...")
