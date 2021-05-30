@@ -44,13 +44,14 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
     (for most GCFs) that the resulting value will be between those two values. Using this principle, we'll stop the
     GCF's calculation when those two values have the same decimal value under the required approximation.
 
-    If the value didn't converge and the iterators are not yielding any new items, we'll take the last two values calculated for  
-    the GCF and compare their digits. As long as the digits are the match - we'll assume that it is a real value. 
+    If the value didn't converge and the iterators are not yielding any new items, we'll take the last two values
+    calculated for the GCF and compare their digits. As long as the digits are the match - we'll assume that it is a
+    real value.
 
     Since huge int division is a costly process, we'll do so only every burst_number of calculations.
 
-    Returns an integer with the matching key for the GCF, which is int(gcf_value*precision_factor) and the number of digits 
-    calculated.
+    Returns an integer with the matching key for the GCF, which is int(gcf_value*precision_factor) and the number of
+    digits calculated.
     """
     computed_values = []
     items_computed = 0
@@ -178,7 +179,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
 
     def _first_enumeration(self, verbose: bool):
         """
-        Calculate the GCD to a low precision and check for hits with the bloom filter
+        Calculate the GCD to a low precision and check for hits with the bloom filter.
         """
         start = time()
 
@@ -261,34 +262,22 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         results = []
         counter = 0
         n_iterations = len(precise_intermediate_results)
-        constant_vals = [const() for const in self.constants_generator]
 
         for res, rhs_str, precision in precise_intermediate_results:
             counter += 1
             if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
                 print('Passed {} permutations out of {}. Found so far {} matches'.format(
                     counter, n_iterations, len(results)))
+
             try:
                 all_matches = self.hash_table.evaluate(res.lhs_key)
-                # check if all values encountered are not inf or nan
-                if not all([not (mpmath.isinf(val) or mpmath.isnan(val))
-                            for val, _, _ in all_matches]):  # safety
-                    print('Something wicked happened!')
-                    print(f'Encountered a NAN or inf in LHS db, at {res.lhs_key}, {constant_vals}')
-                    continue
-            except (ZeroDivisionError, KeyError):
-                # if there was an exception here, there is no need to halt the entire execution,
-                # but only note it to the user
+            except KeyError:
                 continue
 
             for i, match in enumerate(all_matches):
-                # TODO - trunc_division will flat to 0, while nstr will do the right thing
-                # this forces the value to be flatted to zero.
+                # Trunc the LHS to the number of digits actually calculated.
                 val_str = mpmath.nstr(match[0], precision + 1)[:-1]
                 if val_str == rhs_str:
-                    # This patch is meant to allow support for multiple matches for an
-                    # LHS key, i will later be used to determine which item in the LHS dict
-                    # was matched]
                     results.append(RefinedMatch(*res, i, match[1], match[2], precision))
 
         return results
