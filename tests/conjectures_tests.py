@@ -1,6 +1,7 @@
 import unittest
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
+from ramanujan.enumerators.RelativeGCFEnumerator import RelativeGCFEnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
 from ramanujan.constants import g_const_dict
@@ -50,24 +51,32 @@ class APITests(unittest.TestCase):
             (-16, -1)  # bn coef
             )
 
-        enumerator = EfficientGCFEnumerator(
+        efficient_enumerator = EfficientGCFEnumerator(
             lhs,
             poly_search_domain,
             [g_const_dict['zeta'](3)]
             )
+        relative_enumerator = RelativeGCFEnumerator(
+            lhs,
+            poly_search_domain,
+            [g_const_dict['zeta'](3)]
+        )
 
-        results = get_testable_data(enumerator.full_execution())
+        efficient_enumerator_results = get_testable_data(efficient_enumerator.full_execution())
+        relative_enumerator_results = get_testable_data(relative_enumerator.full_execution())
 
-        self.assertEqual(len(results), 3)
+        self.assertEqual(efficient_enumerator_results, relative_enumerator_results)
+
+        self.assertEqual(len(relative_enumerator_results), 3)
         self.assertIn(
             ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)),
-            results)
+            relative_enumerator_results)
         self.assertIn(
             ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)),
-            results)
+            relative_enumerator_results)
         self.assertIn(
             ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)),
-            results)
+            relative_enumerator_results)
 
     def test_MITM_api3(self):
         saved_hash = 'pi_lhs_dept20'
