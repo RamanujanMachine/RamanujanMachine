@@ -1,10 +1,9 @@
-from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.FREnumerator import FREnumerator
 from ramanujan.poly_domains.Zeta3Domain2 import Zeta3Domain2
 from ramanujan.constants import g_const_dict
 
 """
-This script enumerates GCFs for zeta(3) using the FR algorithem.
+This script enumerates GCFs for zeta(3) using the FR algorithm.
 It uses a specific family of series that tends to generate conjectures for zeta(3)
 The family is defined under ramanujan.poly_domains.Zeta3Domain3
 

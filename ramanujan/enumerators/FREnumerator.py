@@ -1,9 +1,7 @@
 import math
-from time import time
-import mpmath 
+import mpmath
 
 from .RelativeGCFEnumerator import RelativeGCFEnumerator
-from ramanujan.constants import g_N_verify_compare_length
 from collections import namedtuple
 
 CONVERGENCE_THRESHOLD = 0.1
@@ -15,10 +13,11 @@ Match = namedtuple('Match', 'rhs_an_poly rhs_bn_poly')
 RefinedMatch = namedtuple('Match', 'rhs_an_poly rhs_bn_poly val c_top c_bot precision')
 
 
-def check_for_fr(an_iterator, bn_iterator, metadata, an_deg, bn_deg, burst_number=BURST_NUMBER, min_iters=MIN_ITERS):
+def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, min_iters=MIN_ITERS):
     """
     As the calculation for p and q goes on, the GCD for the two grows. 
-    We've noticed that conjectures tends to have a GCD that grows in a super exponential manner (we call that Factorial Reduction).
+    We've noticed that conjectures tends to have a GCD that grows in a super exponential manner (we call that Factorial
+    Reduction).
     This function test if a GCF has factorial reduction.
     """
     calculated_values = []
@@ -28,8 +27,8 @@ def check_for_fr(an_iterator, bn_iterator, metadata, an_deg, bn_deg, burst_numbe
     q = 1
     prev_p = 1
     # This is a ugly hack but it works. a[0] is handled before the rest here:
-    p = an_iterator.__next__() # will place a[0] to p
-    bn_iterator.__next__() # b0 is discarded
+    p = an_iterator.__next__()  # will place a[0] to p
+    bn_iterator.__next__()  # b0 is discarded
 
     next_gcd_calculation = burst_number if burst_number >= min_iters else min_iters
 
@@ -39,7 +38,7 @@ def check_for_fr(an_iterator, bn_iterator, metadata, an_deg, bn_deg, burst_numbe
 
         q = a_i * q + b_i * prev_q
         p = a_i * p + b_i * prev_p
-        
+
         prev_q = tmp_a
         prev_p = tmp_b
 
@@ -48,18 +47,19 @@ def check_for_fr(an_iterator, bn_iterator, metadata, an_deg, bn_deg, burst_numbe
             next_gcd_calculation += burst_number
 
             calculated_values.append(
-                mpmath.log(mpmath.mpf(math.gcd(p, q))) / mpmath.mpf(i) + \
-                    (an_deg) * (-mpmath.log(i) + 1)
+                mpmath.log(mpmath.mpf(math.gcd(p, q))) / mpmath.mpf(i) +
+                an_deg * (-mpmath.log(i) + 1)
             )
 
             # This test fails for GCF without FR. Checking it early allows us do discard a lot of GCFs
             if num_of_calculated_vals >= 3 and \
-                abs(calculated_values[-2] - calculated_values[-1]) > abs(calculated_values[-2] - calculated_values[-3]):
+                    abs(calculated_values[-2] - calculated_values[-1]) > \
+                    abs(calculated_values[-2] - calculated_values[-3]):
                 return False, i
 
             if num_of_calculated_vals >= 2 and \
-                abs(calculated_values[-2] - calculated_values[-1]) < CONVERGENCE_THRESHOLD:
-                return True , i
+                    abs(calculated_values[-2] - calculated_values[-1]) < CONVERGENCE_THRESHOLD:
+                return True, i
 
     return False, i
 
@@ -76,22 +76,14 @@ class FREnumerator(RelativeGCFEnumerator):
         print('checking for FR enumerator')
         super().__init__(None, *args, **kwargs)
 
-
     def _first_enumeration(self, print_results: bool):
         """
         Test all GCFs in the domain for FR.
         """
-        num_iterations = self.poly_domains.num_iterations
-
-        start = time()
-        key_factor = 1 / self.threshold
-
         results = []  # list of intermediate results        
         all_items_calculated = []
         for an_iter, bn_iter, metadata in self._iter_domains_with_cache(FIRST_ENUMERATION_MAX_DEPT):
-            has_fr, items_calculated = check_for_fr(an_iter, bn_iter, metadata,
-                self.poly_domains.get_an_degree(metadata.an_coef),
-                self.poly_domains.get_bn_degree(metadata.bn_coef))
+            has_fr, items_calculated = check_for_fr(an_iter, bn_iter, self.poly_domains.get_an_degree(metadata.an_coef))
             if has_fr:
                 all_items_calculated.append(items_calculated)
                 if print_results:
@@ -118,13 +110,12 @@ class FREnumerator(RelativeGCFEnumerator):
         for match, val, precision in precise_intermediate_results:
             mpf_val = mpmath.mpf(val)
             pslq_res = mpmath.pslq(
-                [1, consts[0], consts[0]*consts[0], -mpf_val, -consts[0]*mpf_val, -consts[0]*consts[0]*mpf_val], 
-                tol=10**(1-precision))
+                [1, consts[0], consts[0] * consts[0], -mpf_val, -consts[0] * mpf_val, -consts[0] * consts[0] * mpf_val],
+                tol=10 ** (1 - precision))
             if pslq_res:
                 pslq_results.append(RefinedMatch(*match, val, pslq_res[:3], pslq_res[3:], precision))
             else:
                 pslq_results.append(RefinedMatch(*match, val, None, None, precision))
-
 
         return pslq_results
 
