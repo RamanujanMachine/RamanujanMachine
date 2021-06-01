@@ -74,7 +74,7 @@ class FREnumerator(RelativeGCFEnumerator):
 
     def __init__(self, *args, **kwargs):
         print('checking for FR enumerator')
-        super().__init__(*args, **kwargs, hash_table=None)
+        super().__init__(None, *args, **kwargs)
 
 
     def _first_enumeration(self, print_results: bool):
@@ -120,7 +120,10 @@ class FREnumerator(RelativeGCFEnumerator):
             pslq_res = mpmath.pslq(
                 [1, consts[0], consts[0]*consts[0], -mpf_val, -consts[0]*mpf_val, -consts[0]*consts[0]*mpf_val], 
                 tol=10**(1-precision))
-            pslq_results.append(RefinedMatch(*match, val, pslq_res[:3], pslq_res[3:], precision))
+            if pslq_res:
+                pslq_results.append(RefinedMatch(*match, val, pslq_res[:3], pslq_res[3:], precision))
+            else:
+                pslq_results.append(RefinedMatch(*match, val, None, None, precision))
 
 
         return pslq_results
