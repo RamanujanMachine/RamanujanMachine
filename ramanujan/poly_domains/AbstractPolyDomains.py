@@ -38,7 +38,8 @@ class AbstractPolyDomains(metaclass=ABCMeta):
 	def get_num_iterations(self):
 		pass
 
-	def get_calculation_method(self):
+	@staticmethod
+	def get_calculation_method():
 		pass
 
 	def dump_domain_ranges(self):
