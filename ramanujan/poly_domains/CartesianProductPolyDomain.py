@@ -143,7 +143,6 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
             sub_domains.append(next_instance)
 
         if biggest_range['size'] < number_of_instances:
-            print('rec')
             # divide the required instances over all of the sub domains
             smaller_sub_domains = []
             for i, sub_domain in zip(array_split(range(number_of_instances), len(sub_domains)), sub_domains):
