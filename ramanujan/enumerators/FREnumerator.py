@@ -87,7 +87,7 @@ class FREnumerator(RelativeGCFEnumerator):
             if has_fr:
                 all_items_calculated.append(items_calculated)
                 if print_results:
-                    print(f"found a GCF with FR:\n\tan: {metadata.an_coef}\n\tbn:{metadata.bn_coef}")
+                    print(f"found a GCF with FR:\n\tan: {metadata.an_coef}\n\tbn: {metadata.bn_coef}")
                 # Key is useless here :)
                 results.append(Match(metadata.an_coef, metadata.bn_coef))
 
