@@ -4,6 +4,7 @@ from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
 from ramanujan.enumerators.RelativeGCFEnumerator import RelativeGCFEnumerator, gcf_calculation_to_precision, \
     NotConverging
+from ramanujan.enumerators.FREnumerator import FREnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
 from ramanujan.poly_domains.Zeta3Domain2 import Zeta3Domain2
@@ -215,6 +216,33 @@ class APITests(unittest.TestCase):
             except NotConverging:
                 exception_caught = True
             self.assertTrue(exception_caught)
+
+    def test_fr_enumerator(self):
+        # define the poly domain
+        poly_search_domain = Zeta3Domain2(
+            [(1, 3), (-20, 20)],
+            (1, 2))
+
+        # create an enumerator to iter thought the poly domain and compare it to the lhs table
+        enumerator = FREnumerator(
+            poly_search_domain,
+            [g_const_dict['zeta'](3)]
+        )
+        
+        results = get_testable_data(enumerator.full_execution())
+
+        self.assertEqual(len(results), 10)
+
+        self.assertIn(((1, 0), (1,), [1, 0, 0], [0, 1, 0]), results)
+        self.assertIn(((1, 4), (1,), [0, 1, 0], [0, -1, 1]), results)
+        self.assertIn(((1, 12), (1,), [-8, 0, 0], [9, -8, 0]), results)
+        self.assertIn(((2, -1), (2,), [1, 0, -1], [0, 0, -1]), results)
+        self.assertIn(((2, 0), (2,), [-2, 2, 0], [0, -1, 1]), results)
+        self.assertIn(((2, 3), (2,), [-2, 0, 0], [8, -7, 0]), results)
+        self.assertIn(((2, 8), (2,), [0, 2, 0], [0, -1, 1]), results)
+        self.assertIn(((2, 13), (2,), None, None), results)
+        self.assertIn(((2, 15), (2,), [0, -54, 0], [0, 224, -189]), results)
+        self.assertIn(((3, -2), (1,), [0, -8, 0], [0, 0, -7]), results)
 
 
 if __name__ == '__main__':
