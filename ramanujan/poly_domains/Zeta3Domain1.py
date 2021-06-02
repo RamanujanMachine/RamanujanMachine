@@ -19,7 +19,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	NOTICE - Since every coeffiecnt is given explicitly, we do not enforce that the leading coef of an will always be
 	positive. (See CartesianProductPolyDomain documnetation regarding an_leading_coef_positive for more information)
 	"""
-	def __init__(self, a_coefs_ranges=[[0,0]], b_coef_range=[0,0], *args, **kwargs):
+	def __init__(self, a_coefs_ranges=((0, 0),), b_coef_range=(0, 0), *args, **kwargs):
 		"""
 		:param a_coefs_ranges: the range allowed for each coef from x0,x1,x2,x3
 		in this format-
@@ -60,7 +60,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 
 	@staticmethod
 	def get_bn_degree(bn_coefs):
-		# bn_coefs is not used since the degree is always 0. Still accepting this variable for consistency
+		# bn_coefs is not used since the degree is always 6. Still accepting this variable for consistency
 		return 6
 
 	@staticmethod

@@ -21,16 +21,10 @@ def main():
         [(1, 3), (-20, 20)],
         (1, 2))
 
-    # create an enumerator to iter thought the poly domain and compare it to the lhs table
-    enumerator = FREnumerator(
-        poly_search_domain,
-        [g_const_dict['zeta'](3)]
-    )
-
     # results = enumerator.full_execution()
     results = multiprocess_enumeration(
         FREnumerator,
-        None, # No LHS in FREnumerator
+        None,  # No LHS in FREnumerator
         poly_search_domain,
         [g_const_dict['zeta'](3)],
         4)
@@ -38,6 +32,7 @@ def main():
     print("{} results found!".format(len(results)))
     for r in results:
         print(r)
+
 
 if __name__ == '__main__':
     main()
