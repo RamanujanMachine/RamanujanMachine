@@ -7,7 +7,7 @@ from ramanujan.CachedSeries import CachedSeries
 from ramanujan.constants import g_N_verify_compare_length, g_N_initial_key_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match
 
-RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot precision')
+RefinedMatch = namedtuple('RefinedMatch', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot precision')
 
 IterationMetadata = namedtuple('IterationMetadata', 'an_coef bn_coef')
 

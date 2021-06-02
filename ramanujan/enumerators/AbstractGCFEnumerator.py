@@ -12,7 +12,7 @@ from ramanujan.utils.convergence_rate import calculate_convergence
 from ramanujan.constants import *
 
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
-RefinedMatch = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot')
+RefinedMatch = namedtuple('RefinedMatch', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot')
 FormattedResult = namedtuple('FormattedResult', 'LHS RHS GCF')
 
 
