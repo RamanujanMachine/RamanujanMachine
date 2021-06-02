@@ -1,16 +1,16 @@
 from .CartesianProductPolyDomain import * 
 
 class Zeta3Domain2(CartesianProductPolyDomain):
-	'''
+	"""
 	This domain iters polynomials from this kind:
 	a(n) = x0*n^3 + x0*(n+1)^3 + x1(2n+1)
-	b(n) = x2*n^6
+	b(n) = -(x2**2)*n^6
 
 	Note that all zeta3 results shown in the paper can be written using this
 	scheme. 
 
 	It is suggested to keep x1,x2<0, but this is not enforced by this class 
-	'''
+	"""
 
 	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
 		# a_coef_range and b_coef_range are given blank values. they are initialized again afterwards
@@ -28,7 +28,7 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 
 		def bn_iterator(b_coefs, max_runs, start_n=1):
 			for i in range(start_n, max_runs):
-				yield b_coefs[0]*(i**6)
+				yield -(b_coefs[0]**2)*(i**6)
 
 		return an_iterator, bn_iterator
 
@@ -46,7 +46,7 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 
 	@staticmethod
 	def get_poly_bn_lead_coef(bn_coefs):
-		return bn_coefs[0]
+		return -bn_coefs[0]**2
 	
 	@staticmethod
 	def check_for_convergence(an_coefs, bn_coefs):
@@ -54,7 +54,7 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 		a_leading_coef = an_coefs[0] * 2
 
 		# checking for >= as well as >, might be overkill
-		return bn_coefs[0] * 4 >= -1 * (a_leading_coef**2)
+		return -1 * (bn_coefs[0]**2) * 4 >= -1 * (a_leading_coef**2)
 
 	def iter_polys(self, primary_looped_domain):
 		an_domain, bn_domain = self.dump_domain_ranges()
