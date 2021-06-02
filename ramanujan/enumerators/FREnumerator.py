@@ -10,7 +10,7 @@ FIRST_ENUMERATION_MAX_DEPT = 5_000
 MIN_ITERS = 1
 
 Match = namedtuple('Match', 'rhs_an_poly rhs_bn_poly')
-RefinedMatch = namedtuple('Match', 'rhs_an_poly rhs_bn_poly val c_top c_bot precision')
+RefinedMatch = namedtuple('RefinedMatch', 'rhs_an_poly rhs_bn_poly val c_top c_bot precision')
 
 
 def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, min_iters=MIN_ITERS):
