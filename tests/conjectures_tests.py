@@ -153,37 +153,40 @@ class APITests(unittest.TestCase):
 
     def test_poly_domain_split(self):
         """
-        making sure that the domain is splitted currectly
-        1. checking if the approximate size of a splitted domain is the same as the
+        making sure that the domain is split correctly
+        1. checking if the approximate size of a split domain is the same as the
            original domain
-        2. checking if all the items in the splitted domain are
+        2. checking if all the items in the split domain are
         """
+        def compare_domains(domain, split_domain):
+            all_polys = [i for i in domain.iter_polys('b')]
+            for sub_domain in split_domain:
+                for polys in sub_domain.iter_polys('a'):
+                    # checking if a value is present this way imporves execution times drasticly
+                    try:
+                        all_polys.remove(polys)
+                    except ValueError:
+                        self.assertIn(polys, all_polys)
+            self.assertEqual(len(all_polys), 0)
+
         # coef ranges are 29, aiming for primes that screw with even splitting
         cartesian_domain = CartesianProductPolyDomain(
             2, [-30, 30],
             3, [-10, 19])
-        splitted_cartesian_domain = cartesian_domain.split_domains_to_processes(5)
+        split_cartesian_domain1 = cartesian_domain.split_domains_to_processes(5)
+        split_cartesian_domain2 = cartesian_domain.split_domains_to_processes(51)
 
-        self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in splitted_cartesian_domain]))
-        print('passed1')
+        self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in split_cartesian_domain1]))
+        self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in split_cartesian_domain2]))
+
         # the zeta domain checks for convergences condition when iterating over coefs
         # so the approximate size is bigger then the one actually used
         original_zeta_domain = Zeta3Domain1(
             [(2, 10), (1, 1), (1, 30), (1, 10)],
             (-10, -1)
         )
-        splitted_zeta_domain = original_zeta_domain.split_domains_to_processes(7)
-
-        all_zeta_polys = [i for i in original_zeta_domain.iter_polys('b')]
-        for sub_domain in splitted_zeta_domain:
-            for polys in sub_domain.iter_polys('a'):
-                # checking if a value is present this way imporves execution times drasticly
-                try:
-                    all_zeta_polys.remove(polys)
-                except ValueError:
-                    self.assertIn(polys, all_zeta_polys)
-
-        self.assertEqual(len(all_zeta_polys), 0)
+        compare_domains(original_zeta_domain, original_zeta_domain.split_domains_to_processes(7))
+        compare_domains(original_zeta_domain, original_zeta_domain.split_domains_to_processes(51))
 
     def test_gcf_calculation_to_precision(self):
         with mpmath.workdps(200):
