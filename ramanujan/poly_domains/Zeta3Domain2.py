@@ -12,7 +12,7 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 	It is suggested to keep x1,x2<0, but this is not enforced by this class 
 	"""
 
-	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
+	def __init__(self, a_coefs_ranges=[[0,0]], b_coef_range=[0,0], *args, **kwargs):
 		# a_coef_range and b_coef_range are given blank values. they are initialized again afterwards
 		super().__init__(a_deg=2, b_deg=1, a_coef_range=[0, 0], b_coef_range=[0, 0], *args, **kwargs)
 		self.a_coef_range = a_coefs_ranges
