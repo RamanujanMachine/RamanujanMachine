@@ -15,7 +15,7 @@ b(n) = x2*n^6
 # define the poly domain
 poly_search_domain = Zeta3Domain2(
     [(1, 3), (-20, 20)],
-    (-4, -1))
+    (1, 2))
 
 # create an enumerator to iter thought the poly domain and compare it to the lhs table
 enumerator = FREnumerator(
@@ -25,4 +25,5 @@ enumerator = FREnumerator(
 
 results = enumerator.full_execution()
 print("{} results found!".format(len(results)))
-print(results)
+for r in results:
+	print(r)
