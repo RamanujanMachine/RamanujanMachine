@@ -61,7 +61,8 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 	def get_bn_length(self):
 		return CartesianProductPolyDomain.domain_size_by_var_ranges(self.b_coef_range)
 
-	def get_calculation_method(self):
+	@staticmethod
+	def get_calculation_method():
 		# both an and bn are regular compact polys
 		return iter_series_items_from_compact_poly, \
 			iter_series_items_from_compact_poly
