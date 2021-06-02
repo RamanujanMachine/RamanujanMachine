@@ -50,7 +50,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 		return an_iterator, bn_iterator
 
 	@staticmethod
-	def get_poly_an_degree(an_coefs):
+	def get_an_degree(an_coefs):
 		deg = 3
 		if an_coefs[0] == 0:
 			deg -= 1
@@ -59,7 +59,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 		return deg
 
 	@staticmethod
-	def get_poly_bn_degree(bn_coefs):
+	def get_bn_degree(bn_coefs):
 		# bn_coefs is not used since the degree is always 0. Still accepting this variable for consistency
 		return 6
 
