@@ -1,4 +1,5 @@
-from .CartesianProductPolyDomain import * 
+from .CartesianProductPolyDomain import CartesianProductPolyDomain 
+from itertools import product
 
 
 class Zeta3Domain2(CartesianProductPolyDomain):
