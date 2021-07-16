@@ -6,6 +6,7 @@ import mpmath
 from ramanujan.CachedSeries import CachedSeries
 from ramanujan.constants import g_N_verify_compare_length, g_N_initial_key_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match
+from ramanujan.utils.utils import trunc_division
 
 RefinedMatch = namedtuple('RefinedMatch', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot precision')
 
@@ -16,7 +17,7 @@ FIRST_STEP_MAX_ITERS = 100
 FIRST_STEP_BURST_NUMBER = 7
 
 SECOND_STEP_MIN_ITERS = 7
-SECOND_STEP_MAX_ITERS = 10_000
+SECOND_STEP_MAX_ITERS = 50_000
 SECOND_STEP_BURST_NUMBER = 7
 
 
@@ -28,25 +29,16 @@ class NotConverging(Exception):
     pass
 
 
-# TODO - pass this function to utils.
-def trunc_division(p, q):
-    """ Integer division, rounding towards zero """
-    sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
-    div = abs(p) // abs(q)
-    return -div if sign else div
-
-
 def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min_iters, burst_number):
     """
-    Calculate the GCF's value to a changing dept that depends on the GCF's convergence rate.
+    Calculate the GCF's value to a changing depth that depends on the GCF's convergence rate.
 
-    Most GCFs will converge by oscillation. If we calculate the GCF's value on the n and n+1 dept, we can conclude
+    Most GCFs will converge by oscillation. If we calculate the GCF's value on the n and n+1 depth, we can conclude
     (for most GCFs) that the resulting value will be between those two values. Using this principle, we'll stop the
     GCF's calculation when those two values have the same decimal value under the required approximation.
 
     If the value didn't converge and the iterators are not yielding any new items, we'll take the last two values
-    calculated for the GCF and compare their digits. As long as the digits are the match - we'll assume that it is a
-    real value.
+    calculated for the GCF and compare their digits. If the digits match - we'll assume that it is a real value.
 
     Since huge int division is a costly process, we'll do so only every burst_number of calculations.
 
@@ -65,9 +57,9 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
     prev_q = 0
     q = 1
     prev_p = 1
-    # This is a ugly hack but it works. a[0] is handled before the rest here:
-    p = an_iterator.__next__()  # will place a[0] to p
-    bn_iterator.__next__()  # b0 is discarded
+    
+    p = next(an_iterator)  # will place a[0] to p
+    next(bn_iterator)  # b0 is discarded
 
     if p == 0:
         raise ZeroInAn()
@@ -125,7 +117,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
 
 class RelativeGCFEnumerator(AbstractGCFEnumerator):
     """
-        This enumerator calculates the GCF to an arbitrary dept, until getting to a stable value within the precession
+        This enumerator calculates the GCF to an arbitrary depth, until getting to a stable value within the precession
         required bounds.
         Useful for GCF that converges slowly.
     """
@@ -148,7 +140,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         an_series_iter, bn_series_iter = self.poly_domains.get_calculation_method()
 
         # The series on the outer loop is only used on one iteration of the out loop. So
-        # we'll cache only the current series for it. All of the domain for the inner series is cached
+        # we'll cache only the current series for it. All of the domains for the inner series are cached
         if size_a > size_b:  # cache bn
             bn_cache = {}
             an_cache = CachedSeries((0,), an_series_iter)
@@ -210,7 +202,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
 
     def _improve_results_precision(self, intermediate_results: List[Match], verbose=True):
         """
-        For each results, calculate the GCD to a higher dept, and return the calculated result 
+        For each results, calculate the GCD to a higher depth, and return the calculated result 
         with the original result.
         """
         precise_results = []
