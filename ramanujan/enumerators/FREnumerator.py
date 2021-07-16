@@ -6,7 +6,7 @@ from collections import namedtuple
 
 CONVERGENCE_THRESHOLD = 0.1
 BURST_NUMBER = 200
-FIRST_ENUMERATION_MAX_DEPT = 5_000
+FIRST_ENUMERATION_MAX_DEPTH = 5_000
 MIN_ITERS = 1
 
 Match = namedtuple('Match', 'rhs_an_poly rhs_bn_poly')
@@ -26,9 +26,9 @@ def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, mi
     prev_q = 0
     q = 1
     prev_p = 1
-    # This is a ugly hack but it works. a[0] is handled before the rest here:
-    p = an_iterator.__next__()  # will place a[0] to p
-    bn_iterator.__next__()  # b0 is discarded
+    
+    p = next(an_iterator)  # will place a[0] to p
+    next(bn_iterator)  # b0 is discarded
 
     next_gcd_calculation = burst_number if burst_number >= min_iters else min_iters
 
@@ -51,7 +51,9 @@ def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, mi
                 an_deg * (-mpmath.log(i) + 1)
             )
 
-            # This test fails for GCF without FR. Checking it early allows us do discard a lot of GCFs
+            # The calculated value will converge for GCFs that have FR, but it will not happen monotonicly.
+            # We're calculating values once every burst_number iterations, to try and avoid fluctuations' effect
+            # If the value still isn't converging to a steady value will halt the calculation early.
             if num_of_calculated_vals >= 3 and \
                     abs(calculated_values[-2] - calculated_values[-1]) > \
                     abs(calculated_values[-2] - calculated_values[-3]):
@@ -68,7 +70,7 @@ class FREnumerator(RelativeGCFEnumerator):
     """
     This enumerator checks the Factorial Reduction property of GCFs as the first step of the enumeration.
     In the FR test we don't compute the GCF's value, or even compare it to a LHS.
-    Fractions that have FR will be computed to a higher dept using RelativeGCFEnumerator's implementation.
+    Fractions that have FR will be computed to a higher depth using RelativeGCFEnumerator's implementation.
     The computed values are then fed into a PSLQ that tries to find a suitable LHS.
     """
 
@@ -81,11 +83,9 @@ class FREnumerator(RelativeGCFEnumerator):
         Test all GCFs in the domain for FR.
         """
         results = []  # list of intermediate results        
-        all_items_calculated = []
-        for an_iter, bn_iter, metadata in self._iter_domains_with_cache(FIRST_ENUMERATION_MAX_DEPT):
+        for an_iter, bn_iter, metadata in self._iter_domains_with_cache(FIRST_ENUMERATION_MAX_DEPTH):
             has_fr, items_calculated = check_for_fr(an_iter, bn_iter, self.poly_domains.get_an_degree(metadata.an_coef))
             if has_fr:
-                all_items_calculated.append(items_calculated)
                 if print_results:
                     print(f"found a GCF with FR:\n\tan: {metadata.an_coef}\n\tbn: {metadata.bn_coef}")
                 # Key is useless here :)
@@ -95,7 +95,7 @@ class FREnumerator(RelativeGCFEnumerator):
 
     def _improve_results_precision(self, intermediate_results, verbose=True):
         """
-        Calculates GCFs to a higher dept using RelativeGCFEnumerator's implementation.
+        Calculates GCFs to a higher depth using RelativeGCFEnumerator's implementation.
         We then feed those results and the constant given to a PSLQ, that tries to find a suitable LHS.
 
         Notice-
@@ -104,16 +104,23 @@ class FREnumerator(RelativeGCFEnumerator):
         different processes or clients, and we want the PSLQ to be parallelized as well. 
         """
         precise_intermediate_results = super()._improve_results_precision(intermediate_results, verbose)
-
+        for i in precise_intermediate_results:
+            print(i)
         pslq_results = []
-        consts = [i() for i in self.constants_generator]
+        const = self.constants_generator[0]() # using only one constant for now.
         for match, val, precision in precise_intermediate_results:
             mpf_val = mpmath.mpf(val)
-            pslq_res = mpmath.pslq(
-                [1, consts[0], consts[0] * consts[0], -mpf_val, -consts[0] * mpf_val, -consts[0] * consts[0] * mpf_val],
-                tol=10 ** (1 - precision))
+            print(match)
+            try:
+                pslq_res = mpmath.pslq(
+                    [1, const, -mpf_val, -const * mpf_val],
+                    tol=10 ** (1 - precision))
+            except Exception as e:
+                import ipdb
+                ipdb.set_trace()
+            print(pslq_res)
             if pslq_res:
-                pslq_results.append(RefinedMatch(*match, val, pslq_res[:3], pslq_res[3:], precision))
+                pslq_results.append(RefinedMatch(*match, val, pslq_res[:2], pslq_res[2:], precision))
             else:
                 pslq_results.append(RefinedMatch(*match, val, None, None, precision))
 
