@@ -5,6 +5,14 @@ import mpmath
 import matplotlib.pyplot as plt
 from sympy import lambdify
 
+
+def trunc_division(p, q):
+    """ Integer division, rounding towards zero """
+    sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
+    div = abs(p) // abs(q)
+    return -div if sign else div
+
+
 # Measures the amount of time the function takes to run in milliseconds in order to check improvements
 def measure_performance(func):
     """
