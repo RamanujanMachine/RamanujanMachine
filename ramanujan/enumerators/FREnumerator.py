@@ -120,6 +120,8 @@ class FREnumerator(RelativeGCFEnumerator):
                 import ipdb
                 ipdb.set_trace()
             if pslq_res:
+                # Sometimes, PSLQ can find several results for the same value (e.g. z(3)/(z(3)^2) = 1/z(3))
+                # we'll reduce fraction found to get uniform results
                 reduced_num, reduced_denom = get_reduced_fraction(pslq_res[:3], pslq_res[3:], 2)
                 print(reduced_num, reduced_denom)
                 pslq_results.append(RefinedMatch(*match, val, reduced_num, reduced_denom, precision))
