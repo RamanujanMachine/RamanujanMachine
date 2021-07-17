@@ -54,7 +54,8 @@ def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, mi
 
             # The calculated value will converge for GCFs that have FR, but it will not happen monotonicly.
             # We're calculating values once every burst_number iterations, to try and avoid fluctuations' effect
-            # If the value still isn't converging to a steady value will halt the calculation early.
+            # If the value still isn't converging to a steady value, we'll halt the calculation early.
+            # TODO - add a referrence to Guy & Nadav's paper once its on arxiv
             if num_of_calculated_vals >= 3 and \
                     abs(calculated_values[-2] - calculated_values[-1]) > \
                     abs(calculated_values[-2] - calculated_values[-3]):
