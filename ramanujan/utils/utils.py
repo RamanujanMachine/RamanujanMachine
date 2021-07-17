@@ -3,7 +3,7 @@ from typing import List
 import time
 import mpmath
 import matplotlib.pyplot as plt
-from sympy import lambdify
+from sympy import lambdify, var, Poly
 
 
 def trunc_division(p, q):
@@ -171,7 +171,33 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
     plt.figure(g_current_fig)
     plt.plot([i[1] for i in computed_values], [i[0] for i in computed_values], '+')
     plt.ion()
+    plt.grid()
+    plt.xlabel("n")
+    plt.ylabel("GCF value")
     plt.title(label=label)
     plt.show()
 
     return computed_values
+
+
+def get_reduced_fraction(numerator_coefs, denominator_coefs, result_deg):
+    """
+    Reduce polynomial division by common factors. So (1+k)/(1+2k+k**2) will be reduced to 1/(1+k)
+    Items in the coefs list start from the lowest degree ([a, b, c] = a + b*x +c*x**2)
+
+    """
+    k = var('k')
+    numerator = sum([coef * k**i for i, coef in enumerate(numerator_coefs)])
+    denominator = sum([coef * k**i for i, coef in enumerate(denominator_coefs)])
+
+    reduced_num, reduced_denom = (numerator/denominator).simplify().as_numer_denom()
+    reduced_num_coefs, reduced_denom_coefs = Poly(reduced_num, k).all_coeffs(), Poly(reduced_denom, k).all_coeffs()
+    reduced_num_coefs.reverse()
+    reduced_denom_coefs.reverse()
+
+    # If the higher degrees are missing from the expression, then the list will have a smaller size then needed.
+    # Adding zeros as padding to the end.
+    reduced_num_coefs += [0] * (result_deg + 1 - len(reduced_num_coefs))
+    reduced_denom_coefs += [0] * (result_deg + 1 - len(reduced_denom_coefs))
+
+    return reduced_num_coefs, reduced_denom_coefs

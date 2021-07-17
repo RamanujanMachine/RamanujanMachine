@@ -237,15 +237,14 @@ class APITests(unittest.TestCase):
         self.assertEqual(len(results), 10)
 
         self.assertIn(((1, 0), (1,), [1, 0, 0], [0, 1, 0]), results)
-        self.assertIn(((1, 4), (1,), [0, 1, 0], [0, -1, 1]), results)
-        self.assertIn(((1, 12), (1,), [-8, 0, 0], [9, -8, 0]), results)
-        self.assertIn(((2, -1), (2,), [1, 0, -1], [0, 0, -1]), results)
-        self.assertIn(((2, 0), (2,), [-2, 2, 0], [0, -1, 1]), results)
-        self.assertIn(((2, 3), (2,), [-2, 0, 0], [8, -7, 0]), results)
-        self.assertIn(((2, 8), (2,), [0, 2, 0], [0, -1, 1]), results)
+        self.assertIn(((1, 4), (1,), [1, 0, 0], [-1, 1, 0]), results)
+        self.assertIn(((1, 12), (1,), [8, 0, 0], [-9, 8, 0]), results)
+        self.assertIn(((2, 0), (2,), [2, 0, 0], [0, 1, 0]), results)
+        self.assertIn(((2, 3), (2,), [2, 0, 0], [-8, 7, 0]), results)
+        self.assertIn(((2, 8), (2,), [2, 0, 0], [-1, 1, 0]), results)
         self.assertIn(((2, 13), (2,), None, None), results)
-        self.assertIn(((2, 15), (2,), [0, -54, 0], [0, 224, -189]), results)
-        self.assertIn(((3, -2), (1,), [0, -8, 0], [0, 0, -7]), results)
+        self.assertIn(((2, 15), (2,), [54, 0, 0], [-224, 189, 0]), results)
+        self.assertIn(((3, -2), (1,), [8, 0, 0], [0, 7, 0]), results)
 
 
 if __name__ == '__main__':

@@ -3,6 +3,7 @@ import mpmath
 
 from .RelativeGCFEnumerator import RelativeGCFEnumerator
 from collections import namedtuple
+from ramanujan.utils.utils import get_reduced_fraction
 
 CONVERGENCE_THRESHOLD = 0.1
 BURST_NUMBER = 200
@@ -113,14 +114,15 @@ class FREnumerator(RelativeGCFEnumerator):
             print(match)
             try:
                 pslq_res = mpmath.pslq(
-                    [1, const, -mpf_val, -const * mpf_val],
+                    [1, const, const**2, -mpf_val, -const * mpf_val, -(const**2) * mpf_val],
                     tol=10 ** (1 - precision))
             except Exception as e:
                 import ipdb
                 ipdb.set_trace()
-            print(pslq_res)
             if pslq_res:
-                pslq_results.append(RefinedMatch(*match, val, pslq_res[:2], pslq_res[2:], precision))
+                reduced_num, reduced_denom = get_reduced_fraction(pslq_res[:3], pslq_res[3:], 2)
+                print(reduced_num, reduced_denom)
+                pslq_results.append(RefinedMatch(*match, val, reduced_num, reduced_denom, precision))
             else:
                 pslq_results.append(RefinedMatch(*match, val, None, None, precision))
 
