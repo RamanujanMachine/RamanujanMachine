@@ -97,12 +97,6 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
                     if abs(computed_values[-2] - computed_values[-1]) > abs(computed_values[-3] - computed_values[-2]):
                         raise NotConverging("Not converging")
 
-    # The locations we calculate the GCF for and the size of the iterator is unrelated. Its likely that if we got here,
-    # that last values of the GCFs p and q were calculated but never got divided and added to computed_values
-    if i != next_gcf_calculation:
-        computed_values.append(trunc_division(precision_factor * p, q))
-        items_computed += 1
-
     # we'll take the last two calculations, and check for matching digits.
     # Once the two doesn't match, we'll know that we cannot trust the following digits.
     res = ''
@@ -112,6 +106,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
         res += c1
 
     res += '0' * (len(str(computed_values[-1]))-i)
+
     return int(res), i
         
 
