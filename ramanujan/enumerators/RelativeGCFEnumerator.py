@@ -112,7 +112,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
 
 class RelativeGCFEnumerator(AbstractGCFEnumerator):
     """
-        This enumerator calculates the GCF to an arbitrary depth, until getting to a stable value within the precession
+        This enumerator calculates the GCF to an arbitrary depth, until getting to a stable value within the precision
         required bounds.
         Useful for GCF that converges slowly.
     """
