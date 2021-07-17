@@ -207,8 +207,8 @@ class APITests(unittest.TestCase):
             key, precision = gcf_calculation_to_precision(an_iter, bn_iter, 100, 1, 7)
             self.assertEqual(
                 key,
-                8319073720000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
-            self.assertEqual(precision, 9)
+                8319073728000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+            self.assertEqual(precision, 11)
 
             # GCF that doesn't converge at all
             an_iter = an_iter_func((1, 0), 200, start_n=0)
