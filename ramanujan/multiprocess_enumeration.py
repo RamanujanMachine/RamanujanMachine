@@ -14,13 +14,17 @@ class Dummy(object):
 
 
 def _single_process_execution(enumerator_class, lhs, poly_search_domain, const_vals):
-    enumerator = enumerator_class(
-        lhs,
-        poly_search_domain,
-        const_vals)
-    
-    return enumerator.find_initial_hits()
+    if lhs:
+        enumerator = enumerator_class(
+            lhs,
+            poly_search_domain,
+            const_vals)
+    else:
+        enumerator = enumerator_class(
+            poly_search_domain,
+            const_vals)
 
+    return enumerator.find_initial_hits()
 
 def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_vals, number_of_processes):
     """
@@ -41,7 +45,8 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
     
     # Each subprocess only uses lhs.bloom. See Dummy class doc for more details.
     lean_lhs = Dummy()
-    lean_lhs.bloom = lhs.bloom
+    # Some enumerators don't require the LHS, passing None instead
+    lean_lhs.bloom = lhs.bloom if lhs else None
 
     # Creating arguments for each process function
     split_domain = poly_search_domain.split_domains_to_processes(number_of_processes)
@@ -62,7 +67,11 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
 
     # Create another enumerator (should not take time to initiate) and preforme 
     # the second step using only it
-    enumerator = enumerator_class(lhs, poly_search_domain, const_vals)
+    if lhs:
+        enumerator = enumerator_class(lhs, poly_search_domain, const_vals)
+    else:
+        enumerator = enumerator_class(poly_search_domain, const_vals)
+
     refined_results = enumerator.refine_results(unified_results)
 
     return refined_results

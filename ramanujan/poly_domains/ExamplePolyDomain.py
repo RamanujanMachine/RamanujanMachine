@@ -13,7 +13,7 @@ class ExampleDomain(CartesianProductPolyDomain):
 
     This is a descendant of CartesianProductPolyDomain since each coef is independent from the others.
     """
-    def __init__(self, a_coefs_ranges, b_coef_range, *args, ** kwargs):
+    def __init__(self, a_coefs_ranges, b_coef_range, a_deg, a_coef_range, b_deg, *args, **kwargs):
         """
         Under this function you'll need to create 2 objects:
         1. a_coef_range
@@ -23,6 +23,7 @@ class ExampleDomain(CartesianProductPolyDomain):
         :param a_coefs_ranges:  ranges for an coefs, as described above
         :param b_coef_range:  bn has only one coef, so this is the range for it - [c_3_min, c_3_max]
         """
+        super().__init__(a_deg, a_coef_range, b_deg, b_coef_range, *args, **kwargs)
         self.a_coef_range = a_coefs_ranges
         # bn's coef range is converted to the expected form.
         self.b_coef_range = [b_coef_range]

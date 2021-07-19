@@ -19,7 +19,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 	NOTICE - Since every coeffiecnt is given explicitly, we do not enforce that the leading coef of an will always be
 	positive. (See CartesianProductPolyDomain documnetation regarding an_leading_coef_positive for more information)
 	"""
-	def __init__(self, a_coefs_ranges, b_coef_range, *args, **kwargs):
+	def __init__(self, a_coefs_ranges=((0, 0),), b_coef_range=(0, 0), *args, **kwargs):
 		"""
 		:param a_coefs_ranges: the range allowed for each coef from x0,x1,x2,x3
 		in this format-
@@ -37,7 +37,8 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 
 		self.an_domain_range, self.bn_domain_range = self.dump_domain_ranges()
 
-	def get_calculation_method(self):
+	@staticmethod
+	def get_calculation_method():
 		def an_iterator(free_vars, max_runs, start_n=1):
 			for i in range(start_n, max_runs):
 				yield (free_vars[0]*i + free_vars[1])*(free_vars[2]*i*(i+1) + free_vars[3])
@@ -49,7 +50,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 		return an_iterator, bn_iterator
 
 	@staticmethod
-	def get_poly_an_degree(an_coefs):
+	def get_an_degree(an_coefs):
 		deg = 3
 		if an_coefs[0] == 0:
 			deg -= 1
@@ -58,8 +59,8 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 		return deg
 
 	@staticmethod
-	def get_poly_bn_degree(bn_coefs):
-		# bn_coefs is not used since the degree is always 0. Still accepting this variable for consistency
+	def get_bn_degree(bn_coefs):
+		# bn_coefs is not used since the degree is always 6. Still accepting this variable for consistency
 		return 6
 
 	@staticmethod

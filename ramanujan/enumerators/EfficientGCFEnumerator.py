@@ -6,13 +6,7 @@ from time import time
 from ramanujan.utils.mobius import EfficientGCF
 from ramanujan.constants import g_N_initial_search_terms, g_N_verify_terms, g_N_verify_compare_length
 from .AbstractGCFEnumerator import AbstractGCFEnumerator, Match, RefinedMatch
-
-
-def trunc_division(p, q):
-    """ Integer division, rounding towards zero """
-    sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
-    div = abs(p) // abs(q)
-    return -div if sign else div
+from ramanujan.utils.utils import trunc_division
 
 
 class EfficientGCFEnumerator(AbstractGCFEnumerator):
