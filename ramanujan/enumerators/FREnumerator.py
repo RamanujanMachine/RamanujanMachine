@@ -108,6 +108,10 @@ class FREnumerator(RelativeGCFEnumerator):
         precise_intermediate_results = super()._improve_results_precision(intermediate_results, verbose)
         for i in precise_intermediate_results:
             print(i)
+        # keeping intermediate values so decedent classes could use this data
+        self.precise_intermediate_results = precise_intermediate_results
+
+        print('Running PSLQ')
         pslq_results = []
         const = self.constants_generator[0]() # using only one constant for now.
         for match, val, precision in precise_intermediate_results:
