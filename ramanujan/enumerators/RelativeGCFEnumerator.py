@@ -81,6 +81,7 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
         if i == next_gcf_calculation:
             next_gcf_calculation += burst_number * (len(computed_values) + 1)
             if q != 0:  # safety check
+
                 computed_values.append(trunc_division(precision_factor * p, q))
                 items_computed += 1
             else:
@@ -209,7 +210,7 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
         for res in intermediate_results:
             counter += 1
             
-            if (counter % 10_000 == 0 or counter == n_iterations) and verbose:
+            if counter % 10_000 == 0 and verbose:
                 print('Calculated {} matches out of {} to a more precise value.'.format(
                     counter, n_iterations))
 
@@ -233,6 +234,8 @@ class RelativeGCFEnumerator(AbstractGCFEnumerator):
             rhs_str = mpmath.nstr(rhs_val, precision)
 
             precise_results.append((res, rhs_str, precision))
+
+        print(f'finished calculating {n_iterations} to a more precise value.')
         return precise_results
 
     def _refine_results(self, precise_intermediate_results, verbose=True):
