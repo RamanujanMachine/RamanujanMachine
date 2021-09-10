@@ -8,7 +8,7 @@ from sympy import lambdify, var, Poly
 
 def trunc_division(p, q):
     """ Integer division, rounding towards zero """
-    sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
+    sign = (p < 0) or (q < 0)  # if exactly one is negative
     div = abs(p) // abs(q)
     return -div if sign else div
 
