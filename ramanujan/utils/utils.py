@@ -77,6 +77,17 @@ def iter_series_items_from_compact_poly(poly_a, max_runs, starting_n=0):
         yield tmp
 
 
+def iter_series_items_from_func(series_func, max_runs, starting_n=0):
+    """
+    create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
+    :param poly_a: a[k] coefficients
+    :param n: length of series
+    :return: a list of numbers in series
+    """
+    for i in range(starting_n, max_runs + starting_n):
+        yield series_func(i)
+
+
 def create_mpf_const_generator(sym_constants):
     """
     Returns a generator that creates an mpf objects from sympy constants
@@ -200,4 +211,7 @@ def get_reduced_fraction(numerator_coefs, denominator_coefs, result_deg):
     reduced_num_coefs += [0] * (result_deg + 1 - len(reduced_num_coefs))
     reduced_denom_coefs += [0] * (result_deg + 1 - len(reduced_denom_coefs))
 
+    reduced_num_coefs = [int(i) for i in reduced_num_coefs]
+    reduced_denom_coefs = [int(i) for i in reduced_denom_coefs]
+    
     return reduced_num_coefs, reduced_denom_coefs
