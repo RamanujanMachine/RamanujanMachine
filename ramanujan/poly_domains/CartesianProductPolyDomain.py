@@ -1,15 +1,21 @@
+import os
+import json
 from .AbstractPolyDomains import AbstractPolyDomains
 from ..utils.utils import iter_series_items_from_compact_poly
 from itertools import product
 from copy import deepcopy
 from numpy import array_split
+from hashlib import md5
+
+CACHE_DUMP_SIZE = 5_000
 
 
 class CartesianProductPolyDomain(AbstractPolyDomains):
     """
     This poly domain will generate all combinations for a(n) and b(n) coefs without complex dependence between the two
     """
-    def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, an_leading_coef_positive=True, *args, **kwargs):
+    def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, an_leading_coef_positive=True, name_prefix_for_cache='', 
+        *args, **kwargs):
         """
         If all of an's coefs can get both positive and negative values, then we might get two iterations for any set of
         coefs, with opposite signs. Those two series will converge to the same value, but with a different sign, hence
@@ -25,6 +31,7 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
         self.b_deg = b_deg
         self.b_coef_range = [b_coef_range for _ in range(b_deg + 1)]
+        self.name_prefix_for_cache = name_prefix_for_cache
 
         self._setup_metadata()
         super().__init__()
@@ -35,11 +42,34 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         It continues __init__'s job, but holds code that is used in classes that extend this class, so it was
         moved to a separate function.
         """
+        # Before creating values for series sizes, or iteration ranges, check if we have a cache file from previes 
+        # execution that stopped without finishing 
+        identifyer = bytes(str(self.a_coef_range) + ';' + str(self.b_coef_range), 'ascii')
+        domain_ranges_hash = md5(identifyer).hexdigest()
+        self.cache_file_name = self.name_prefix_for_cache + domain_ranges_hash + '.json'
+
+        if os.path.isfile(self.cache_file_name):
+            # If a cache file is present, we'll try to load the data from it
+            try:
+                with open(self.cache_file_name, 'r') as f:
+                    cache = json.load(f)
+                    self.a_coef_range = [(cache['a'][i], self.a_coef_range[i][1]) for i in range(len(cache['a']))]
+                    self.b_coef_range = [(cache['b'][i], self.b_coef_range[i][1]) for i in range(len(cache['b']))]
+            except Exception as e:
+                print(f'cache file {self.cache_file_name} loading failed:')
+                print(e)
+                print(f'Moving it to {self.cache_file_name}.currpted')
+                os.rename(self.cache_file_name, self.cache_file_name + '.currpted')
+        else:
+            # The first state we're at is the for value for each coef
+            self.update_cache([i[0] for i in self.a_coef_range], [i[0] for i in self.b_coef_range])
+
         self.an_length = self.get_an_length()
         self.bn_length = self.get_bn_length()
         self.num_iterations = self.an_length * self.bn_length
 
         self.an_domain_range, self.bn_domain_range = self.dump_domain_ranges()
+        
 
     @staticmethod
     def _range_size(coef_range):
@@ -63,6 +93,31 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         return CartesianProductPolyDomain.domain_size_by_var_ranges(self.b_coef_range)
 
     @staticmethod
+    def get_poly_an_lead_coef(an_coefs):
+        return an_coefs[0]
+
+    @staticmethod
+    def get_poly_bn_lead_coef(bn_coefs):
+        return bn_coefs[0]
+
+    @staticmethod
+    def _get_compact_poly_deg(coeffs):
+        deg = len(coeffs) - 1
+        for coef in coeffs:
+            if coef != 0:
+                return deg
+            else:
+                deg -= 1
+
+    @staticmethod
+    def get_bn_degree(bn_coefs):
+        self._get_compact_poly_deg(bn_coefs)
+
+    @staticmethod
+    def get_bn_degree(bn_coefs):
+        self._get_compact_poly_deg(an_coefs)
+
+    @staticmethod
     def get_calculation_method():
         # both an and bn are regular compact polys
         return iter_series_items_from_compact_poly, \
@@ -74,21 +129,37 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
         return an_domain, bn_domain
 
+    def update_cache(self, current_a_coef, current_b_coef):
+        with open(self.cache_file_name, 'w') as f:
+            json.dump({'a': current_a_coef, 'b':current_b_coef}, f)
+
+    def delete_cache(self):
+        os.remove(self.cache_file_name)
+
     def iter_polys(self, primary_looped_domain):
         an_domain, bn_domain = self.dump_domain_ranges()
 
+        items_passed = 0
         if primary_looped_domain == 'a':
             a_coef_iter = product(*an_domain)
             for a_coef in a_coef_iter:
                 b_coef_iter = product(*bn_domain)
                 for b_coef in b_coef_iter:
+                    items_passed += 1
+                    if CACHE_DUMP_SIZE % items_passed == 0:
+                        self.update_cache(a_coef, b_coef)
                     yield a_coef, b_coef
         else:
             b_coef_iter = product(*bn_domain)
             for b_coef in b_coef_iter:
                 a_coef_iter = product(*an_domain)
                 for a_coef in a_coef_iter:
+                    items_passed += 1
+                    if CACHE_DUMP_SIZE % items_passed == 0:
+                        self.update_cache(a_coef, b_coef)
                     yield a_coef, b_coef
+
+        self.delete_cache()
 
     def get_a_coef_iterator(self):
         return product(*self.an_domain_range)
