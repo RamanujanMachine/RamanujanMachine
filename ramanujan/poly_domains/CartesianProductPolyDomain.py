@@ -7,7 +7,7 @@ from copy import deepcopy
 from numpy import array_split
 from hashlib import md5
 
-CACHE_DUMP_SIZE = 5_000
+CHECKPOINT_DUMP_SIZE = 5_000
 
 
 class CartesianProductPolyDomain(AbstractPolyDomains):
@@ -42,27 +42,30 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         It continues __init__'s job, but holds code that is used in classes that extend this class, so it was
         moved to a separate function.
         """
-        # Before creating values for series sizes, or iteration ranges, check if we have a cache file from previes 
+        # Before creating values for series sizes, or iteration ranges, check if we have a checkpoint file from previous 
         # execution that stopped without finishing 
         identifyer = bytes(str(self.a_coef_range) + ';' + str(self.b_coef_range), 'ascii')
         domain_ranges_hash = md5(identifyer).hexdigest()
-        self.cache_file_name = self.name_prefix_for_cache + domain_ranges_hash + '.json'
+        self.checkpoint_file_name = self.name_prefix_for_cache + domain_ranges_hash + '.json'
 
-        if os.path.isfile(self.cache_file_name):
-            # If a cache file is present, we'll try to load the data from it
+        self.checkpoint = {}
+        # As default, the last checkpoint is the first iteration - so no data was calculated yet
+        self.checkpoint['a'] = [coef_range[0] for coef_range in self.a_coef_range]
+        self.checkpoint['b'] = [coef_range[0] for coef_range in self.b_coef_range]
+        if os.path.isfile(self.checkpoint_file_name):
+            # If a checkpoint file is present, we'll try to load the data from it
             try:
-                with open(self.cache_file_name, 'r') as f:
-                    cache = json.load(f)
-                    self.a_coef_range = [(cache['a'][i], self.a_coef_range[i][1]) for i in range(len(cache['a']))]
-                    self.b_coef_range = [(cache['b'][i], self.b_coef_range[i][1]) for i in range(len(cache['b']))]
+                with open(self.checkpoint_file_name, 'r') as f:
+                    self.checkpoint = json.load(f)
+                    print('loaded!')
+                    print(self.checkpoint)
             except Exception as e:
-                print(f'cache file {self.cache_file_name} loading failed:')
+                print(f'checkpoint file {self.checkpoint_file_name} loading failed:')
                 print(e)
-                print(f'Moving it to {self.cache_file_name}.currpted')
-                os.rename(self.cache_file_name, self.cache_file_name + '.currpted')
-        else:
-            # The first state we're at is the for value for each coef
-            self.update_cache([i[0] for i in self.a_coef_range], [i[0] for i in self.b_coef_range])
+                print(f'Moving it to {self.checkpoint_file_name}.corrupted')
+                os.rename(self.checkpoint_file_name, self.checkpoint_file_name + '.corrupted')
+        self.checkpoint['a'] = tuple(self.checkpoint['a'])
+        self.checkpoint['b'] = tuple(self.checkpoint['b'])
 
         self.an_length = self.get_an_length()
         self.bn_length = self.get_bn_length()
@@ -129,37 +132,95 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
         return an_domain, bn_domain
 
-    def update_cache(self, current_a_coef, current_b_coef):
-        with open(self.cache_file_name, 'w') as f:
+    def update_checkpoint(self, current_a_coef, current_b_coef):
+        print('dumping')
+        print(current_a_coef, current_b_coef)
+        with open(self.checkpoint_file_name, 'w') as f:
             json.dump({'a': current_a_coef, 'b':current_b_coef}, f)
 
-    def delete_cache(self):
-        os.remove(self.cache_file_name)
+    def delete_checkpoint(self):
+        print(f'deleteing {self.checkpoint_file_name}')
+        try:
+            os.remove(self.checkpoint_file_name)
+        except FileNotFoundError as e:
+            print('Failed deleting cache file (might acurre on small domains that don\'t require it)')
+            print(e)
+
+    @staticmethod
+    def _goto_checkpoint(iterator, location):
+        # This way we don't cause a StopIteration exception by closing the generator at the end of the loop
+        # Notice - this causes the required location to already by yielded, so you might want to handle this item
+        # separately 
+        while next(iterator) != tuple(location):
+            pass
 
     def iter_polys(self, primary_looped_domain):
-        an_domain, bn_domain = self.dump_domain_ranges()
+        '''
+        This function iterate pairs of an and bn coefs from the domain. 
+        Some enumerators cache series items, and primary_looped_domain is used to determine the 
+        nested loop order that fit the caching mechanism 
+        If a checkpoint file was successfully loaded, we'll start the iteration from this point, using 
+        the following logic:
+        We're storing the last itered an and the last itered bn
+        For the outer loop, we can just start the iteration from the last saved location.
+        For the first outer series iteration, some inner series items had already been calculated, so we can
+        discard those items. From the next iteration onwards, we'll have to calculate all items in the inner loop
 
-        items_passed = 0
+        to make variable names easier, we refer to the outer series as `pn` and the inner (secondary) series as `sn`
+        '''
         if primary_looped_domain == 'a':
-            a_coef_iter = product(*an_domain)
-            for a_coef in a_coef_iter:
-                b_coef_iter = product(*bn_domain)
-                for b_coef in b_coef_iter:
-                    items_passed += 1
-                    if CACHE_DUMP_SIZE % items_passed == 0:
-                        self.update_cache(a_coef, b_coef)
-                    yield a_coef, b_coef
+            pn_coef_range = self.a_coef_range
+            pn_series_checkpoint = self.checkpoint['a']
+            sn_coef_range = self.b_coef_range
+            sn_series_checkpoint = self.checkpoint['b']
         else:
-            b_coef_iter = product(*bn_domain)
-            for b_coef in b_coef_iter:
-                a_coef_iter = product(*an_domain)
-                for a_coef in a_coef_iter:
-                    items_passed += 1
-                    if CACHE_DUMP_SIZE % items_passed == 0:
-                        self.update_cache(a_coef, b_coef)
-                    yield a_coef, b_coef
+            pn_coef_range = self.b_coef_range
+            pn_series_checkpoint = self.checkpoint['b']
+            sn_coef_range = self.a_coef_range
+            sn_series_checkpoint = self.checkpoint['a']
 
-        self.delete_cache()
+        pn_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(pn_coef_range)
+        sn_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(sn_coef_range)
+
+        # only use relevant data for the outer series
+        pn_iterator = product(*pn_domain)
+        CartesianProductPolyDomain._goto_checkpoint(pn_iterator, pn_series_checkpoint)
+
+        # handle the first series with incomplete iterations separately
+        pn_coef = pn_series_checkpoint
+        sn_iterator = product(*sn_domain)
+        CartesianProductPolyDomain._goto_checkpoint(sn_iterator, sn_series_checkpoint)
+
+        yield self.checkpoint['a'], self.checkpoint['b']
+        items_passed = 1
+
+        for sn_coef in sn_iterator:
+            if items_passed % CHECKPOINT_DUMP_SIZE == 0:
+                if primary_looped_domain == 'a':
+                    self.update_checkpoint(pn_coef, sn_coef)
+                else:
+                    self.update_checkpoint(sn_coef, pn_coef)
+            if primary_looped_domain == 'a':
+                yield pn_coef, sn_coef
+            else:
+                yield sn_coef, pn_coef
+            items_passed += 1
+
+        for pn_coef in pn_iterator:
+            sn_iterator = product(*sn_domain)           
+            for sn_coef in sn_iterator:
+                if items_passed % CHECKPOINT_DUMP_SIZE == 0:
+                    if primary_looped_domain == 'a':
+                        self.update_checkpoint(pn_coef, sn_coef)
+                    else:
+                        self.update_checkpoint(sn_coef, pn_coef)
+                if primary_looped_domain == 'a':
+                    yield pn_coef, sn_coef
+                else:
+                    yield sn_coef, pn_coef
+                items_passed += 1
+
+        self.delete_checkpoint()
 
     def get_a_coef_iterator(self):
         return product(*self.an_domain_range)
