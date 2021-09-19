@@ -8,7 +8,7 @@ from numpy import array_split
 from hashlib import md5
 
 CHECKPOINT_DUMP_SIZE = 5_000
-
+ALLOW_LOWER_DEGREE = False
 
 class CartesianProductPolyDomain(AbstractPolyDomains):
     """
@@ -87,7 +87,10 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
     @staticmethod
     def expand_coef_range_to_full_domain(coef_ranges):
-        return [[i for i in range(coef[0], coef[1] + 1)] for coef in coef_ranges]
+        domain = [[i for i in range(coef[0], coef[1] + 1)] for coef in coef_ranges]
+        if not ALLOW_LOWER_DEGREE and 0 in domain[0]:
+            domain[0].remove(0)
+        return domain
 
     def get_an_length(self):
         return CartesianProductPolyDomain.domain_size_by_var_ranges(self.a_coef_range)
@@ -154,6 +157,15 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         while next(iterator) != tuple(location):
             pass
 
+    @staticmethod
+    def check_for_convergence(an_coefs, bn_coefs):
+        # check convergence condition for balanced degrees only
+        # 2*deg(an) = deg(bn)
+        if (len(an_coefs) - 1) * 2 != len(bn_coefs) - 1:
+            return True
+
+        return 4 * bn_coefs[0] > -1 * (an_coefs[0]**2)
+
     def iter_polys(self, primary_looped_domain):
         '''
         This function iterate pairs of an and bn coefs from the domain. 
@@ -168,6 +180,13 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
         to make variable names easier, we refer to the outer series as `pn` and the inner (secondary) series as `sn`
         '''
+        def _get_coefs_in_order():
+            # Helper function to order pn and sn back to an and bn 
+            if primary_looped_domain == 'a':
+                return pn_coef, sn_coef
+            else:
+                return sn_coef, pn_coef
+
         if primary_looped_domain == 'a':
             pn_coef_range = self.a_coef_range
             pn_series_checkpoint = self.checkpoint['a']
@@ -191,33 +210,24 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         sn_iterator = product(*sn_domain)
         CartesianProductPolyDomain._goto_checkpoint(sn_iterator, sn_series_checkpoint)
 
-        yield self.checkpoint['a'], self.checkpoint['b']
+        if self.check_for_convergence(self.checkpoint['a'], self.checkpoint['b']):
+            yield self.checkpoint['a'], self.checkpoint['b']
         items_passed = 1
 
         for sn_coef in sn_iterator:
             if items_passed % CHECKPOINT_DUMP_SIZE == 0:
-                if primary_looped_domain == 'a':
-                    self.update_checkpoint(pn_coef, sn_coef)
-                else:
-                    self.update_checkpoint(sn_coef, pn_coef)
-            if primary_looped_domain == 'a':
-                yield pn_coef, sn_coef
-            else:
-                yield sn_coef, pn_coef
+                self.update_checkpoint(*_get_coefs_in_order())
+            if self.check_for_convergence(*_get_coefs_in_order()):
+                yield _get_coefs_in_order()
             items_passed += 1
 
         for pn_coef in pn_iterator:
             sn_iterator = product(*sn_domain)           
             for sn_coef in sn_iterator:
                 if items_passed % CHECKPOINT_DUMP_SIZE == 0:
-                    if primary_looped_domain == 'a':
-                        self.update_checkpoint(pn_coef, sn_coef)
-                    else:
-                        self.update_checkpoint(sn_coef, pn_coef)
-                if primary_looped_domain == 'a':
-                    yield pn_coef, sn_coef
-                else:
-                    yield sn_coef, pn_coef
+                    self.update_checkpoint(*_get_coefs_in_order())
+                if self.check_for_convergence(*_get_coefs_in_order()):
+                    yield _get_coefs_in_order()
                 items_passed += 1
 
         self.delete_checkpoint()
