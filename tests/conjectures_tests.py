@@ -235,13 +235,12 @@ class APITests(unittest.TestCase):
         
         results = get_testable_data(enumerator.full_execution())
 
-        self.assertEqual(len(results), 8)
+        self.assertEqual(len(results), 7)
 
         self.assertIn(((1, 0), (1,), [1, 0, 0], [0, 1, 0]), results)
         self.assertIn(((1, 4), (1,), [1, 0, 0], [-1, 1, 0]), results)
         self.assertIn(((1, 12), (1,), [8, 0, 0], [-9, 8, 0]), results)
         self.assertIn(((2, 3), (2,), [2, 0, 0], [-8, 7, 0]), results)
-        self.assertIn(((2, 13), (2,), None, None), results)
         self.assertIn(((2, 15), (2,), [54, 0, 0], [-224, 189, 0]), results)
         self.assertIn(((3, -2), (1,), [8, 0, 0], [0, 7, 0]), results)
 
