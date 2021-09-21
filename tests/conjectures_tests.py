@@ -224,7 +224,8 @@ class APITests(unittest.TestCase):
         # define the poly domain
         poly_search_domain = Zeta3Domain2(
             [(1, 3), (-20, 20)],
-            (1, 2))
+            (1, 2),
+            use_strict_convergence_cond=False)
 
         # create an enumerator to iter thought the poly domain and compare it to the lhs table
         enumerator = FREnumerator(
