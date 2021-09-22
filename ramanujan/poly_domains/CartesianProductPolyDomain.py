@@ -15,7 +15,7 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
     This poly domain will generate all combinations for a(n) and b(n) coefs without complex dependence between the two
     """
     def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, an_leading_coef_positive=True, name_prefix_for_cache='', 
-        *args, **kwargs):
+        only_balanced_degress=False, use_strict_convergence_cond=False, *args, **kwargs):
         """
         If all of an's coefs can get both positive and negative values, then we might get two iterations for any set of
         coefs, with opposite signs. Those two series will converge to the same value, but with a different sign, hence
@@ -32,6 +32,8 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         self.b_deg = b_deg
         self.b_coef_range = [b_coef_range for _ in range(b_deg + 1)]
         self.name_prefix_for_cache = name_prefix_for_cache
+        self.only_balanced_degress = only_balanced_degress
+        self.use_strict_convergence_cond = use_strict_convergence_cond
 
         self._setup_metadata()
         super().__init__()
@@ -45,8 +47,8 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         # Before creating values for series sizes, or iteration ranges, check if we have a checkpoint file from previous 
         # execution that stopped without finishing 
         identifyer = bytes(str(self.a_coef_range) + ';' + str(self.b_coef_range), 'ascii')
-        domain_ranges_hash = md5(identifyer).hexdigest()
-        self.checkpoint_file_name = self.name_prefix_for_cache + domain_ranges_hash + '.json'
+        self.domain_ranges_hash = md5(identifyer).hexdigest()
+        self.checkpoint_file_name = self.name_prefix_for_cache + self.domain_ranges_hash + '.json'
 
         self.checkpoint = {}
         # As default, the last checkpoint is the first iteration - so no data was calculated yet
@@ -85,18 +87,32 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
             size *= CartesianProductPolyDomain._range_size(var_range)
         return size
 
-    @staticmethod
-    def expand_coef_range_to_full_domain(coef_ranges):
+    # @staticmethod
+    def expand_coef_range_to_full_domain(self, coef_ranges):
         domain = [[i for i in range(coef[0], coef[1] + 1)] for coef in coef_ranges]
-        if not ALLOW_LOWER_DEGREE and 0 in domain[0]:
+        if self.only_balanced_degress and 0 in domain[0]:
             domain[0].remove(0)
         return domain
 
     def get_an_length(self):
-        return CartesianProductPolyDomain.domain_size_by_var_ranges(self.a_coef_range)
+        return self.domain_size_by_var_ranges(self.a_coef_range)
 
     def get_bn_length(self):
-        return CartesianProductPolyDomain.domain_size_by_var_ranges(self.b_coef_range)
+        return self.domain_size_by_var_ranges(self.b_coef_range)
+
+    def get_an_degree(self, an_coef):
+        if ALLOW_LOWER_DEGREE:
+            # TODO - add caclulation here 
+            pass 
+
+        return self.a_deg
+
+    def get_bn_degree(self, bn_coef):
+        if ALLOW_LOWER_DEGREE:
+            # TODO - add caclulation here 
+            pass 
+
+        return self.b_deg
 
     @staticmethod
     def get_poly_an_lead_coef(an_coefs):
@@ -130,14 +146,14 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
             iter_series_items_from_compact_poly
 
     def dump_domain_ranges(self):
-        an_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(self.a_coef_range)
-        bn_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(self.b_coef_range)
+        an_domain = self.expand_coef_range_to_full_domain(self.a_coef_range)
+        bn_domain = self.expand_coef_range_to_full_domain(self.b_coef_range)
 
         return an_domain, bn_domain
 
     def update_checkpoint(self, current_a_coef, current_b_coef):
-        print('dumping')
-        print(current_a_coef, current_b_coef)
+        # print('dumping')
+        # print(current_a_coef, current_b_coef)
         with open(self.checkpoint_file_name, 'w') as f:
             json.dump({'a': current_a_coef, 'b':current_b_coef}, f)
 
@@ -157,14 +173,25 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         while next(iterator) != tuple(location):
             pass
 
-    @staticmethod
-    def check_for_convergence(an_coefs, bn_coefs):
-        # check convergence condition for balanced degrees only
-        # 2*deg(an) = deg(bn)
+    #@staticmethod
+    def filter_gcfs(self, an_coefs, bn_coefs):
+        """
+        Some GCFs will not converge, and some are duplicates of other GCFs
+        This function filter those cases out
+        """
+        # For un-balanced degrees, we have no filtering conditions
         if (len(an_coefs) - 1) * 2 != len(bn_coefs) - 1:
-            return True
+            return self.only_balanced_degress
 
-        return 4 * bn_coefs[0] > -1 * (an_coefs[0]**2)
+        # Discard non-converging cases
+        if 4 * bn_coefs[0] < -1 * (an_coefs[0]**2):
+            return False
+
+        # On equality in convergence condition, some cases converge and some not 
+        if self.use_strict_convergence_cond and 4 * bn_coefs[0] == -1 * (an_coefs[0]**2):
+            return False
+
+        return True
 
     def iter_polys(self, primary_looped_domain):
         '''
@@ -198,8 +225,8 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
             sn_coef_range = self.a_coef_range
             sn_series_checkpoint = self.checkpoint['a']
 
-        pn_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(pn_coef_range)
-        sn_domain = CartesianProductPolyDomain.expand_coef_range_to_full_domain(sn_coef_range)
+        pn_domain = self.expand_coef_range_to_full_domain(pn_coef_range)
+        sn_domain = self.expand_coef_range_to_full_domain(sn_coef_range)
 
         # only use relevant data for the outer series
         pn_iterator = product(*pn_domain)
@@ -210,14 +237,14 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         sn_iterator = product(*sn_domain)
         CartesianProductPolyDomain._goto_checkpoint(sn_iterator, sn_series_checkpoint)
 
-        if self.check_for_convergence(self.checkpoint['a'], self.checkpoint['b']):
+        if self.filter_gcfs(self.checkpoint['a'], self.checkpoint['b']):
             yield self.checkpoint['a'], self.checkpoint['b']
         items_passed = 1
 
         for sn_coef in sn_iterator:
             if items_passed % CHECKPOINT_DUMP_SIZE == 0:
                 self.update_checkpoint(*_get_coefs_in_order())
-            if self.check_for_convergence(*_get_coefs_in_order()):
+            if self.filter_gcfs(*_get_coefs_in_order()):
                 yield _get_coefs_in_order()
             items_passed += 1
 
@@ -226,7 +253,7 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
             for sn_coef in sn_iterator:
                 if items_passed % CHECKPOINT_DUMP_SIZE == 0:
                     self.update_checkpoint(*_get_coefs_in_order())
-                if self.check_for_convergence(*_get_coefs_in_order()):
+                if self.filter_gcfs(*_get_coefs_in_order()):
                     yield _get_coefs_in_order()
                 items_passed += 1
 
