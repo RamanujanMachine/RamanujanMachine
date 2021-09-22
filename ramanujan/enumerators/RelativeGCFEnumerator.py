@@ -61,9 +61,6 @@ def gcf_calculation_to_precision(an_iterator, bn_iterator, result_precision, min
     p = next(an_iterator)  # will place a[0] to p
     next(bn_iterator)  # b0 is discarded
 
-    if p == 0:
-        raise ZeroInAn()
-
     for i, (a_i, b_i) in enumerate(zip(an_iterator, bn_iterator)):
         if a_i == 0:
             raise ZeroInAn()
