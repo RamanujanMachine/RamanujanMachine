@@ -1,5 +1,6 @@
 from .CartesianProductPolyDomain import CartesianProductPolyDomain 
 from itertools import product
+import numpy as np
 
 
 class Zeta3Domain2(CartesianProductPolyDomain):
@@ -50,30 +51,17 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 	def get_poly_bn_lead_coef(bn_coefs):
 		return -bn_coefs[0]**2
 	
-	@staticmethod
-	def check_for_convergence(an_coefs, bn_coefs):
+	def filter_gcfs(self, an_coefs, bn_coefs):
 		# see Ramanujan paper for convergence condition on balanced an & bn degrees
 		a_leading_coef = an_coefs[0] * 2
+		if -1 * (bn_coefs[0]**2) * 4 < -1 * (a_leading_coef**2):
+			return False
 
-		# checking for >= as well as >, might be overkill
-		return -1 * (bn_coefs[0]**2) * 4 >= -1 * (a_leading_coef**2)
+		if self.use_strict_convergence_cond and -1 * (bn_coefs[0]**2) * 4 == -1 * (a_leading_coef**2):
+			return False
 
-	def iter_polys(self, primary_looped_domain):
-		an_domain, bn_domain = self.dump_domain_ranges()
+		# discarding expansions
+		if np.gcd.reduce(an_coefs + bn_coefs) != 1:
+			return False
 
-		# TODO
-		# try calling super's iter_polys and check convergence for yielded polys
-		if primary_looped_domain == 'a':
-			a_coef_iter = product(*an_domain)
-			for a_coef in a_coef_iter:
-				b_coef_iter = product(*bn_domain)
-				for b_coef in b_coef_iter:
-					if self.check_for_convergence(a_coef, b_coef):
-						yield a_coef, b_coef
-		else:
-			b_coef_iter = product(*bn_domain)
-			for b_coef in b_coef_iter:
-				a_coef_iter = product(*an_domain)
-				for a_coef in a_coef_iter:
-					if self.check_for_convergence(a_coef, b_coef):
-						yield a_coef, b_coef
+		return True
