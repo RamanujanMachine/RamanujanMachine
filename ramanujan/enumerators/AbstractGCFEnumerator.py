@@ -1,3 +1,5 @@
+import json
+import os
 from time import time
 from typing import List
 from collections import namedtuple
@@ -83,6 +85,8 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
         self.get_an_iterator = poly_domains.get_a_coef_iterator
         self.get_bn_iterator = poly_domains.get_b_coef_iterator
+
+        self.results_file = poly_domains.name_prefix_for_cache + poly_domains.domain_ranges_hash + '_results.json'        
 
         # store lhs_hash_table
         self.hash_table = hash_table
@@ -175,6 +179,41 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                 print(f'that took {end - start}s')
 
         return results
+
+    def _update_results(self, new_result, all_results):
+        # Since checkpoints are stored every ~5k iterations, some results will be enumerated twice.
+        # To avoid double calculation on the results verification (that takes much more time) we discard
+        # duplicates here
+        if new_result in all_results:
+            return all_results
+
+        all_results.append(new_result)
+        with open(self.results_file, 'w') as f:
+            formatted_results = [r._asdict() for r in  all_results]
+            json.dump(formatted_results, f, indent=2)
+        return all_results
+    
+    def _load_results(self, result_type):
+        # create an empty file if non exist 
+        try:
+            with open(self.results_file, 'r') as f:
+                stored_results = json.load(f)
+        except Exception as e:
+            print(f'Error on results file {self.results_file} load:')
+            print(e)
+            print('Overriding it and creating an clean file')
+            with open(self.results_file, 'w') as f:
+                json.dump([], f, indent=2)
+                return []
+
+        formatted_results = []
+        for result in stored_results:
+            # json doesn't store tuples, while we use them later on. Casting stored lists on tuples here
+            formatted_result = {}
+            for k,v in result.items():
+                formatted_result[k] = tuple(v) if isinstance(v, list) else v
+            formatted_results.append(result_type(**formatted_result))
+        return formatted_results
 
     @abstractmethod
     def _first_enumeration(self, verbose: bool):
