@@ -1,13 +1,16 @@
 import math
 import mpmath
+import time
+import random
 
 from .RelativeGCFEnumerator import RelativeGCFEnumerator
 from collections import namedtuple
 from ramanujan.utils.utils import get_reduced_fraction
 
+
 CONVERGENCE_THRESHOLD = 0.1
 BURST_NUMBER = 200
-FIRST_ENUMERATION_MAX_DEPTH = 5_000
+FIRST_ENUMERATION_MAX_DEPTH = 1_000
 MIN_ITERS = 1
 
 Match = namedtuple('Match', 'rhs_an_poly rhs_bn_poly')
@@ -34,6 +37,9 @@ def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, mi
     next_gcd_calculation = burst_number if burst_number >= min_iters else min_iters
 
     for i, (a_i, b_i) in enumerate(zip(an_iterator, bn_iterator)):
+        if b_i == 0:
+            return False, i
+
         tmp_a = q
         tmp_b = p
 
@@ -52,10 +58,10 @@ def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, mi
                 an_deg * (-mpmath.log(i) + 1)
             )
 
-            # The calculated value will converge for GCFs that have FR, but it will not happen monotonicly.
+            # The calculated value will converge for GCFs that have FR, but it will not happen monotonically.
             # We're calculating values once every burst_number iterations, to try and avoid fluctuations' effect
             # If the value still isn't converging to a steady value, we'll halt the calculation early.
-            # TODO - add a referrence to Guy & Nadav's paper once its on arxiv
+            # TODO - add a reference to Guy & Nadav's paper once its on arxiv
             if num_of_calculated_vals >= 3 and \
                     abs(calculated_values[-2] - calculated_values[-1]) > \
                     abs(calculated_values[-2] - calculated_values[-3]):
@@ -84,14 +90,16 @@ class FREnumerator(RelativeGCFEnumerator):
         """
         Test all GCFs in the domain for FR.
         """
-        results = []  # list of intermediate results        
+        results = self._load_results(Match)  # list of intermediate results
+
         for an_iter, bn_iter, metadata in self._iter_domains_with_cache(FIRST_ENUMERATION_MAX_DEPTH):
             has_fr, items_calculated = check_for_fr(an_iter, bn_iter, self.poly_domains.get_an_degree(metadata.an_coef))
             if has_fr:
                 if print_results:
                     print(f"found a GCF with FR:\n\tan: {metadata.an_coef}\n\tbn: {metadata.bn_coef}")
+
                 # Key is useless here :)
-                results.append(Match(metadata.an_coef, metadata.bn_coef))
+                results = self._update_results(Match(metadata.an_coef, metadata.bn_coef), results)
 
         return results
 
@@ -116,14 +124,14 @@ class FREnumerator(RelativeGCFEnumerator):
         const = self.constants_generator[0]() # using only one constant for now.
         for match, val, precision in precise_intermediate_results:
             mpf_val = mpmath.mpf(val)
-            print(match)
             try:
                 pslq_res = mpmath.pslq(
                     [1, const, const**2, -mpf_val, -const * mpf_val, -(const**2) * mpf_val],
                     tol=10 ** (1 - precision))
             except Exception as e:
-                import ipdb
-                ipdb.set_trace()
+                print(f'Exception when using plsq on PCF {match}, {mpmath.nstr(mpf_val, 30)} with constant {const}')
+                print(e)
+                continue
             if pslq_res:
                 # Sometimes, PSLQ can find several results for the same value (e.g. z(3)/(z(3)^2) = 1/z(3))
                 # we'll reduce fraction found to get uniform results
