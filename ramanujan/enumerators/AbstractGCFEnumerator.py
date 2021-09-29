@@ -191,7 +191,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
 
         all_results.append(new_result)
         with open(self.results_file, 'w') as f:
-            formatted_results = [r._asdict() for r in  all_results]
+            formatted_results = [r._asdict() for r in all_results]
             json.dump(formatted_results, f, indent=2)
         return all_results
     
@@ -212,7 +212,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         for result in stored_results:
             # json doesn't store tuples, while we use them later on. Casting stored lists on tuples here
             formatted_result = {}
-            for k,v in result.items():
+            for k, v in result.items():
                 formatted_result[k] = tuple(v) if isinstance(v, list) else v
             formatted_results.append(result_type(**formatted_result))
         return formatted_results
