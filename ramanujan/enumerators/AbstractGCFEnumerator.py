@@ -1,6 +1,7 @@
 import json
 import os
 from time import time
+from datetime import datetime
 from typing import List
 from collections import namedtuple
 from collections.abc import Iterable
@@ -86,7 +87,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
         self.get_an_iterator = poly_domains.get_a_coef_iterator
         self.get_bn_iterator = poly_domains.get_b_coef_iterator
 
-        self.results_file = poly_domains.name_prefix_for_cache + poly_domains.domain_ranges_hash + '_results.json'        
+        self.results_file = poly_domains.name_prefix_for_cache + poly_domains.domain_ranges_hash + '_results.json'
 
         # store lhs_hash_table
         self.hash_table = hash_table
@@ -178,6 +179,7 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
             if verbose:
                 print(f'that took {end - start}s')
 
+        self._rename_finished_results()
         return results
 
     def _update_results(self, new_result, all_results):
@@ -214,6 +216,20 @@ class AbstractGCFEnumerator(metaclass=ABCMeta):
                 formatted_result[k] = tuple(v) if isinstance(v, list) else v
             formatted_results.append(result_type(**formatted_result))
         return formatted_results
+
+    def _rename_finished_results(self):
+        """
+        When the execution is complete, there is no need to save checkpoints for farther runs.
+        Store the file on a different name, so it wouldn't collide with other executions
+        """
+        try:
+            new_name = self.results_file.rsplit('.', 1)[0] + '_' + \
+                datetime.now().strftime("%y%m%d_%H%M%S") + '.json'
+            print(new_name)
+            os.rename(self.results_file, new_name)
+        except Exception as e:
+            print('Failed moving completed result file')
+            print(e)
 
     @abstractmethod
     def _first_enumeration(self, verbose: bool):
