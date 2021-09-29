@@ -13,7 +13,7 @@ Those jsons will be sent to different hosts from a BOINC server
 Currently, we're planning on distributing FREnumerator only, so there is no support for 
 bloom filter distribution.
 """
-SPLIT_DOMAIN_CHUNK_SIZE = 100
+SPLIT_DOMAIN_CHUNK_SIZE = 50_000
 BLOOM_LOCAL_PATH = "./{0}_bloom.bin"
 JSON_NAME_FORMAT = "./{folder}/{filename}.json"
 
@@ -33,6 +33,8 @@ def store_execution_to_json(dest_file_name, enumerator_type, poly_domain, const_
             "bn_coefs": poly_domain.b_coef_range,
             "enumerator": enumerator_type,
             "domain_type": poly_domain.__class__.__name__,
+            "only_balanced_degress": poly_domain.only_balanced_degress,
+            "use_strict_convergence_cond": poly_domain.use_strict_convergence_cond,
             "const_list": const_list
         }
         json.dump(chunk_data, f)
