@@ -121,22 +121,27 @@ class FREnumerator(RelativeGCFEnumerator):
 
         print('Running PSLQ')
         pslq_results = []
-        const = self.constants_generator[0]() # using only one constant for now.
+        num_items = [1] + [gen() for gen in self.constants_generator]
+        num_of_items = len(num_items)
+
         for match, val, precision in precise_intermediate_results:
             mpf_val = mpmath.mpf(val)
             try:
+                denom_items = [-mpf_val * c for c in num_items]
                 pslq_res = mpmath.pslq(
-                    [1, const, const**2, -mpf_val, -const * mpf_val, -(const**2) * mpf_val],
-                    tol=10 ** (1 - precision))
+                    num_items + denom_items, tol=10 ** (1 - precision))
             except Exception as e:
-                print(f'Exception when using plsq on PCF {match}, {mpmath.nstr(mpf_val, 30)} with constant {const}')
+                print(f'Exception when using plsq on PCF {match}, {mpmath.nstr(mpf_val, 30)} with constant' +
+                      f'{self.const_sym}')
                 print(e)
-                continue
+                pslq_res = None
             if pslq_res:
                 # Sometimes, PSLQ can find several results for the same value (e.g. z(3)/(z(3)^2) = 1/z(3))
                 # we'll reduce fraction found to get uniform results
-                reduced_num, reduced_denom = get_reduced_fraction(pslq_res[:3], pslq_res[3:], 2)
-                print(reduced_num, reduced_denom)
+                reduced_num, reduced_denom = get_reduced_fraction(pslq_res[:num_of_items], pslq_res[num_of_items:],
+                                                                  num_of_items-1)
+                print(f'Found result! an = {match.rhs_an_poly}, bn = {match.rhs_bn_poly}')
+                print(f'Numerator coefs = {reduced_num}, Denominator coefs = {reduced_denom}')
                 pslq_results.append(RefinedMatch(*match, val, reduced_num, reduced_denom, precision))
             else:
                 pslq_results.append(RefinedMatch(*match, val, None, None, precision))
