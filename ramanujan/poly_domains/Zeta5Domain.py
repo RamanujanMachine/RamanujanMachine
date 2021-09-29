@@ -22,7 +22,7 @@ class Zeta5Domain(CartesianProductPolyDomain):
 	def get_calculation_method(self):
 		def an_iterator(a_coefs, max_runs, start_n=1):
 			for i in range(start_n, max_runs):
-				yield a_coefs[0]*( (i+1)**5 + i**5 ) + a_coefs[1]*(i**3 + (i+1)**3) + a_coefs[2]*(2*i+1)
+				yield a_coefs[0] * ((i+1)**5 + i**5) + a_coefs[1] * (i**3 + (i+1)**3) + a_coefs[2] * (2*i+1)
 
 		def bn_iterator(b_coefs, max_runs, start_n=1):
 			for i in range(start_n, max_runs):
@@ -45,36 +45,18 @@ class Zeta5Domain(CartesianProductPolyDomain):
 	@staticmethod
 	def get_poly_bn_lead_coef(bn_coefs):
 		return bn_coefs[0]
-	
-	@staticmethod
-	def check_for_convergence(an_coefs, bn_coefs):
+
+	def filter_gcfs(self, an_coefs, bn_coefs):
 		# see Ramanujan paper for convergence condition on balanced an & bn degrees
 		a_leading_coef = an_coefs[0] * 2
+		if -1 * (bn_coefs[0]**2) * 4 < -1 * (a_leading_coef**2):
+			return False
 
-		# checking for >= as well as >, might be overkill
+		if self.use_strict_convergence_cond and -1 * (bn_coefs[0]**2) * 4 == -1 * (a_leading_coef**2):
+			return False
 
-		return bn_coefs[0] * 4 >= -1 * (a_leading_coef**2)
+		# discarding expansions
+		if np.gcd.reduce(an_coefs + bn_coefs) != 1:
+			return False
 
-	@staticmethod
-	def is_not_expansion(an_coefs, bn_coefs):
-		return np.gcd.reduce(an_coefs + bn_coefs) == 1
-
-	def iter_polys(self, primary_looped_domain):
-		an_domain, bn_domain = self.dump_domain_ranges()
-
-		# TODO
-		# try calling super's iter_polys and check convergence for yielded polys
-		if primary_looped_domain == 'a':
-			a_coef_iter = product(*an_domain)
-			for a_coef in a_coef_iter:
-				b_coef_iter = product(*bn_domain)
-				for b_coef in b_coef_iter:
-					if self.check_for_convergence(a_coef, b_coef) and self.is_not_expansion(a_coef, b_coef):
-						yield a_coef, b_coef
-		else:
-			b_coef_iter = product(*bn_domain)
-			for b_coef in b_coef_iter:
-				a_coef_iter = product(*an_domain)
-				for a_coef in a_coef_iter:
-					if self.check_for_convergence(a_coef, b_coef) and self.is_not_expansion(a_coef, b_coef):
-						yield a_coef, b_coef
+		return True
