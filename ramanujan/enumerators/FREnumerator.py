@@ -7,7 +7,10 @@ from ramanujan.utils.utils import get_reduced_fraction
 
 CONVERGENCE_THRESHOLD = 0.1
 BURST_NUMBER = 200
-FIRST_ENUMERATION_MAX_DEPTH = 5_000
+# This constant is set to ~ 1400, based on results we've found from various executions.
+# Changing it may lead to more false positives / missed results.
+# We specifically use 1402 to ensure that no items of an/bn are calculated and not used in GCD calculations
+FIRST_ENUMERATION_MAX_DEPTH = 1_402
 MIN_ITERS = 1
 
 Match = namedtuple('Match', 'rhs_an_poly rhs_bn_poly')
