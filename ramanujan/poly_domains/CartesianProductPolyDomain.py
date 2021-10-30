@@ -130,14 +130,6 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         return self.b_deg
 
     @staticmethod
-    def get_poly_an_lead_coef(an_coefs):
-        return an_coefs[0]
-
-    @staticmethod
-    def get_poly_bn_lead_coef(bn_coefs):
-        return bn_coefs[0]
-
-    @staticmethod
     def _get_compact_poly_deg(coeffs):
         deg = len(coeffs) - 1
         for coef in coeffs:
