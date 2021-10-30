@@ -111,26 +111,41 @@ class FREnumerator(RelativeGCFEnumerator):
         precise_intermediate_results = super()._improve_results_precision(intermediate_results, verbose)
         for i in precise_intermediate_results:
             print(i)
+        # keeping intermediate values so decedent classes could use this data
+        self.precise_intermediate_results = precise_intermediate_results
+
+        print('Running PSLQ')
         pslq_results = []
-        const = self.constants_generator[0]() # using only one constant for now.
+        # TODO - add docs and change name
+        num_items = [1] + [gen() for gen in self.constants_generator]
+        num_of_items = len(num_items)
+
         for match, val, precision in precise_intermediate_results:
-            mpf_val = mpmath.mpf(val)
-            print(match)
             try:
+                mpf_val = mpmath.mpf(val)
+
+                denom_items = [-mpf_val * c for c in num_items]
                 pslq_res = mpmath.pslq(
-                    [1, const, const**2, -mpf_val, -const * mpf_val, -(const**2) * mpf_val],
-                    tol=10 ** (1 - precision))
+                    num_items + denom_items, tol=10 ** (1 - precision),
+                    maxcoeff=1_000)
+
+                if pslq_res:
+                    # Sometimes, PSLQ can find several results for the same value (e.g. z(3)/(z(3)^2) = 1/z(3))
+                    # we'll reduce fraction found to get uniform results
+                    reduced_num, reduced_denom = get_reduced_fraction(
+                        pslq_res[:num_of_items], pslq_res[num_of_items:], num_of_items - 1)
+                    print(f'Found result! an = {match.rhs_an_poly}, bn = {match.rhs_bn_poly}')
+                    print(f'Numerator coefs = {reduced_num}, Denominator coefs = {reduced_denom}')
+                else:
+                    reduced_num, reduced_denom = [], []
             except Exception as e:
-                import ipdb
-                ipdb.set_trace()
-            if pslq_res:
-                # Sometimes, PSLQ can find several results for the same value (e.g. z(3)/(z(3)^2) = 1/z(3))
-                # we'll reduce fraction found to get uniform results
-                reduced_num, reduced_denom = get_reduced_fraction(pslq_res[:3], pslq_res[3:], 2)
-                print(reduced_num, reduced_denom)
-                pslq_results.append(RefinedMatch(*match, val, reduced_num, reduced_denom, precision))
-            else:
-                pslq_results.append(RefinedMatch(*match, val, None, None, precision))
+                print(f'Exception when using plsq on PCF {match}, {mpmath.nstr(mpf_val, 30)} with constant' +
+                      f'{self.const_sym}')
+                print(e)
+                print('Result saved with None as PSLQ coeffs')
+                reduced_num, reduced_denom = None, None
+
+            pslq_results.append(RefinedMatch(*match, val, reduced_num, reduced_denom, precision))
 
         return pslq_results
 
