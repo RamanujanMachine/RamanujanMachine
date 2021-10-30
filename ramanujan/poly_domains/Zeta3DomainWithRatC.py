@@ -42,14 +42,6 @@ class Zeta3DomainWithRatC(CartesianProductPolyDomain):
 	def get_bn_degree(self, bn_coefs):
 		return 6
 
-	@staticmethod
-	def get_poly_an_lead_coef(an_coefs):
-		return 2 * (an_coefs[2]**2)
-
-	@staticmethod
-	def get_poly_bn_lead_coef(bn_coefs):
-		return -bn_coefs[0]**4
-	
 	def filter_gcfs(self, an_coefs, bn_coefs):
 		"""
 		This class is not truly a cartesian domain - a and b coefs share a value (y).
@@ -59,7 +51,7 @@ class Zeta3DomainWithRatC(CartesianProductPolyDomain):
 		if an_coefs[2] != bn_coefs[0]:
 			return False
 		# We don't use x/y >= 1, this is a duplicate of using another c
-		if an_coefs[1] >= an_coefs[0]:
+		if an_coefs[1] >= an_coefs[2]:
 			return False
 
 		return True
