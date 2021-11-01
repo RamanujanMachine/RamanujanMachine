@@ -11,7 +11,11 @@ class ExplicitCartesianProductPolyDomain(CartesianProductPolyDomain):
         super().__init__(a_deg=len(a_coefs)-1, b_deg=len(b_coefs)-1, a_coef_range=[0, 0], b_coef_range=[0, 0], 
             *args, **kwargs)
 
-        self.a_coef_range = a_coefs
-        self.b_coef_range = b_coefs
-
         self._setup_metadata()
+
+    def _setup_metadata(self):
+        super()._setup_metadata()
+
+        # This domain's degree is not constant and needs to be calculated 
+        self.a_deg = len(self.a_coef_range) - 1
+        self.b_deg = len(self.b_coef_range) - 1
