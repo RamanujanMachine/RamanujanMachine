@@ -126,7 +126,7 @@ class FREnumerator(RelativeGCFEnumerator):
 
                 denom_items = [-mpf_val * c for c in num_items]
                 pslq_res = mpmath.pslq(
-                    num_items + denom_items, tol=10 ** (1 - precision),
+                    num_items + denom_items, tol=10 ** (2 - precision),
                     maxcoeff=1_000)
 
                 if pslq_res:
