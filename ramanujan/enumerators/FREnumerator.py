@@ -116,17 +116,19 @@ class FREnumerator(RelativeGCFEnumerator):
 
         print('Running PSLQ')
         pslq_results = []
-        # TODO - add docs and change name
-        num_items = [1] + [gen() for gen in self.constants_generator]
-        num_of_items = len(num_items)
+        # The expression PSLQ tries to find is
+        # (a + b * const) / (c + d * const) = val
+        # => a + b*const -c*val -c*d*val = 0
+        # The first two items are identical for all matches. The last two are calculated for each value
+        numer_items = [1] + [gen() for gen in self.constants_generator]
+        num_of_items = len(numer_items)
 
         for match, val, precision in precise_intermediate_results:
             try:
                 mpf_val = mpmath.mpf(val)
-
-                denom_items = [-mpf_val * c for c in num_items]
+                denom_items = [-mpf_val * c for c in numer_items]
                 pslq_res = mpmath.pslq(
-                    num_items + denom_items, tol=10 ** (2 - precision),
+                    numer_items + denom_items, tol=10 ** (2 - precision),
                     maxcoeff=1_000)
 
                 if pslq_res:
@@ -138,6 +140,7 @@ class FREnumerator(RelativeGCFEnumerator):
                     print(f'Numerator coefs = {reduced_num}, Denominator coefs = {reduced_denom}')
                 else:
                     reduced_num, reduced_denom = [], []
+
             except Exception as e:
                 print(f'Exception when using plsq on PCF {match}, {mpmath.nstr(mpf_val, 30)} with constant' +
                       f'{self.const_sym}')
