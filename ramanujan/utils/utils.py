@@ -77,6 +77,14 @@ def iter_series_items_from_compact_poly(poly_a, max_runs, starting_n=0):
         yield tmp
 
 
+def iter_series_items_from_func(series_func, max_runs, starting_n=0):
+    """
+    Iter items from series_func
+    """
+    for i in range(starting_n, max_runs + starting_n):
+        yield series_func(i)
+
+
 def create_mpf_const_generator(sym_constants):
     """
     Returns a generator that creates an mpf objects from sympy constants
