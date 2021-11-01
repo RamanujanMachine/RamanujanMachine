@@ -40,7 +40,7 @@ class Zeta5Domain(CartesianProductPolyDomain):
 		return 10
 
 	def filter_gcfs(self, an_coefs, bn_coefs):
-		# checking for convergence
+		# This scheme is very simular to other zeta schemes, so some duplications may occure
 		a_leading_coef = an_coefs[0] * 2
 		if -1 * (bn_coefs[0]**2) * 4 < -1 * (a_leading_coef**2):
 			return False
