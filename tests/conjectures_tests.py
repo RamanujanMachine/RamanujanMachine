@@ -8,6 +8,7 @@ from ramanujan.enumerators.FREnumerator import FREnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
 from ramanujan.poly_domains.Zeta3Domain2 import Zeta3Domain2
+from ramanujan.poly_domains.Zeta5Domain import Zeta5Domain
 from ramanujan.constants import g_const_dict
 from ramanujan.multiprocess_enumeration import multiprocess_enumeration
 
@@ -51,8 +52,8 @@ class APITests(unittest.TestCase):
         lhs = LHSHashTable('zeta3.lhs.dept14.db', 14, [g_const_dict['zeta'](3)])
 
         poly_search_domain = Zeta3Domain1(
-            [(2, 2), (1, 1), (1, 17), (1, 5)],  # an coefs
-            (-16, -1)  # bn coef
+            [(2, 2), (1, 1), (1, 17), (1, 5)],  # an coefficients
+            (-16, -1)  # bn coefficients
             )
 
         efficient_enumerator = EfficientGCFEnumerator(
@@ -115,8 +116,8 @@ class APITests(unittest.TestCase):
         lhs = LHSHashTable('zeta3_lhs_dept20.db', 20, [g_const_dict['zeta'](3)])
 
         poly_search_domain = Zeta3Domain1(
-            [(2, 2), (1, 1), (1, 100), (1, 100)],  # an coefs
-            (-50, -1)  # bn coef
+            [(2, 2), (1, 1), (1, 100), (1, 100)],  # an coefficients
+            (-50, -1)  # bn coefficients
             )
 
         results = multiprocess_enumeration(
@@ -162,14 +163,14 @@ class APITests(unittest.TestCase):
             all_polys = [i for i in domain.iter_polys('b')]
             for sub_domain in split_domain:
                 for polys in sub_domain.iter_polys('a'):
-                    # checking if a value is present this way imporves execution times drasticly
+                    # checking if a value is present this way improves execution times drastically
                     try:
                         all_polys.remove(polys)
                     except ValueError:
                         self.assertIn(polys, all_polys)
             self.assertEqual(len(all_polys), 0)
 
-        # coef ranges are 29, aiming for primes that screw with even splitting
+        # coefficient ranges are 29, aiming for primes that screw with even splitting
         cartesian_domain = CartesianProductPolyDomain(
             2, [-30, 30],
             3, [-10, 19])
@@ -179,7 +180,7 @@ class APITests(unittest.TestCase):
         self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in split_cartesian_domain1]))
         self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in split_cartesian_domain2]))
 
-        # the zeta domain checks for convergences condition when iterating over coefs
+        # the zeta domain checks for convergences condition when iterating over coefficients
         # so the approximate size is bigger then the one actually used
         original_zeta_domain = Zeta3Domain1(
             [(2, 10), (1, 1), (1, 30), (1, 10)],
@@ -243,6 +244,26 @@ class APITests(unittest.TestCase):
         self.assertIn(((2, 13), (2,), [], []), results)
         self.assertIn(((2, 15), (2,), [54, 0], [-224, 189]), results)
         self.assertIn(((3, -2), (1,), [8, 0], [0, 7]), results)
+
+    def test_long_plsq_vector(self):
+        # we'll test this feature using zeta5's domain
+        poly_search_domain = Zeta5Domain(
+            [(1, 1), (0, 20), (-5, 5)],
+            (1, 1))
+
+        enumerator = FREnumerator(
+            poly_search_domain,
+            [g_const_dict['zeta'](3), g_const_dict['zeta'](5)]
+        )
+
+        results = get_testable_data(enumerator.full_execution())
+
+        print(results)
+        self.assertEqual(len(results), 4)
+        self.assertIn(((1, 0, 0), (1, ), [1, 0, 0], [0, 0, 1]), results)
+        self.assertIn(((1, 6, -4), (1, ), [2, 0, 0], [1, -2, 2]), results)
+        self.assertIn(((1, 6, 0), (1, ), [2, 0, 0], [-9, 6, 2]), results)
+        self.assertIn(((1, 16, -4), (1, ), [64, 0, 0], [-273, 176, 64]), results)
 
 
 if __name__ == '__main__':
