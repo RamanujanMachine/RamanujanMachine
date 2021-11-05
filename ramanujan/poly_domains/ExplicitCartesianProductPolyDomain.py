@@ -4,7 +4,7 @@ from .CartesianProductPolyDomain import CartesianProductPolyDomain
 class ExplicitCartesianProductPolyDomain(CartesianProductPolyDomain):
     """
     This domain is the equivalent to CartesianProductPolyDomain, but the user may
-    state the required range for each coef individually.
+    state the required range for each coefficient individually.
     It's used mostly in splitting a cartesian domain to BOINC clients.
     """
 

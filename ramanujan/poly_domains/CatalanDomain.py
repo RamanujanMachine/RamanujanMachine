@@ -11,8 +11,8 @@ class CatalanDomain(CartesianProductPolyDomain):
 	"""
 	def __init__(self, a_coefs_ranges=(0, 0), poly_an_degree=3, b_coefs_ranges=((0, 0), (0, 0)), *args, **kwargs):
 		"""
-		:param a_coefs_ranges: The range allowed for all an coeffs (the same range for all of them).
-		:param b_coefs_ranges: The ranges allowd for bn coeffs. You must specify ranges for both coefs.
+		:param a_coefs_ranges: The range allowed for all an coefficients (the same range for all of them).
+		:param b_coefs_ranges: The ranges allowed for bn coefficients. You must specify ranges for both coefficients.
 		"""
 		# b_coef_range are is given blank values. It will be initialized again afterwards
 		super().__init__(a_deg=poly_an_degree, b_deg=2, a_coef_range=a_coefs_ranges, b_coef_range=[0, 0], *args, **kwargs)

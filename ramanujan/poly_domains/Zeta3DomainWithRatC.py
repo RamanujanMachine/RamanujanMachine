@@ -6,7 +6,8 @@ class Zeta3DomainWithRatC(CartesianProductPolyDomain):
 	A sub-set of Zeta3Domain2 is an infinite family of GCFs with FR, that converges to permutation of zeta(3):
 		an = n^3 (n+1)^3 + 2c(c+1)(2n+1)
 		bn = -n^6
-	When c can be any rational number. However, we want to use only integer coefs. We can achieve this by inflation
+	When c can be any rational number. However, we want to use only integer coefficients. We can achieve this by
+	inflation:
 		c <- c + x/y
 		an = n^3 + (n+1)^3 + 2(c+x/y)(c+x/y+1)(2n+1)
 	inflate by y^2, and get:
@@ -44,7 +45,7 @@ class Zeta3DomainWithRatC(CartesianProductPolyDomain):
 
 	def filter_gcfs(self, an_coefs, bn_coefs):
 		"""
-		This class is not truly a cartesian domain - a and b coefs share a value (y).
+		This class is not truly a cartesian domain - a and b coefficients share a value (y).
 		This means that GCFs with different values for a's y and b's y will be generated. We filter them out here.
 		"""
 		# Require same y for a and b

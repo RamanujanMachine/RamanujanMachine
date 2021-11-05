@@ -55,10 +55,10 @@ def check_for_fr(an_iterator, bn_iterator, an_deg, burst_number=BURST_NUMBER, mi
                 an_deg * (-mpmath.log(i) + 1)
             )
 
-            # The calculated value will converge for GCFs that have FR, but it will not happen monotonicly.
+            # The calculated value will converge for GCFs that have FR, but it will not happen monotonically.
             # We're calculating values once every burst_number iterations, to try and avoid fluctuations' effect
             # If the value still isn't converging to a steady value, we'll halt the calculation early.
-            # TODO - add a referrence to Guy & Nadav's paper once its on arxiv
+            # TODO - add a reference to Guy & Nadav's paper once its on arxiv
             if num_of_calculated_vals >= 3 and \
                     abs(calculated_values[-2] - calculated_values[-1]) > \
                     abs(calculated_values[-2] - calculated_values[-3]):
@@ -137,7 +137,7 @@ class FREnumerator(RelativeGCFEnumerator):
                     reduced_num, reduced_denom = get_reduced_fraction(
                         pslq_res[:num_of_items], pslq_res[num_of_items:], num_of_items - 1)
                     print(f'Found result! an = {match.rhs_an_poly}, bn = {match.rhs_bn_poly}')
-                    print(f'Numerator coefs = {reduced_num}, Denominator coefs = {reduced_denom}')
+                    print(f'Numerator coefficients = {reduced_num}, Denominator coefficients = {reduced_denom}')
                 else:
                     reduced_num, reduced_denom = [], []
 
@@ -145,7 +145,7 @@ class FREnumerator(RelativeGCFEnumerator):
                 print(f'Exception when using plsq on PCF {match}, {mpmath.nstr(mpf_val, 30)} with constant' +
                       f'{self.const_sym}')
                 print(e)
-                print('Result saved with None as PSLQ coeffs')
+                print('Result saved with None as PSLQ coefficients')
                 reduced_num, reduced_denom = None, None
 
             pslq_results.append(RefinedMatch(*match, val, reduced_num, reduced_denom, precision))

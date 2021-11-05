@@ -4,7 +4,7 @@ import numpy as np
 
 class Zeta3Domain2(CartesianProductPolyDomain):
 	"""
-	This domain iters polynomials from this kind:
+	This domain iterates polynomials from this kind:
 
 	a(n) = x0*n^3 + x0*(n+1)^3 + x1(2n+1)
 	b(n) = -(x2**2)*n^6
@@ -41,7 +41,7 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 		return 6
 
 	def filter_gcfs(self, an_coefs, bn_coefs):
-		# This scheme is very simular to other zeta schemes, so some duplications may occure
+		# This scheme is very similar to other zeta schemes, so some duplications may occur
 		a_leading_coef = an_coefs[0] * 2
 		if -1 * (bn_coefs[0] ** 2) * 4 < -1 * (a_leading_coef ** 2):
 			return False

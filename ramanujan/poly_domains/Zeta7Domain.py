@@ -9,7 +9,7 @@ class Zeta7Domain(CartesianProductPolyDomain):
 		bn = -x4^2 * n^14
 	"""
 
-	def __init__(self, a_coefs_ranges=((0,0),), b_coef_range=(0,0), *args, **kwargs):
+	def __init__(self, a_coefs_ranges=((0, 0),), b_coef_range=(0, 0), *args, **kwargs):
 		# a_coef_range and b_coef_range are given blank values. they are initialized again afterwards
 		super().__init__(a_deg=4, b_deg=1, a_coef_range=[0, 0], b_coef_range=[0, 0], *args, **kwargs)
 		self.a_coef_range = a_coefs_ranges
@@ -36,7 +36,7 @@ class Zeta7Domain(CartesianProductPolyDomain):
 		return 14
 
 	def filter_gcfs(self, an_coefs, bn_coefs):
-		# This scheme is very simular to other zeta schemes, so some duplications may occure
+		# This scheme is very similar to other zeta schemes, so some duplications may occur
 		a_leading_coef = an_coefs[0] * 2
 		if -1 * (bn_coefs[0]**2) * 4 < -1 * (a_leading_coef**2):
 			return False
