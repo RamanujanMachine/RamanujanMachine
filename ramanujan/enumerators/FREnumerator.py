@@ -129,7 +129,7 @@ class FREnumerator(RelativeGCFEnumerator):
                 denom_items = [-mpf_val * c for c in numer_items]
                 pslq_res = mpmath.pslq(
                     numer_items + denom_items, tol=10 ** (2 - precision),
-                    maxcoeff=1_000)
+                    maxcoeff=1_000, maxsteps=1_000)
 
                 if pslq_res:
                     # Sometimes, PSLQ can find several results for the same value (e.g. z(3)/(z(3)^2) = 1/z(3))
