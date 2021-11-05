@@ -126,8 +126,8 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
     def filter_gcfs(self, an_coefs, bn_coefs):
         """
-        Some GCFs will not converge, and some are duplicates of other GCFs
-        This function filter those cases out
+        Some GCFs will not converge, and some are duplicates of other GCFs.
+        This function filter these cases out.
         """
         # For un-balanced degrees, we have no filtering conditions
         if (len(an_coefs) - 1) * 2 != len(bn_coefs) - 1:
