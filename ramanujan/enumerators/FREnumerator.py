@@ -118,7 +118,7 @@ class FREnumerator(RelativeGCFEnumerator):
         pslq_results = []
         # The expression PSLQ tries to find is
         # (a + b * const) / (c + d * const) = val
-        # => a + b*const -c*val -c*d*val = 0
+        # => a + b*const -c*val -d*const*val = 0
         # The first two items are identical for all matches. The last two are calculated for each value
         numer_items = [1] + [gen() for gen in self.constants_generator]
         num_of_items = len(numer_items)
