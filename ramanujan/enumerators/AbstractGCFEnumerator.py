@@ -5,11 +5,14 @@ from collections.abc import Iterable
 from sympy import lambdify
 from abc import ABCMeta, abstractmethod
 
+import sympy
+import mpmath
 from ramanujan.utils.mobius import GeneralizedContinuedFraction
 from ramanujan.utils.utils import find_polynomial_series_coefficients, create_mpf_const_generator, \
     get_series_items_from_iter
 from ramanujan.utils.convergence_rate import calculate_convergence
-from ramanujan.constants import *
+from ramanujan.constants import g_N_initial_key_length, g_N_initial_search_dps, g_N_verify_dps
+
 
 Match = namedtuple('Match', 'lhs_key rhs_an_poly rhs_bn_poly')
 RefinedMatch = namedtuple('RefinedMatch', 'lhs_key rhs_an_poly rhs_bn_poly lhs_match_idx c_top c_bot')

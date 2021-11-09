@@ -4,7 +4,7 @@ from itertools import product
 
 class Zeta3Domain1(CartesianProductPolyDomain):
 	"""
-	This domain iters polynomials from this kind:
+	This domain iterates polynomials from this kind:
 	a(n) = (x0*n + x1)(x2*n*(n + 1) + x3)
 	b(n) = x4*n^6
 
@@ -16,15 +16,16 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 
 	this is a decedent of CartesianProductPolyDomain since an and bn has no	particular relation
 
-	NOTICE - Since every coeffiecnt is given explicitly, we do not enforce that the leading coef of an will always be
-	positive. (See CartesianProductPolyDomain documnetation regarding an_leading_coef_positive for more information)
+	NOTICE - Since every coefficient is given explicitly, we do not enforce that the leading coefficient of an will
+	always be positive.
+	(See CartesianProductPolyDomain documentation regarding an_leading_coef_positive for more information)
 	"""
 	def __init__(self, a_coefs_ranges=((0, 0),), b_coef_range=(0, 0), *args, **kwargs):
 		"""
-		:param a_coefs_ranges: the range allowed for each coef from x0,x1,x2,x3
+		:param a_coefs_ranges: the range allowed for each coefficient from x0,x1,x2,x3
 		in this format-
 			[(x0_min, x0_max), ... ]
-		:param b_coefs_ranges: b has only one coef, so this will hold (x4_min, x4_max)
+		:param b_coefs_ranges: b has only one coefficient, so this will hold (x4_min, x4_max)
 		"""
 		# a_coef_range and b_coef_range are given blank values. they are initialized again afterwards
 		super().__init__(a_deg=4, b_deg=1, a_coef_range=[0, 0], b_coef_range=[0, 0], *args, **kwargs)
@@ -49,8 +50,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 
 		return an_iterator, bn_iterator
 
-	@staticmethod
-	def get_an_degree(an_coefs):
+	def get_an_degree(self, an_coefs):
 		deg = 3
 		if an_coefs[0] == 0:
 			deg -= 1
@@ -58,8 +58,7 @@ class Zeta3Domain1(CartesianProductPolyDomain):
 			deg -= 2
 		return deg
 
-	@staticmethod
-	def get_bn_degree(bn_coefs):
+	def get_bn_degree(self, bn_coefs):
 		# bn_coefs is not used since the degree is always 6. Still accepting this variable for consistency
 		return 6
 

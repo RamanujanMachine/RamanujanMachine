@@ -62,19 +62,12 @@ def get_poly_deg_and_leading_coef(poly_coef):
     return deg, poly_coef[-1]
 
 
-def iter_series_items_from_compact_poly(poly_a, max_runs, starting_n=0):
+def iter_series_items_from_func(series_func, max_runs, starting_n=0):
     """
-    create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
-    :param poly_a: a[k] coefficients
-    :param n: length of series
-    :return: a list of numbers in series
+    Iter items from series_func
     """
     for i in range(starting_n, max_runs + starting_n):
-        tmp = 0
-        for c in poly_a:
-            tmp *= i
-            tmp += c
-        yield tmp
+        yield series_func(i)
 
 
 def create_mpf_const_generator(sym_constants):
@@ -91,15 +84,16 @@ def create_mpf_const_generator(sym_constants):
     return constants_generator
 
 
-def get_series_items_from_iter(series_iter, coefs, max_n, start_n = 0):
+def get_series_items_from_iter(series_iter, coefs, max_n, start_n=0):
     return [i for i in series_iter(coefs, max_n, start_n)]
 
 
 def iter_series_items_from_compact_poly(poly_coef, max_runs, start_n=1):
     """
     create a series of type n(n(...(a[0]*n + a[1]) + a[2]) + ...) + a[k]
-    :param poly_a: a[k] coefficients
-    :param n: length of series
+    :param poly_coef: a[k] coefficients
+    :param max_runs: max items to iter
+    :param start_n: starting index
     :return: a list of numbers in series
     """
     for i in range(start_n, max_runs):
@@ -140,7 +134,7 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
     prev_q = 0
     q = 1
     prev_p = 1
-    p = an_items_iterator.__next__() # will place a[0] to p
+    p = an_items_iterator.__next__()  # will place a[0] to p
 
     for i, (a_i_1, b_i) in enumerate(zip(an_items_iterator, bn_items_iterator)):
         # a_i_1 is the (i+1)'th item of an, and b_i the the i'th item of bn
@@ -184,7 +178,6 @@ def get_reduced_fraction(numerator_coefs, denominator_coefs, result_deg):
     """
     Reduce polynomial division by common factors. So (1+k)/(1+2k+k**2) will be reduced to 1/(1+k)
     Items in the coefs list start from the lowest degree ([a, b, c] = a + b*x +c*x**2)
-
     """
     k = var('k')
     numerator = sum([coef * k**i for i, coef in enumerate(numerator_coefs)])
@@ -199,5 +192,8 @@ def get_reduced_fraction(numerator_coefs, denominator_coefs, result_deg):
     # Adding zeros as padding to the end.
     reduced_num_coefs += [0] * (result_deg + 1 - len(reduced_num_coefs))
     reduced_denom_coefs += [0] * (result_deg + 1 - len(reduced_denom_coefs))
+
+    reduced_num_coefs = [int(i) for i in reduced_num_coefs]
+    reduced_denom_coefs = [int(i) for i in reduced_denom_coefs]
 
     return reduced_num_coefs, reduced_denom_coefs
