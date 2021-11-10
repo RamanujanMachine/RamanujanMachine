@@ -59,7 +59,7 @@ class BoincTests(unittest.TestCase):
         split_items.sort()
         self.assertEqual(split_items, original_items)
 
-    def test_load_execute_from_json(self):
+    def test_execute_from_json(self):
         example_json_filename = 'boinc_example_config.json'
         expected_result_filename = 'boinc_example_config_results.json'
         # remove files from previous executions
