@@ -1,0 +1,1 @@
+{"an_coefs": [[5, 5], [0, 10], [1, 10]], "bn_coefs": [[-4, -4], [2, 2], [0, 0], [0, 0], [0, 0]], "enumerator": "FREnumerator", "domain_type": "ExplicitCartesianProductPolyDomain", "only_balanced_degrees": false, "use_strict_convergence_cond": false, "const_list": ["pi_sqared"]}
