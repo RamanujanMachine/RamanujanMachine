@@ -47,7 +47,7 @@ def store_execution_to_json(dest_file_name, enumerator_type, poly_domain, const_
             "bn_coefs": poly_domain.b_coef_range,
             "enumerator": enumerator_type,
             "domain_type": dom_type,
-            "only_balanced_degress": poly_domain.only_balanced_degress,
+            "only_balanced_degrees": poly_domain.only_balanced_degrees,
             "use_strict_convergence_cond": poly_domain.use_strict_convergence_cond,
             "const_list": const_list
         }

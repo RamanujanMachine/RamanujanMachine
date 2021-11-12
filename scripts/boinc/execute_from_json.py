@@ -48,7 +48,7 @@ def main():
     poly_domain = DOMAINS[config["domain_type"]]()
     poly_domain.a_coef_range = config["an_coefs"]
     poly_domain.b_coef_range = config["bn_coefs"]
-    poly_domain.only_balanced_degress = config["only_balanced_degress"]
+    poly_domain.only_balanced_degrees = config["only_balanced_degrees"]
     poly_domain.use_strict_convergence_cond = config["use_strict_convergence_cond"]
     poly_domain._setup_metadata()
 
