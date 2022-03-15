@@ -1,5 +1,6 @@
 from ramanujan.enumerators.FREnumerator import FREnumerator
 from ramanujan.poly_domains.Zeta3Domain2 import Zeta3Domain2
+from ramanujan.poly_domains.Zeta4Domain import Zeta4Domain
 from ramanujan.constants import g_const_dict
 from ramanujan.multiprocess_enumeration import multiprocess_enumeration
 
@@ -17,16 +18,17 @@ b(n) = x2*n^6
 
 def main():
     # define the poly domain
-    poly_search_domain = Zeta3Domain2(
-        [(1, 3), (-20, 20)],
-        (1, 2))
+    # poly_search_domain = Zeta3Domain2(
+    poly_search_domain = Zeta4Domain(
+        [(1, 1), (-30, 30), (-30, 30) ,(-30, 30)],
+        (1, 1))
 
     # results = enumerator.full_execution()
     results = multiprocess_enumeration(
         FREnumerator,
         None,  # No LHS in FREnumerator
         poly_search_domain,
-        [g_const_dict['zeta'](3)],
+        [g_const_dict['pi_squared']],
         4)
 
     print("{} results found!".format(len(results)))

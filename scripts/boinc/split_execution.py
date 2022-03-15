@@ -17,7 +17,7 @@ Those jsons will be sent to different hosts from a BOINC server
 Currently, we're planning on distributing FREnumerator only, so there is no support for 
 bloom filter distribution.
 """
-SPLIT_DOMAIN_CHUNK_SIZE = 10_000
+SPLIT_DOMAIN_CHUNK_SIZE = 30_000
 BLOOM_LOCAL_PATH = "./{0}_bloom.bin"
 JSON_NAME_FORMAT = "./{folder}/{filename}.json"
 
@@ -71,14 +71,14 @@ def split_to_jsons(identifier, enumerator_type, domain, const_list):
 
 def main():
     # Change the following arguments as you wish 
-    const_list = [('zeta', 5), ('zeta', 3)]
-    identifier = None  # distinct name for generated json
+    const_list = [('zeta', 3), 'pi']
+    identifier = 'general_'  # distinct name for generated json
 
     identifier = identifier if identifier else time.strftime("%y%m%d_%H%M%S")
     
-    poly_search_domain = Zeta5Domain(
-        [(1, 100), (-100, 100), (-100, 100)],
-        (1, 10))
+    poly_search_domain = ExplicitCartesianProductPolyDomain(
+        [[1, ], [-1000, 1000], [-1000, 1000], [-1000, 1000]], # an - 3nd deg
+        [[-100, 100], [-100, 100], [-100, 100], [-100, 100] ,[-100, 100], [-100, 100]]) # bn - 6th deg
 
     split_to_jsons(identifier, "FREnumerator", poly_search_domain, const_list)
 

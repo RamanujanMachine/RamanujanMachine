@@ -35,12 +35,13 @@ g_const_dict = {
     'zeta': sympy.zeta,
     'e': sympy.E,
     'pi': sympy.pi,
-    'pi_sqared': sympy.pi ** 2,
+    'pi_squared': sympy.pi ** 2,
+    'pi_4th': sympy.pi ** 4,
     'catalan': sympy.Catalan,
     'golden_ratio': sympy.GoldenRatio,
     'khinchin': sympy.S.Khinchin,
     'euler-mascheroni': sympy.EulerGamma,
     'pi-acosh_2': sympy.pi * sympy.acosh(2),
-    'polygamma': sympy.polygamma
-
+    'polygamma2': lambda x: sympy.polygamma(2, x),
+    'pi_power': lambda x: sympy.pi ** x
 }

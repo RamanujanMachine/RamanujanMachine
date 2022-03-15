@@ -8,7 +8,7 @@ class Zeta3Domain2(CartesianProductPolyDomain):
 
 	a(n) = x0*n^3 + x0*(n+1)^3 + x1(2n+1)
 	b(n) = -(x2**2)*n^6
-
+	
 	Note that all zeta3 results shown in the paper can be written using this scheme.
 
 	It is suggested to keep x1,x2<0, but this is not enforced by this class
