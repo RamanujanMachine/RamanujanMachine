@@ -10,6 +10,7 @@ Similar to the series generators of the MITM flavor. Here we chose patterns for 
 The enumeration of the LHS is a substantial part of the search. 
 """
 
+
 def create_standard_lhs(poly_deg, coefficients_limit, out_path=None, do_print=True):
     """
     Prepares generic LHS enumerations (variable 'x'). When used later in searching conjectures- 'x' will be substituted
@@ -22,12 +23,17 @@ def create_standard_lhs(poly_deg, coefficients_limit, out_path=None, do_print=Tr
     if do_print:
         print("starting enumeration")
     strt = time()
-    x = symbols('x')
-    enum = SignedRcfEnumeration(sym_constant=x, cycle_len_range=None, coefficients_limit=coefficients_limit,
-                                poly_deg=poly_deg, do_print=do_print)
+    x = symbols("x")
+    enum = SignedRcfEnumeration(
+        sym_constant=x,
+        cycle_len_range=None,
+        coefficients_limit=coefficients_limit,
+        poly_deg=poly_deg,
+        do_print=do_print,
+    )
     generic_variations = enum.create_rational_variations_enum()
     if out_path is not None:
-        with open(out_path, 'wb') as file:
+        with open(out_path, "wb") as file:
             pickle.dump(generic_variations, file)
     if do_print:
         print("Finished. Took {} sec".format(time() - strt))
@@ -42,7 +48,7 @@ def create_biased_monoms(max_deg, const_coeff_lim, bias_lim):  # monom = x**d.
     :param bias_lim: symmetrical limit for the coefficient of the bias.
     :return: List of custom generic LHS enumerations that can later be used for enumerating over any constant.
     """
-    x = symbols('x')
+    x = symbols("x")
     c_list = [j for j in range(1, const_coeff_lim + 1) if j != 0]
     d_list = [j for j in range(-max_deg, max_deg + 1) if j != 0]
     b_list = [j for j in range(-bias_lim, bias_lim + 1)]
@@ -54,15 +60,15 @@ def create_biased_monoms(max_deg, const_coeff_lim, bias_lim):  # monom = x**d.
 
 
 def e_to_the_k_hypo(max_deg, bias_lim):
-    x = symbols('x')
+    x = symbols("x")
     d_list = [j for j in range(-max_deg, max_deg + 1) if j != 0]
     b_list = [j for j in range(-bias_lim, bias_lim + 1)]
     domain = itertools.product(d_list, b_list)
     variations = []
     for it in domain:
-        variations.append(((Abs(it[0]) - 1)*(x**it[0])) + it[1])
+        variations.append(((Abs(it[0]) - 1) * (x ** it[0])) + it[1])
     return variations
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Keep it simple, use the API")

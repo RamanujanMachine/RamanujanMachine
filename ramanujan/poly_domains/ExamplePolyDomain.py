@@ -13,7 +13,10 @@ class ExampleDomain(CartesianProductPolyDomain):
 
     This is a descendant of CartesianProductPolyDomain since each coefficient is independent from the others.
     """
-    def __init__(self, a_coefs_ranges, b_coef_range, a_deg, a_coef_range, b_deg, *args, **kwargs):
+
+    def __init__(
+        self, a_coefs_ranges, b_coef_range, a_deg, a_coef_range, b_deg, *args, **kwargs
+    ):
         """
         Under this function you'll need to create 2 objects:
         1. a_coef_range
@@ -37,12 +40,13 @@ class ExampleDomain(CartesianProductPolyDomain):
         Here you must specify exactly how to use the coefficients generated. e.g. give a formula for an and bn
         :return: two iterators that generate series based on the given coefficients
         """
+
         def an_iterator(coefs, max_runs, start_n=0):
             for i in range(start_n, max_runs):
-                yield coefs[0] * (i ** 2 + (i+1) ** 2) + coefs[1]
+                yield coefs[0] * (i**2 + (i + 1) ** 2) + coefs[1]
 
         def bn_iterator(coefs, max_runs, start_n=0):
             for i in range(start_n, max_runs):
-                yield coefs[0] * (i ** 4)
+                yield coefs[0] * (i**4)
 
         return an_iterator, bn_iterator

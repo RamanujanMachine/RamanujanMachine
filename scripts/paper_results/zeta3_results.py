@@ -19,25 +19,16 @@ Also, Zeta3Domain1 will check for a convergence condition for the GCF, as descri
 """
 
 # create a LHS table for zeta
-saved_hash = 'zeta3.lhs.dept20.db'
+saved_hash = "zeta3.lhs.dept20.db"
 lhs_search_limit = 20
-lhs = LHSHashTable(
-    saved_hash,
-    lhs_search_limit,
-    [g_const_dict['zeta'](3)])
+lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict["zeta"](3)])
 
 # define the poly domain
-poly_search_domain = Zeta3Domain1(
-    [(2, 2), (1, 1), (-50, 50), (-50, 50)],
-    (-10, -1))
+poly_search_domain = Zeta3Domain1([(2, 2), (1, 1), (-50, 50), (-50, 50)], (-10, -1))
 
 # create an enumerator to iter thought the poly domain and compare it to the lhs table
-enumerator = EfficientGCFEnumerator(
-    lhs,
-    poly_search_domain,
-    [g_const_dict['zeta'](3)]
-)
+enumerator = EfficientGCFEnumerator(lhs, poly_search_domain, [g_const_dict["zeta"](3)])
 
 results = enumerator.full_execution()
 print("{} results found!".format(len(results)))
-enumerator.print_results(results, 'unicode', convergence_rate=False)
+enumerator.print_results(results, "unicode", convergence_rate=False)

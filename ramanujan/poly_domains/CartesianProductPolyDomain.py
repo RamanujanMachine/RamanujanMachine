@@ -13,8 +13,19 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
     This poly domain will generate all combinations for a(n) and b(n) coefficients without complex dependence between
     the two
     """
-    def __init__(self, a_deg, a_coef_range, b_deg, b_coef_range, an_leading_coef_positive=True,
-                 only_balanced_degrees=False, use_strict_convergence_cond=False, *args, **kwargs):
+
+    def __init__(
+        self,
+        a_deg,
+        a_coef_range,
+        b_deg,
+        b_coef_range,
+        an_leading_coef_positive=True,
+        only_balanced_degrees=False,
+        use_strict_convergence_cond=False,
+        *args,
+        **kwargs,
+    ):
         """
         a_deg - an's polynomial degree
         a_coef_range - The coefficient range iterated for every coefficient in an
@@ -132,11 +143,13 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
             return self.only_balanced_degrees
 
         # Discard non-converging cases
-        if 4 * bn_coefs[0] < -1 * (an_coefs[0]**2):
+        if 4 * bn_coefs[0] < -1 * (an_coefs[0] ** 2):
             return False
 
-        # On equality in convergence condition, some cases converge and some not 
-        if self.use_strict_convergence_cond and 4 * bn_coefs[0] == -1 * (an_coefs[0]**2):
+        # On equality in convergence condition, some cases converge and some not
+        if self.use_strict_convergence_cond and 4 * bn_coefs[0] == -1 * (
+            an_coefs[0] ** 2
+        ):
             return False
 
         return True
@@ -144,19 +157,20 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
     def iter_polys(self, primary_looped_domain):
         """
         This function iterate pairs of an and bn coefficients from the domain.
-        Some enumerators cache series items, and primary_looped_domain is used to determine the nested loop order that 
+        Some enumerators cache series items, and primary_looped_domain is used to determine the nested loop order that
         fit the caching mechanism. Only the nested series needs to be cached.
         The outer looped series is called pn, and the inner series sn.
         """
+
         def _get_coefs_in_order():
-            # Helper function to order pn and sn back to an and bn 
-            if primary_looped_domain == 'a':
+            # Helper function to order pn and sn back to an and bn
+            if primary_looped_domain == "a":
                 return pn_coef, sn_coef
             else:
                 return sn_coef, pn_coef
 
         # setting pn and sn from original series
-        if primary_looped_domain == 'a':
+        if primary_looped_domain == "a":
             pn_coef_range = self.a_coef_range
             sn_coef_range = self.b_coef_range
         else:
@@ -171,7 +185,7 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
 
         items_passed = 0
         for pn_coef in pn_iterator:
-            sn_iterator = product(*sn_domain)           
+            sn_iterator = product(*sn_domain)
             for sn_coef in sn_iterator:
                 if self.filter_gcfs(*_get_coefs_in_order()):
                     yield _get_coefs_in_order()
@@ -191,12 +205,9 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
     def _get_metadata_on_var_ranges(ranges, series):
         ranges_metadata = []
         for i, v in enumerate(ranges):
-            ranges_metadata.append({
-                'range': v,
-                'size': v[1]-v[0]+1,
-                'series': series,
-                'index': i
-                })
+            ranges_metadata.append(
+                {"range": v, "size": v[1] - v[0] + 1, "series": series, "index": i}
+            )
         return ranges_metadata
 
     def split_domains_to_processes(self, number_of_instances):
@@ -206,33 +217,37 @@ class CartesianProductPolyDomain(AbstractPolyDomains):
         This function will split the domain to number_of_instances sub-domains. To do so, we'll find the coefficient
         with the biggest range, and split it as evenly as possible to different instances.
         """
-        all_coef_ranges = self._get_metadata_on_var_ranges(self.a_coef_range, 'a')
-        all_coef_ranges += self._get_metadata_on_var_ranges(self.b_coef_range, 'b')
+        all_coef_ranges = self._get_metadata_on_var_ranges(self.a_coef_range, "a")
+        all_coef_ranges += self._get_metadata_on_var_ranges(self.b_coef_range, "b")
 
-        biggest_range = max(all_coef_ranges, key=lambda x: x['size'])
+        biggest_range = max(all_coef_ranges, key=lambda x: x["size"])
 
         # when splitting over a huge number of processes (probably over different clients) we'll not be able to
         # split the domain using only one coefficient. If that's the case, we'll just split the biggest coefficient as
         # much as we can, and use the same logic recursively over every sub-domain.
-        number_of_sub_arrays = min(number_of_instances, biggest_range['size'])
-        
+        number_of_sub_arrays = min(number_of_instances, biggest_range["size"])
+
         sub_domains = []
-        for chunk_items in array_split(range(biggest_range['range'][0], biggest_range['range'][1] + 1),
-                                       number_of_sub_arrays):
+        for chunk_items in array_split(
+            range(biggest_range["range"][0], biggest_range["range"][1] + 1),
+            number_of_sub_arrays,
+        ):
             chunk_range = [int(chunk_items[0]), int(chunk_items[-1])]
             next_instance = deepcopy(self)
-            if biggest_range['series'] == 'a':
-                next_instance.a_coef_range[biggest_range['index']] = chunk_range
+            if biggest_range["series"] == "a":
+                next_instance.a_coef_range[biggest_range["index"]] = chunk_range
             else:
-                next_instance.b_coef_range[biggest_range['index']] = chunk_range
+                next_instance.b_coef_range[biggest_range["index"]] = chunk_range
 
             next_instance._setup_metadata()
             sub_domains.append(next_instance)
 
-        if biggest_range['size'] < number_of_instances:
+        if biggest_range["size"] < number_of_instances:
             # divide the required instances over all of the sub domains
             smaller_sub_domains = []
-            for i, sub_domain in zip(array_split(range(number_of_instances), len(sub_domains)), sub_domains):
+            for i, sub_domain in zip(
+                array_split(range(number_of_instances), len(sub_domains)), sub_domains
+            ):
                 smaller_sub_domains += sub_domain.split_domains_to_processes(len(i))
 
             return smaller_sub_domains

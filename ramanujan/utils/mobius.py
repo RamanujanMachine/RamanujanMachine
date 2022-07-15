@@ -9,12 +9,12 @@ from ortools.linear_solver.pywraplp import Solver
 class MobiusTransform(object):
     def __init__(self, arr=np.eye(2, dtype=object)):
         """
-            This class represents a Mobius Transform stored as:
-            ( a b )
-            ( c d )
-            matrix.
-            applying this transform onto x will result in:
-            (ax + b) / (cx + d)
+        This class represents a Mobius Transform stored as:
+        ( a b )
+        ( c d )
+        matrix.
+        applying this transform onto x will result in:
+        (ax + b) / (cx + d)
         """
         super().__init__()
         self.data = arr
@@ -28,9 +28,9 @@ class MobiusTransform(object):
         :param x: expression to use as the operand of the transformation
         """
         a, b, c, d = self.__values()
-        return (a*x + b) / (c*x + d)
+        return (a * x + b) / (c * x + d)
 
-    def pprint(self, x=Symbol('x')):
+    def pprint(self, x=Symbol("x")):
         """
         pretty print the mobius transform.
         :param x: (optional) expression to print as the operand of the transformation
@@ -168,7 +168,7 @@ class GeneralizedContinuedFraction(object):
         :param n: depth of convergent
         :return: sym expression
         """
-        x = Symbol('..')
+        x = Symbol("..")
         eq = x
         for i in reversed(range(n)):
             eq = self.a_[i] + self.b_[i] / eq
@@ -198,14 +198,20 @@ class GeneralizedContinuedFraction(object):
         a_ = [floor(const) if b_[0] > 0 else ceil(const)]
         k = MobiusTransform(np.array([[1, -a_[0]], [0, 1]]))  # x = x - a[0]
         for i in range(1, len(b_)):
-            k_rcp = MobiusTransform(np.array([[0, b_[i - 1]], [1, 0]], dtype=object)) * k  # 1) calculate floor(b[i]/x)
+            k_rcp = (
+                MobiusTransform(np.array([[0, b_[i - 1]], [1, 0]], dtype=object)) * k
+            )  # 1) calculate floor(b[i]/x)
             try:
                 rcp = k_rcp(const)  # 1) (**)
             except ZeroDivisionError:
-                print("Finished extraction sooner than expected. Rational input, or insufficient precision.")
+                print(
+                    "Finished extraction sooner than expected. Rational input, or insufficient precision."
+                )
                 raise ZeroDivisionError
             a_.append(floor(rcp) if b_[i] > 0 else ceil(rcp))  # 2) find a_i
-            next_transform = MobiusTransform(np.array([[0, b_[i-1]], [1, a_[i]]], dtype=object))  # 3) x = b[i]/x - a[i]
+            next_transform = MobiusTransform(
+                np.array([[0, b_[i - 1]], [1, a_[i]]], dtype=object)
+            )  # 3) x = b[i]/x - a[i]
             k = next_transform.inverse() * k
         return cls(a_, b_)
 
@@ -290,23 +296,31 @@ def find_transform(x, y, limit, threshold=1e-7):
     """
     x1 = x
     x2 = dec(1.0)
-    x3 = -x*y
+    x3 = -x * y
     x4 = -y
-    solver = Solver('mobius', Solver.CBC_MIXED_INTEGER_PROGRAMMING)
-    a = solver.IntVar(-limit, limit, 'a')
-    b = solver.IntVar(-limit, limit, 'b')
-    c = solver.IntVar(-limit, limit, 'c')
-    d = solver.IntVar(-limit, limit, 'd')
-    f = solver.NumVar(0, 1, 'f')
-    solver.Add(f == (a*x1 + b*x2 + c*x3 + d*x4))
-    solver.Add(a*x1 + b >= 1)   # don't except trivial solutions and remove some redundancy
+    solver = Solver("mobius", Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+    a = solver.IntVar(-limit, limit, "a")
+    b = solver.IntVar(-limit, limit, "b")
+    c = solver.IntVar(-limit, limit, "c")
+    d = solver.IntVar(-limit, limit, "d")
+    f = solver.NumVar(0, 1, "f")
+    solver.Add(f == (a * x1 + b * x2 + c * x3 + d * x4))
+    solver.Add(
+        a * x1 + b >= 1
+    )  # don't except trivial solutions and remove some redundancy
     solver.Minimize(f)
     status = solver.Solve()
     if status == Solver.OPTIMAL:
         if abs(solver.Objective().Value()) <= threshold:
-            res_a, res_b, res_c, res_d = int(a.solution_value()), int(b.solution_value()),\
-                                         int(c.solution_value()), int(d.solution_value())
-            ret = MobiusTransform(np.array([[res_a, res_b], [res_c, res_d]], dtype=object))
+            res_a, res_b, res_c, res_d = (
+                int(a.solution_value()),
+                int(b.solution_value()),
+                int(c.solution_value()),
+                int(d.solution_value()),
+            )
+            ret = MobiusTransform(
+                np.array([[res_a, res_b], [res_c, res_d]], dtype=object)
+            )
             ret.normalize()
             return ret
     else:
