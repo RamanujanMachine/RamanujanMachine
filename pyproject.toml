@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "ramanujan"
+version = "0.1.0"
+description = "Using algorithms to discover new mathematics"
+authors = []
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+cycler = "^0.11.0"
+kiwisolver = "^1.4.4"
+llvmlite = "^0.38.1"
+matplotlib = "^3.5.2"
+mpmath = "^1.2.1"
+numba = "^0.55.2"
+ordered-set = "^4.1.0"
+pandas = "^1.4.3"
+protobuf = "^4.21.2"
+PyLaTeX = "^1.4.1"
+pyparsing = "^3.0.9"
+python-dateutil = "^2.8.2"
+pytz = "^2022.1"
+six = "^1.16.0"
+sympy = "^1.10.1"
+numpy = "1.22.4"
+
+[tool.poetry.dev-dependencies]
+black = "^22.6.0"
+pre-commit = "^2.20.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
