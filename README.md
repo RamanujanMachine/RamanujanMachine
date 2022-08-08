@@ -4,6 +4,7 @@
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg">
     <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
     <a href="https://results.pre-commit.ci/latest/github/RamanujanMachine/RamanujanMachine/main"><img alt="pre-commit.ci status" src="https://results.pre-commit.ci/badge/github/RamanujanMachine/RamanujanMachine/main.svg"></a>
+    <a href="https://twitter.com/daily_ramanujan/"><img src="https://img.shields.io/twitter/url/https/twitter.com/cloudposse.svg?style=social&label=Follow%20%40daily_ramanujan" alt="Twitter">
 </h1>
 
 The Ramanujan Machine is an algorithmic approach to discover new mathematical conjectures. For the time being, the
