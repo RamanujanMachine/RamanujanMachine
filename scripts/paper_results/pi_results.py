@@ -14,24 +14,16 @@ All coefs are independent from one another and all combinations will be generate
 """
 
 # create a LHS table for pi
-saved_hash = 'pi.lhs.dept20.db'
+saved_hash = "pi.lhs.dept20.db"
 lhs_search_limit = 20
-lhs = LHSHashTable(
-    saved_hash,
-    lhs_search_limit,
-    [g_const_dict['pi']]) 
+lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict["pi"]])
 
 # define the poly domain
-poly_search_domain = CartesianProductPolyDomain(
-    1, [-13, 13],
-    2, [-11, 11])
+poly_search_domain = CartesianProductPolyDomain(1, [-13, 13], 2, [-11, 11])
 
 # create an enumerator that iters thought the poly domain and compare GCFs to the lhs table
-enumerator = ParallelGCFEnumerator(
-    lhs,
-    poly_search_domain,
-    [g_const_dict['pi']])
+enumerator = ParallelGCFEnumerator(lhs, poly_search_domain, [g_const_dict["pi"]])
 
 results = enumerator.full_execution()
 print("{} results found!".format(len(results)))
-enumerator.print_results(results, 'unicode', convergence_rate=False)
+enumerator.print_results(results, "unicode", convergence_rate=False)

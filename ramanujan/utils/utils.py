@@ -7,7 +7,7 @@ from sympy import lambdify, var, Poly
 
 
 def trunc_division(p, q):
-    """ Integer division, rounding towards zero """
+    """Integer division, rounding towards zero"""
     sign = (p < 0) + (q < 0) == 1  # if exactly one is negative
     div = abs(p) // abs(q)
     return -div if sign else div
@@ -20,6 +20,7 @@ def measure_performance(func):
 
     Use as decorator by adding @measure_performance before functions you wish to test
     """
+
     def wrapper(*args, **kwargs):
         start = time.time()
         func_value = func(*args, **kwargs)
@@ -38,14 +39,19 @@ def find_polynomial_series_coefficients(poly_deg, lead_terms: List[int], startin
     :param starting_n: what index does the series start from (default is 0).
     :return: list of polynomial coefficients (starting with the lead term)
     """
-    assert (poly_deg+1) <= len(lead_terms)
-    mat = np.array([[n**i for i in range(poly_deg+1)] for n in range(starting_n, starting_n+poly_deg+1)])
-    x = np.array(lead_terms[:poly_deg+1])
+    assert (poly_deg + 1) <= len(lead_terms)
+    mat = np.array(
+        [
+            [n**i for i in range(poly_deg + 1)]
+            for n in range(starting_n, starting_n + poly_deg + 1)
+        ]
+    )
+    x = np.array(lead_terms[: poly_deg + 1])
     coefs = np.linalg.inv(mat) @ x
     coefs = np.flip(coefs)
     int_coefs = np.round(coefs)
-    if any(np.abs(int_coefs-coefs) > 10e-7):
-        print('warning! non integer coefficients - {}'.format(coefs))
+    if any(np.abs(int_coefs - coefs) > 10e-7):
+        print("warning! non integer coefficients - {}".format(coefs))
         return list(coefs)
     else:
         return list(int_coefs.astype(int))
@@ -104,30 +110,32 @@ def iter_series_items_from_compact_poly(poly_coef, max_runs, start_n=1):
         yield tmp
 
 
-def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=101, label=None):
+def plot_gcf_convergens(
+    an_poly_coef, bn_poly_coef, max_iters, divide_interval=101, label=None
+):
     computed_values = []
-    label = f'an {an_poly_coef} bn {bn_poly_coef}' if not label else label
+    label = f"an {an_poly_coef} bn {bn_poly_coef}" if not label else label
 
-    # a_n iterator is always one ahead, while a[0] goes to p. so this is 
+    # a_n iterator is always one ahead, while a[0] goes to p. so this is
     # an ugly hack
 
     poly_a_deg, _ = get_poly_deg_and_leading_coef(an_poly_coef)
     poly_b_deg, _ = get_poly_deg_and_leading_coef(bn_poly_coef)
 
-    print(f'deg a - {poly_a_deg} deg b - {poly_b_deg}')
+    print(f"deg a - {poly_a_deg} deg b - {poly_b_deg}")
     if poly_a_deg * 2 == poly_b_deg:
-        print('\texpo')
-        print(f'\t4b_d = {bn_poly_coef[0] * 4} | -a^2 = {-1 * (an_poly_coef[0]**2)}')
-        if bn_poly_coef[0] * 4 > -1 * (an_poly_coef[0]**2):
-            print('\t\tcond passed')
-        elif bn_poly_coef[0] * 4 == -1 * (an_poly_coef[0]**2):
-            print('\t\tequality')
+        print("\texpo")
+        print(f"\t4b_d = {bn_poly_coef[0] * 4} | -a^2 = {-1 * (an_poly_coef[0]**2)}")
+        if bn_poly_coef[0] * 4 > -1 * (an_poly_coef[0] ** 2):
+            print("\t\tcond passed")
+        elif bn_poly_coef[0] * 4 == -1 * (an_poly_coef[0] ** 2):
+            print("\t\tequality")
         else:
-            print('\t\tcond failed')
+            print("\t\tcond failed")
     elif poly_a_deg * 2 > poly_b_deg:
-        print('\tsuper expo')
+        print("\tsuper expo")
     else:
-        print('\tsub expo')
+        print("\tsub expo")
     an_items_iterator = iter_series_items_from_compact_poly(an_poly_coef, max_iters, 0)
     bn_items_iterator = iter_series_items_from_compact_poly(bn_poly_coef, max_iters, 1)
 
@@ -148,7 +156,7 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
         prev_p = tmp_b
 
         # This is the hard part to compute.
-        # TODO - consider computing once in every X iters; Might be significant 
+        # TODO - consider computing once in every X iters; Might be significant
         if i % divide_interval != 0:
             continue
         if q != 0:  # safety check
@@ -159,11 +167,11 @@ def plot_gcf_convergens(an_poly_coef, bn_poly_coef, max_iters, divide_interval=1
     # if you wish to have several different figures open, you'll need to give each a distinct name.
     # to keep a state of the number of windows open, and index the ones opened, we use a global variable
     global g_current_fig
-    if 'g_current_fig' not in globals():
+    if "g_current_fig" not in globals():
         g_current_fig = 0
     g_current_fig += 1
     plt.figure(g_current_fig)
-    plt.plot([i[1] for i in computed_values], [i[0] for i in computed_values], '+')
+    plt.plot([i[1] for i in computed_values], [i[0] for i in computed_values], "+")
     plt.ion()
     plt.grid()
     plt.xlabel("n")
@@ -179,12 +187,15 @@ def get_reduced_fraction(numerator_coefs, denominator_coefs, result_deg):
     Reduce polynomial division by common factors. So (1+k)/(1+2k+k**2) will be reduced to 1/(1+k)
     Items in the coefs list start from the lowest degree ([a, b, c] = a + b*x +c*x**2)
     """
-    k = var('k')
+    k = var("k")
     numerator = sum([coef * k**i for i, coef in enumerate(numerator_coefs)])
     denominator = sum([coef * k**i for i, coef in enumerate(denominator_coefs)])
 
-    reduced_num, reduced_denom = (numerator/denominator).simplify().as_numer_denom()
-    reduced_num_coefs, reduced_denom_coefs = Poly(reduced_num, k).all_coeffs(), Poly(reduced_denom, k).all_coeffs()
+    reduced_num, reduced_denom = (numerator / denominator).simplify().as_numer_denom()
+    reduced_num_coefs, reduced_denom_coefs = (
+        Poly(reduced_num, k).all_coeffs(),
+        Poly(reduced_denom, k).all_coeffs(),
+    )
     reduced_num_coefs.reverse()
     reduced_denom_coefs.reverse()
 

@@ -4,7 +4,9 @@ from mpmath import mpf as dec
 from ramanujan.utils.mobius import GeneralizedContinuedFraction
 
 
-def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=False, title=''):
+def calculate_convergence(
+    gcf: GeneralizedContinuedFraction, reference, plot=False, title=""
+):
     """
     calculate convergence rate of General Continued Fraction (in reference to some constant x).
     the result is the average number of decimal digits, per term of the general continued fraction.
@@ -32,5 +34,5 @@ def calculate_convergence(gcf: GeneralizedContinuedFraction, reference, plot=Fal
         plt.plot(range(length), log_diff)
         plt.title(title)
         plt.show()
-    log_slope = 2 * (log_diff[length-1] - log_diff[length//2]) / length
+    log_slope = 2 * (log_diff[length - 1] - log_diff[length // 2]) / length
     return -log_slope

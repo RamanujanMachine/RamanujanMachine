@@ -6,27 +6,26 @@ class Dummy(object):
     """
     When passing the lhs object to each process, only the bloom filter is used.
     To pass less data to each process, we'll be using this class to duplicate only
-    the bloom filter. 
+    the bloom filter.
     Also, passing LHSHashTable to a child process requires us to pickle it, which creates
     problems. This way, we only handle the required data when spawning a new process
     """
+
     pass
 
 
 def _single_process_execution(enumerator_class, lhs, poly_search_domain, const_vals):
     if lhs:
-        enumerator = enumerator_class(
-            lhs,
-            poly_search_domain,
-            const_vals)
+        enumerator = enumerator_class(lhs, poly_search_domain, const_vals)
     else:
-        enumerator = enumerator_class(
-            poly_search_domain,
-            const_vals)
+        enumerator = enumerator_class(poly_search_domain, const_vals)
 
     return enumerator.find_initial_hits()
 
-def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_vals, number_of_processes):
+
+def multiprocess_enumeration(
+    enumerator_class, lhs, poly_search_domain, const_vals, number_of_processes
+):
     """
     This function will split an execution to number_of_processes different processes the poly_domain will be split, and
     for each chunk an instance of lhs and enumerator will be created. Each instance will preform the first enumeration.
@@ -42,7 +41,7 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
 
     pool = multiprocessing.Pool(processes=number_of_processes)
     arguments = []
-    
+
     # Each subprocess only uses lhs.bloom. See Dummy class doc for more details.
     lean_lhs = Dummy()
     # Some enumerators don't require the LHS, passing None instead
@@ -51,21 +50,16 @@ def multiprocess_enumeration(enumerator_class, lhs, poly_search_domain, const_va
     # Creating arguments for each process function
     split_domain = poly_search_domain.split_domains_to_processes(number_of_processes)
     for domain_chunk in split_domain:
-        arguments.append((
-            enumerator_class,
-            lean_lhs.bloom,
-            domain_chunk,
-            const_vals
-            ))
+        arguments.append((enumerator_class, lean_lhs.bloom, domain_chunk, const_vals))
 
     process_results = pool.starmap(_single_process_execution, arguments)
     pool.close()
-    
+
     unified_results = []
     for r in process_results:
         unified_results += r
 
-    # Create another enumerator (should not take time to initiate) and preforme 
+    # Create another enumerator (should not take time to initiate) and preforme
     # the second step using only it
     if lhs:
         enumerator = enumerator_class(lhs, poly_search_domain, const_vals)

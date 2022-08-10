@@ -22,19 +22,20 @@ expression and using PSLQ with zeta(3) will not recognize it, so this script doe
 
 def main():
     poly_search_domain = Zeta3DomainWithRatC(
-        [(1, 5), (0, 5), (1, 5)],  # [c, x, y]
-        (1, 5))
+        [(1, 5), (0, 5), (1, 5)], (1, 5)  # [c, x, y]
+    )
     results = multiprocess_enumeration(
         FREnumerator,
         None,  # No LHS in FREnumerator
         poly_search_domain,
-        [g_const_dict['zeta'](3)],
-        4)
+        [g_const_dict["zeta"](3)],
+        4,
+    )
 
     print("{} results found!".format(len(results)))
     for r in results:
         print(r)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

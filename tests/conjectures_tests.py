@@ -2,8 +2,11 @@ import unittest
 import mpmath
 from ramanujan.LHSHashTable import LHSHashTable
 from ramanujan.enumerators.EfficientGCFEnumerator import EfficientGCFEnumerator
-from ramanujan.enumerators.RelativeGCFEnumerator import RelativeGCFEnumerator, gcf_calculation_to_precision, \
-    NotConverging
+from ramanujan.enumerators.RelativeGCFEnumerator import (
+    RelativeGCFEnumerator,
+    gcf_calculation_to_precision,
+    NotConverging,
+)
 from ramanujan.enumerators.FREnumerator import FREnumerator
 from ramanujan.poly_domains.CartesianProductPolyDomain import CartesianProductPolyDomain
 from ramanujan.poly_domains.Zeta3Domain1 import Zeta3Domain1
@@ -20,88 +23,73 @@ def get_testable_data(refined_res_list):
     """
     data = []
     for i in refined_res_list:
-        data.append((
-            i.rhs_an_poly,
-            i.rhs_bn_poly,
-            i.c_top,
-            i.c_bot))
+        data.append((i.rhs_an_poly, i.rhs_bn_poly, i.c_top, i.c_bot))
     return data
 
 
 class APITests(unittest.TestCase):
     def test_MITM_api1(self):
-        lhs = LHSHashTable('e_lhs_dept5_db', 5, [g_const_dict['e']])
+        lhs = LHSHashTable("e_lhs_dept5_db", 5, [g_const_dict["e"]])
 
-        poly_search_domain = CartesianProductPolyDomain(
-            1, [-5, 5],
-            1, [-5, 5])
+        poly_search_domain = CartesianProductPolyDomain(1, [-5, 5], 1, [-5, 5])
 
-        enumerator = EfficientGCFEnumerator(lhs, poly_search_domain, [g_const_dict['e']])
+        enumerator = EfficientGCFEnumerator(
+            lhs, poly_search_domain, [g_const_dict["e"]]
+        )
 
         results = get_testable_data(enumerator.full_execution())
 
         self.assertEqual(len(results), 20)
-        self.assertIn(
-            ((4, 2), (0, 1), (1, 1), (-1, 1)),
-            results)
-        self.assertIn(
-            ((1, 1), (1, 0), (1, 0), (-2, 1)),
-            results)
+        self.assertIn(((4, 2), (0, 1), (1, 1), (-1, 1)), results)
+        self.assertIn(((1, 1), (1, 0), (1, 0), (-2, 1)), results)
 
     def test_MITM_api2(self):
-        lhs = LHSHashTable('zeta3.lhs.dept14.db', 14, [g_const_dict['zeta'](3)])
+        lhs = LHSHashTable("zeta3.lhs.dept14.db", 14, [g_const_dict["zeta"](3)])
 
         poly_search_domain = Zeta3Domain1(
             [(2, 2), (1, 1), (1, 17), (1, 5)],  # an coefficients
-            (-16, -1)  # bn coefficients
-            )
-
-        efficient_enumerator = EfficientGCFEnumerator(
-            lhs,
-            poly_search_domain,
-            [g_const_dict['zeta'](3)]
-            )
-        relative_enumerator = RelativeGCFEnumerator(
-            lhs,
-            poly_search_domain,
-            [g_const_dict['zeta'](3)]
+            (-16, -1),  # bn coefficients
         )
 
-        efficient_enumerator_results = get_testable_data(efficient_enumerator.full_execution())
-        relative_enumerator_results = get_testable_data(relative_enumerator.full_execution())
+        efficient_enumerator = EfficientGCFEnumerator(
+            lhs, poly_search_domain, [g_const_dict["zeta"](3)]
+        )
+        relative_enumerator = RelativeGCFEnumerator(
+            lhs, poly_search_domain, [g_const_dict["zeta"](3)]
+        )
+
+        efficient_enumerator_results = get_testable_data(
+            efficient_enumerator.full_execution()
+        )
+        relative_enumerator_results = get_testable_data(
+            relative_enumerator.full_execution()
+        )
 
         self.assertEqual(efficient_enumerator_results, relative_enumerator_results)
 
         self.assertEqual(len(relative_enumerator_results), 3)
         self.assertIn(
-            ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)),
-            relative_enumerator_results)
+            ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)), relative_enumerator_results
+        )
         self.assertIn(
-            ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)),
-            relative_enumerator_results)
+            ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)), relative_enumerator_results
+        )
         self.assertIn(
-            ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)),
-            relative_enumerator_results)
+            ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)), relative_enumerator_results
+        )
 
     def test_MITM_api3(self):
-        saved_hash = 'pi_lhs_dept20'
+        saved_hash = "pi_lhs_dept20"
         lhs_search_limit = 20
-        lhs = LHSHashTable(
-            saved_hash,
-            lhs_search_limit,
-            [g_const_dict['pi']])
+        lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict["pi"]])
 
-        poly_search_domain = CartesianProductPolyDomain(
-            1, [-13, 13],
-            2, [-11, 11])
+        poly_search_domain = CartesianProductPolyDomain(1, [-13, 13], 2, [-11, 11])
 
         # create an enumerator to iter thought the poly domain and compare it to the
         # lhs table
         enumerator = EfficientGCFEnumerator(
-            lhs,
-            poly_search_domain,
-            [g_const_dict['pi']]
-            )
+            lhs, poly_search_domain, [g_const_dict["pi"]]
+        )
 
         results = enumerator.full_execution()
         self.assertEqual(len(results), 46)
@@ -113,44 +101,31 @@ class APITests(unittest.TestCase):
         This tested domain is large, and will scan duplicates (two scaled results). This is not a mistake, since we're
         interested in the way the poly domain is split, and we want to test that no part of the domain is missed out.
         """
-        lhs = LHSHashTable('zeta3_lhs_dept20.db', 20, [g_const_dict['zeta'](3)])
+        lhs = LHSHashTable("zeta3_lhs_dept20.db", 20, [g_const_dict["zeta"](3)])
 
         poly_search_domain = Zeta3Domain1(
             [(2, 2), (1, 1), (1, 100), (1, 100)],  # an coefficients
-            (-50, -1)  # bn coefficients
-            )
+            (-50, -1),  # bn coefficients
+        )
 
         results = multiprocess_enumeration(
             EfficientGCFEnumerator,
             lhs,
             poly_search_domain,
-            [g_const_dict['zeta'](3)],
-            4)
+            [g_const_dict["zeta"](3)],
+            4,
+        )
 
         results = get_testable_data(results)
 
         self.assertEqual(len(results), 7)
-        self.assertIn(
-            ((2, 1, 3, 1), (-1,), (8, 0), (0, 7)),
-            results)
-        self.assertIn(
-            ((2, 1, 5, 2), (-16,), (12, 0), (0, 7)),
-            results)
-        self.assertIn(
-            ((2, 1, 6, 2), (-4,), (16, 0), (0, 7)),
-            results)
-        self.assertIn(
-            ((2, 1, 17, 5), (-1,), (6, 0), (0, 1)),
-            results)
-        self.assertIn(
-            ((2, 1, 21, 7), (-49,), (8, 0), (0, 1)),
-            results)
-        self.assertIn(
-            ((2, 1, 34, 10), (-4,), (12, 0), (0, 1)),
-            results)
-        self.assertIn(
-            ((2, 1, 51, 15), (-9,), (18, 0), (0, 1)),
-            results)
+        self.assertIn(((2, 1, 3, 1), (-1,), (8, 0), (0, 7)), results)
+        self.assertIn(((2, 1, 5, 2), (-16,), (12, 0), (0, 7)), results)
+        self.assertIn(((2, 1, 6, 2), (-4,), (16, 0), (0, 7)), results)
+        self.assertIn(((2, 1, 17, 5), (-1,), (6, 0), (0, 1)), results)
+        self.assertIn(((2, 1, 21, 7), (-49,), (8, 0), (0, 1)), results)
+        self.assertIn(((2, 1, 34, 10), (-4,), (12, 0), (0, 1)), results)
+        self.assertIn(((2, 1, 51, 15), (-9,), (18, 0), (0, 1)), results)
 
     def test_poly_domain_split(self):
         """
@@ -159,10 +134,11 @@ class APITests(unittest.TestCase):
            original domain
         2. checking if all the items in the split domain are
         """
+
         def compare_domains(domain, split_domain):
-            all_polys = [i for i in domain.iter_polys('b')]
+            all_polys = [i for i in domain.iter_polys("b")]
             for sub_domain in split_domain:
-                for polys in sub_domain.iter_polys('a'):
+                for polys in sub_domain.iter_polys("a"):
                     # checking if a value is present this way improves execution times drastically
                     try:
                         all_polys.remove(polys)
@@ -171,23 +147,30 @@ class APITests(unittest.TestCase):
             self.assertEqual(len(all_polys), 0)
 
         # coefficient ranges are 29, aiming for primes that screw with even splitting
-        cartesian_domain = CartesianProductPolyDomain(
-            2, [-30, 30],
-            3, [-10, 19])
+        cartesian_domain = CartesianProductPolyDomain(2, [-30, 30], 3, [-10, 19])
         split_cartesian_domain1 = cartesian_domain.split_domains_to_processes(5)
         split_cartesian_domain2 = cartesian_domain.split_domains_to_processes(51)
 
-        self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in split_cartesian_domain1]))
-        self.assertEqual(cartesian_domain.num_iterations, sum([i.num_iterations for i in split_cartesian_domain2]))
+        self.assertEqual(
+            cartesian_domain.num_iterations,
+            sum([i.num_iterations for i in split_cartesian_domain1]),
+        )
+        self.assertEqual(
+            cartesian_domain.num_iterations,
+            sum([i.num_iterations for i in split_cartesian_domain2]),
+        )
 
         # the zeta domain checks for convergences condition when iterating over coefficients
         # so the approximate size is bigger then the one actually used
         original_zeta_domain = Zeta3Domain1(
-            [(2, 10), (1, 1), (1, 30), (1, 10)],
-            (-10, -1)
+            [(2, 10), (1, 1), (1, 30), (1, 10)], (-10, -1)
         )
-        compare_domains(original_zeta_domain, original_zeta_domain.split_domains_to_processes(7))
-        compare_domains(original_zeta_domain, original_zeta_domain.split_domains_to_processes(51))
+        compare_domains(
+            original_zeta_domain, original_zeta_domain.split_domains_to_processes(7)
+        )
+        compare_domains(
+            original_zeta_domain, original_zeta_domain.split_domains_to_processes(51)
+        )
 
     def test_gcf_calculation_to_precision(self):
         with mpmath.workdps(200):
@@ -199,7 +182,8 @@ class APITests(unittest.TestCase):
 
             self.assertEqual(
                 key,
-                9507512829493799642092871757960351250480644545528320906053375232736661476255405586529893359885317761)
+                9507512829493799642092871757960351250480644545528320906053375232736661476255405586529893359885317761,
+            )
             self.assertEqual(precision, 100)
 
             # GCF that converges slowly
@@ -208,7 +192,8 @@ class APITests(unittest.TestCase):
             key, precision = gcf_calculation_to_precision(an_iter, bn_iter, 100, 1, 7)
             self.assertEqual(
                 key,
-                8319073728000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000)
+                8319073728000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000,
+            )
             self.assertEqual(precision, 11)
 
             # GCF that doesn't converge at all
@@ -223,16 +208,11 @@ class APITests(unittest.TestCase):
 
     def test_fr_enumerator(self):
         # define the poly domain
-        poly_search_domain = Zeta3Domain2(
-            [(1, 3), (-20, 20)],
-            (1, 2))
+        poly_search_domain = Zeta3Domain2([(1, 3), (-20, 20)], (1, 2))
 
         # create an enumerator to iter thought the poly domain and compare it to the lhs table
-        enumerator = FREnumerator(
-            poly_search_domain,
-            [g_const_dict['zeta'](3)]
-        )
-        
+        enumerator = FREnumerator(poly_search_domain, [g_const_dict["zeta"](3)])
+
         results = get_testable_data(enumerator.full_execution())
 
         self.assertEqual(len(results), 8)
@@ -247,24 +227,21 @@ class APITests(unittest.TestCase):
 
     def test_long_plsq_vector(self):
         # we'll test this feature using zeta5's domain
-        poly_search_domain = Zeta5Domain(
-            [(1, 1), (0, 20), (-5, 5)],
-            (1, 1))
+        poly_search_domain = Zeta5Domain([(1, 1), (0, 20), (-5, 5)], (1, 1))
 
         enumerator = FREnumerator(
-            poly_search_domain,
-            [g_const_dict['zeta'](3), g_const_dict['zeta'](5)]
+            poly_search_domain, [g_const_dict["zeta"](3), g_const_dict["zeta"](5)]
         )
 
         results = get_testable_data(enumerator.full_execution())
 
         print(results)
         self.assertEqual(len(results), 4)
-        self.assertIn(((1, 0, 0), (1, ), [1, 0, 0], [0, 0, 1]), results)
-        self.assertIn(((1, 6, -4), (1, ), [2, 0, 0], [1, -2, 2]), results)
-        self.assertIn(((1, 6, 0), (1, ), [2, 0, 0], [-9, 6, 2]), results)
-        self.assertIn(((1, 16, -4), (1, ), [64, 0, 0], [-273, 176, 64]), results)
+        self.assertIn(((1, 0, 0), (1,), [1, 0, 0], [0, 0, 1]), results)
+        self.assertIn(((1, 6, -4), (1,), [2, 0, 0], [1, -2, 2]), results)
+        self.assertIn(((1, 6, 0), (1,), [2, 0, 0], [-9, 6, 2]), results)
+        self.assertIn(((1, 16, -4), (1,), [64, 0, 0], [-273, 176, 64]), results)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

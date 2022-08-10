@@ -13,25 +13,16 @@ All coefs are independent from one another and all combinations will be generate
 """
 
 # create a LHS table for e
-saved_hash = 'e_lhs_dept5_db'
+saved_hash = "e_lhs_dept5_db"
 lhs_search_limit = 5
-lhs = LHSHashTable(
-    saved_hash,
-    lhs_search_limit,
-    [g_const_dict['e']]) 
+lhs = LHSHashTable(saved_hash, lhs_search_limit, [g_const_dict["e"]])
 
 # define the poly domain
-poly_search_domain = CartesianProductPolyDomain(
-    1, [-5, 5],
-    1, [-5, 5])
+poly_search_domain = CartesianProductPolyDomain(1, [-5, 5], 1, [-5, 5])
 
 # create an enumerator that iters thought the poly domain and compare GCFs to the lhs table
-enumerator = EfficientGCFEnumerator(
-    lhs,
-    poly_search_domain,
-    [g_const_dict['e']]
-    )
+enumerator = EfficientGCFEnumerator(lhs, poly_search_domain, [g_const_dict["e"]])
 
 results = enumerator.full_execution()
 print("{} results found!".format(len(results)))
-enumerator.print_results(results, 'unicode', convergence_rate=False)
+enumerator.print_results(results, "unicode", convergence_rate=False)

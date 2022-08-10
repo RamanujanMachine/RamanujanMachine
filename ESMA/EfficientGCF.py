@@ -8,6 +8,7 @@ class EfficientGCF(ramanujan.utils.mobius.EfficientGCF):
 
     TODO - change ESMA to use b1 as the first item, and use ramanujan.utils.mobius.EfficientGCF without This patch
     """
+
     def __init__(self, a_, b_):
         self.prev_A = 0
         self.A = 1

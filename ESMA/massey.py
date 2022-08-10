@@ -51,7 +51,7 @@ def slow_massey(line, p):
     :param p: prime number field
     :return: polynomial coefficients of P field.
     """
-    assert p < 2 ** 32
+    assert p < 2**32
     s_ = array(line, dtype=object)  # input series
     c_ = array([1], dtype=object)  # current polynomial
     b_ = array([1], dtype=object)  # previous error polynomial
@@ -80,7 +80,7 @@ def slow_massey(line, p):
         first_non_zero = [x for x in c_ if x != 0][0]
         c_ = (c_ * _inv_mod(first_non_zero, p) + (p // 2)) % p - (p // 2)
     except RuntimeError:  # Exception will only happen if c_ is all zeros, which is bad anyway
-        print('Something went wrong with slow_massey algorithm')
+        print("Something went wrong with slow_massey algorithm")
     return c_
 
 
@@ -91,6 +91,10 @@ def massey_check(a_, p=199):
     :param a_: series
     """
     shift_reg = slow_massey(a_, p)
-    print("\tmassey shift register: {}\n\twith length: {}".format(shift_reg, len(shift_reg)))
-    if len(shift_reg < len(a_)//20):
-        print('found something interesting!')
+    print(
+        "\tmassey shift register: {}\n\twith length: {}".format(
+            shift_reg, len(shift_reg)
+        )
+    )
+    if len(shift_reg < len(a_) // 20):
+        print("found something interesting!")

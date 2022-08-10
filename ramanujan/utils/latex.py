@@ -7,8 +7,8 @@ def generate_latex(file_name, eqns=None):
         eqns = []
     doc = Document()
 
-    with doc.create(Section('Automatic Conjectures')):
-        doc.append('These are the conjectures detected by the algorithm.')
+    with doc.create(Section("Automatic Conjectures")):
+        doc.append("These are the conjectures detected by the algorithm.")
 
         for eqn in eqns:
             with doc.create(Alignat(numbering=False, escape=False)) as agn:

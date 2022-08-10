@@ -6,23 +6,23 @@ from ramanujan.poly_domains.Zeta3Domain2 import Zeta3Domain2
 from ramanujan.poly_domains.Zeta5Domain import Zeta5Domain
 from ramanujan.poly_domains.Zeta7Domain import Zeta7Domain
 from ramanujan.poly_domains.CatalanDomain import CatalanDomain
-from ramanujan.poly_domains.ExplicitCartesianProductPolyDomain import ExplicitCartesianProductPolyDomain
+from ramanujan.poly_domains.ExplicitCartesianProductPolyDomain import (
+    ExplicitCartesianProductPolyDomain,
+)
 from ramanujan.constants import g_const_dict
 from ramanujan.enumerators.FREnumerator import FREnumerator
 
 
-ENUMERATORS = {
-    "FREnumerator": FREnumerator
-}
+ENUMERATORS = {"FREnumerator": FREnumerator}
 DOMAINS = {
     "Zeta3Domain1": Zeta3Domain1,
     "Zeta3Domain2": Zeta3Domain2,
     "Zeta5Domain": Zeta5Domain,
     "Zeta7Domain": Zeta7Domain,
     "CatalanDomain": CatalanDomain,
-    "ExplicitCartesianProductPolyDomain": ExplicitCartesianProductPolyDomain
+    "ExplicitCartesianProductPolyDomain": ExplicitCartesianProductPolyDomain,
 }
-RESULTS_FILE_PATH_FORMAT = '{id}_results.json'
+RESULTS_FILE_PATH_FORMAT = "{id}_results.json"
 
 
 def get_consts_objects(consts):
@@ -37,12 +37,12 @@ def get_consts_objects(consts):
 
 def main():
     json_path = sys.argv[1]
-    unique_id = os.path.split(json_path)[1].rsplit('.', 1)[0]
+    unique_id = os.path.split(json_path)[1].rsplit(".", 1)[0]
 
-    with open(json_path, 'r') as f:
+    with open(json_path, "r") as f:
         config = json.load(f)
 
-    # some domains accept their ranges in different ways. 
+    # some domains accept their ranges in different ways.
     # (If the scheme only contains one coef range, it will be on list. If it has more ranges, it may be a list of lists)
     # This way we pass the non-standard init function and assign the ranges directly
     poly_domain = DOMAINS[config["domain_type"]]()
@@ -53,15 +53,13 @@ def main():
     poly_domain._setup_metadata()
 
     const_vals = get_consts_objects(config["const_list"])
-    enumerator = ENUMERATORS[config["enumerator"]](
-        poly_domain,
-        const_vals)
+    enumerator = ENUMERATORS[config["enumerator"]](poly_domain, const_vals)
 
     results = enumerator.find_initial_hits()
 
-    with open(RESULTS_FILE_PATH_FORMAT.format(id=unique_id), 'w') as f:
+    with open(RESULTS_FILE_PATH_FORMAT.format(id=unique_id), "w") as f:
         json.dump(results, f)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
