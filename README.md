@@ -8,7 +8,7 @@ For more information, please go to [RamanujanMachine.com](https://www.RamanujanM
 
 ## Installation
 
-Clone the repo and install the package. If you have pip, it can be done by running
+As of now, [Python3.10.8](https://www.python.org/downloads/release/python-3108/) (and no later) is required. Clone the repo, install the package, and run
 ```
 pip install -e .
 ```
