@@ -47,6 +47,7 @@ CREATE TABLE relation (
 	relation_id UUID NOT NULL DEFAULT uuid_generate_v1() PRIMARY KEY,
 	relation_type VARCHAR NOT NULL,
 	details INT[] NOT NULL,
+	precision INT,
 	time_added timestamp DEFAULT current_timestamp
 );
 
