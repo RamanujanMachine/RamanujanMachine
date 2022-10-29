@@ -14,12 +14,29 @@ pip install -e .
 ```
 under the same folder as `setup.py`. That's it, you are now ready to discover new conjectures.
 
+## The Database
+(TODO) After you obtain your scout user, you may connect to the main database so you can start adding relations.
+The way by which the code can add relations on its own is by using an algorithm called PSLQ to check whether certain subsets of constants from the database have an integer relation between them. This is done by calling
+```
+python db/ramanujan.py start
+```
+under the same folder as `setup.py` and waiting for results. You may also call `python db/ramanujan.py stop` at any time to stop searching (in addition to just closing the window).
+
+### Configuring the Search
+The configuration is in `db/config.py`, where there's both the login credentials and details for running "jobs" that search for relations.
+By default, all cores on your CPU will be utilized to search for Möbius-like relations between a named constant and a PCF.
+If you want, you may change this under `configuration['jobs_to_run']['poly_pslq']`, more details on its functionality are in that file.
+
+### New Database
+Should you need to create a new database (for local testing, for instance), first install [PostgreSQL](https://www.postgresql.org/download/) on the machine intended to host the database, then create a new PostgreSQL server on that machine (pgAdmin, a builtin application in PostgreSQL, can do this). Then, go to `db/config.py` and edit `db_configuration` so you can connect to your new database instead, and finally call `python db/create_db.py` to create a new database. (TODO write a better postgres installation tutorial here?)
+Once you have created your own database, you may even run code from `db/su` on it (your scout user cannot run it on the main database). More information can be found in each `.py` file there.
+
 ## The MITM_RF algorithm: 
-The MITM algorithm will "mine" new Continued Fraction conjectures of the type:
+Alternatively, the MITM algorithm will "mine" new Continued Fraction conjectures of the type:
 ![LHS_RHS](images/LHS_RHS.png)
 This project lets you control the equation space scanned by the algorithm.
 
-## Running the code
+### Running the code
 
 To start a new execution, you'll need to configure three parts:
 1. What LHS do you wish to scan
@@ -76,7 +93,7 @@ The simplest, and fastest approach is implemented under `EfficentGCFEnumerator`.
 2. The matches are re-evaluated to a dept of 1000, and compared again for higher precision, thus eliminating false 
    positives. The final results are then presented as new conjectures.
    
-For farther information regarding this algorithm, please refer to our paper 'the Ramanujan machine' under 
+For further information regarding this algorithm, please refer to our paper 'the Ramanujan machine' under 
 the 'MITM-RF algorithm' chapter, or visit our website [RamanujanMachine.com](https://www.RamanujanMachine.com).
 
 For example, creating `EfficientGCFEnumerator` using the `LHSHashTable` and `poly_domain` defined above:
