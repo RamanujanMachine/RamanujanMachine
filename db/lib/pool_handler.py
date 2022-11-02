@@ -19,6 +19,7 @@ import math
 import os
 from logging import getLogger
 from logging.config import fileConfig
+import numpy as np
 from traceback import format_exc
 from typing import Tuple, Dict, Any
 from types import ModuleType
@@ -52,7 +53,7 @@ class WorkerPool:
     main_jobs: int
 
     def __init__(self: WorkerPool, pool_size: int = 0) -> None:
-        fileConfig('logging.config', defaults={'log_filename': 'pool'})
+        fileConfig('db/logging.config', defaults={'log_filename': 'pool'})
         self.manager = Manager()
         self.running = self.manager.Value('i', 0)
         self.job_queue = self.manager.Queue()
@@ -74,7 +75,7 @@ class WorkerPool:
                 WorkerPool.run_job, 
                 (self.running, self.job_queue, self.result_queues[module_path], module_path, module_config)
             ))
-
+        
         self.read_queue()
 
         return [result.get() for result in results]
@@ -104,8 +105,8 @@ class WorkerPool:
                 module.execute_job(**args)
                 return True
             queried_data = module.run_query(**args)
-            if not any(queried_data):
-                return False
+            if queried_data == -1:
+                raise Exception('internal error')
             extra_args = getattr(module, 'EXECUTE_NEEDS_ARGS', False)
             if not run_async:
                 results = [module.execute_job(queried_data, **args) if extra_args else module.execute_job(queried_data)]
@@ -120,37 +121,42 @@ class WorkerPool:
                     results.append(result_queue.get())
             module.summarize_results(results)
             return True
-        except Exception as ex:
+        except:
             getLogger(LOGGER_NAME).info(f'There was an error while running the module {module_path}: {format_exc()}')
             return False
 
     @staticmethod
     def run_job(running, job_queue, result_queue, module_path, module_config) -> Tuple[str, float]:
-        module = importlib.import_module(module_path)
-        args = module_config['args']
-        timings = []
-        iterations = module_config.get('iterations', math.inf)
-        run_async = module_config.get('run_async', False)
-        async_cores = module_config.get('async_cores', 0)
-        split_async = module_config.get('split_async', True)
-        cooldown = module_config.get(COOLDOWN, DEFAULT_COOLDOWN)
-        no_work_timeout = module_config.get('no_work_timeout', -1)
-        iteration = 0
-        while running.value and iteration < iterations:
-            start_time = time.time()
-            worked = WorkerPool.run_module(module, module_path, job_queue, result_queue, run_async, async_cores, split_async, args)
-            if worked and len(timings) < 30:
-                timings.append(time.time() - start_time)
-            iteration += 1
-            if worked:
+        try:
+            module = importlib.import_module(module_path)
+            args = module_config['args']
+            timings = []
+            iterations = module_config.get('iterations', math.inf)
+            run_async = module_config.get('run_async', False)
+            async_cores = module_config.get('async_cores', 0)
+            split_async = module_config.get('split_async', True)
+            cooldown = module_config.get(COOLDOWN, DEFAULT_COOLDOWN)
+            no_work_timeout = module_config.get('no_work_timeout', -1)
+            iteration = 0
+            while running.value and iteration < iterations:
+                start_time = time.time()
+                worked = WorkerPool.run_module(module, module_path, job_queue, result_queue, run_async, async_cores, split_async, args)
+                if not worked:
+                    break
+                if len(timings) < 30:
+                    timings.append(time.time() - start_time)
+                iteration += 1
                 time.sleep(cooldown)
-            elif no_work_timeout == -1:
-                break
-            else:
-                time.sleep(no_work_timeout)
-        
-        job_queue.put(Message.get_kill_message())
-        return module_path, timings
+                if no_work_timeout == -1:
+                    break
+                else:
+                    time.sleep(no_work_timeout)
+            
+            job_queue.put(Message.get_kill_message())
+            return module_path, timings
+        except:
+            getLogger(LOGGER_NAME).info(f'There was an error while attempting to run the module {module_path}: {format_exc()}')
+            return module_path, []
 
     @staticmethod
     def run_sub_job(module_path, parameters):
@@ -163,5 +169,6 @@ class WorkerPool:
 
     @staticmethod
     def split_parameters(parameters, pool_size):
-        chunk_size = max(len(parameters) // pool_size, 1)
-        return [parameters[i:i+chunk_size] for i in range(0, len(parameters), chunk_size)]
+        l = max(len(parameters), 1)
+        chunk_size = l / pool_size
+        return [parameters[math.ceil(i):math.ceil(i+chunk_size)] for i in np.arange(0, l, chunk_size)]

@@ -1,11 +1,11 @@
 import re
-from db import models, ramanujan_db
+from db.lib import models, ramanujan_db
 from decimal import Decimal
 from config import get_connection_string
 import os
-from tools.constants_generator import Constants
+from db.lib.constants_generator import Constants
 
-COMMAND = 'psql {connection_string} < tools/db/create_db.sql'
+COMMAND = 'psql {connection_string} < db/lib/db/create_db.sql'
 MIN_PRECISION = 20
 
 def get_manual_value(path): # works with the OEIS format, credit where credit is due
@@ -51,7 +51,7 @@ if __name__ == '__main__':
             named_const.base.value = Decimal(str(const_func()))
         else:
             print(f'    Skipping calculation of {x}, too inefficient or no calculation available!')
-            path = f'lib/manual_values/{x}.txt'
+            path = f'db/lib/manual_values/{x}.txt'
             if os.path.isfile(path):
                 value, precision2 = get_manual_value(path)
                 if precision2 < MIN_PRECISION:

@@ -14,7 +14,7 @@ def main():
     config = configuration['analyze_pcfs']
     db_handle = RamanujanDB()
     pcfs = (PCF(*(poly_from_expr(poly)[0].all_coeffs() for poly in pcf)) for pcf in config['pcfs'])
-    successful, unsuccessful = db_handle.add_pcfs(pcfs)#[],{'Already exist':pcfs}#
+    successful, unsuccessful = db_handle.add_pcfs(pcfs)
     unsuccessful['Too imprecise'] = []
     for key in unsuccessful:
         if key == 'Already exist': # still want to test these...
@@ -24,9 +24,9 @@ def main():
                     if pcf.base.precision > PRECISION_LIMIT:
                         successful += [pcf]
                     else:
-                        unsuccessful['Too imprecise'] += [pcf]
+                        unsuccessful['Too imprecise'] += [unsuccessful[key][canonical_forms.index([pcf.P, pcf.Q])]]
         elif unsuccessful[key]:
-            polys = [(pcf.P, pcf.Q) for pcf in unsuccessful[key]]
+            polys = [[[int(c) for c in poly.all_coeffs()] for poly in pcf.get_canonical_form()] for pcf in unsuccessful[key]]
             pcfs_string = reduce(lambda a,b: a+'\n\t'+str(b), polys[1:], str(polys[0]))
             print(f'Could not add {len(unsuccessful[key])} pcfs with reason "{key}":\n\t{pcfs_string}\n')
     db_handle.session.close()
@@ -34,17 +34,17 @@ def main():
         print('None of the configued PCFs can be tested! Aborting...')
     else: # bulk doesn't matter, it just exists due to the limitation of how EXECUTE_NEEDS_ARGS works
         print(f'Testing relations with {len(successful)} PCFs')
-        execute_job(transpose([successful]), config.get('subdivide', None), config.get('degree', None), debug_pslq = config.get('debug_pslq', False), manual = True)
+        execute_job(transpose([successful]), config.get('subdivide', None), config.get('degree', None), manual = True)
 
 if __name__ == '__main__':
     '''
-    Example config:
+    Example config: (using BOINC zetas)
     configuration = {
         ...
+        ,
         'analyze_pcfs': {
-            'degree': (2, 1), 'debug_pslq': False, 'subdivide': {
-                'PcfCanonical': { 'count': 1, 'balanced_only': True },
-                'Named': { 'count': 1 }
+            'degree': (2, 1), 'subdivide': {
+                'PcfCanonical': { 'count': 2, 'balanced_only': True }
             },
             'pcfs': [
                 ('2*n**5 + 7*n**4 + 14*n**3 + 16*n**2 + 9*n + 2', '-n**10 - 2*n**9 - n**8'),

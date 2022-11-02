@@ -1,13 +1,13 @@
 '''
 '''
-from pool_handler import WorkerPool
-from config import configuration
 from logging import getLogger
 from logging.config import fileConfig
 import signal
 import numpy as np
 import os
 import sys
+from db.config import configuration
+from db.lib.pool_handler import WorkerPool
 
 LOGGER_NAME = 'job_logger'
 MOD_PATH = 'jobs.job_%s'
@@ -19,7 +19,7 @@ def main() -> None:
     worker_pool = WorkerPool(configuration['pool_size'])
     signal.signal(signal.SIGINT, lambda sig, frame: worker_pool.stop())
     results = worker_pool.start({MOD_PATH % name : config for name, config in configuration['jobs_to_run'].items() })
-    fileConfig('logging.config', defaults={'log_filename': 'main'})
+    fileConfig('db/logging.config', defaults={'log_filename': 'main'})
 
     for module_path, timings in results:
         getLogger(LOGGER_NAME).info('-------------------------------------')
@@ -30,7 +30,7 @@ def main() -> None:
             getLogger(LOGGER_NAME).info(f'median time: {np.median(timings)}')
             getLogger(LOGGER_NAME).info(f'average time: {np.average(timings)}')
         else:
-            getLogger(LOGGER_NAME).info(f"module {module_path} didn't run")
+            getLogger(LOGGER_NAME).info(f"module {module_path} didn't run! check logs")
         getLogger(LOGGER_NAME).info('-------------------------------------')
         
 

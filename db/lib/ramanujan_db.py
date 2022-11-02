@@ -18,8 +18,9 @@ from db.lib import models
 from db.lib.pcf import *
 
 MAX_ITERATOR_STEPS = 1402
-DEPTH = 12000
+DEPTH = 1200
 CALC_JUMP = 200
+REDUCE_JUMP = 100
 FR_THRESHOLD = 0.1
 
 PcfCalculation = namedtuple('PcfCalculation', ['value', 'precision', 'last_matrix', 'depth', 'convergence'])
@@ -43,12 +44,14 @@ class PcfCalc:
     def refine(self: PcfCalc):
         # TODO upgrade to mergesort-like binary tree scheme?
         self.depth += 1
-        mat = mp.matrix([[self.a(self.depth), self.b(self.depth)], [1, 0]]) * self.mat
-        # the old code only did this gcd step every REDUCE_JUMP steps, for now I
-        # decided to do it every step to see how much of a performance hit it really is
+        self.mat = mp.matrix([[self.a(self.depth), self.b(self.depth)], [1, 0]]) * self.mat
+        if self.depth % REDUCE_JUMP == 0:
+            self.reduce()
+    
+    def reduce(self: PcfCalc):
         gcd = np.gcd.reduce(self.mat)
         #self.reduction *= gcd
-        self.mat = mat / mp.mpf(gcd)
+        self.mat /= mp.mpf(gcd)
     
     @property
     def value(self: PcfCalc):
@@ -143,6 +146,7 @@ class RamanujanDB(object):
                 # (though as far as i could tell, the reverse direction might not be necessarily true)
                 fr_list += [mp.log(mp.mpf(np.gcd(*calc.mat[0,:]))) / mp.mpf(n) + calc.a.degree() * (1 - mp.log(n))]
         
+        calc.reduce()
         prec = calc.precision
         if prec == -mp.inf:
             raise RamanujanDB.IllegalPCFException('continuant denominator zero')

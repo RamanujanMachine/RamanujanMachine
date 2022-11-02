@@ -83,7 +83,7 @@ class PCF:
         Notice there may be many pcfs that fit the same canonical form, this returns just one of them.
         TODO: add link to the doc which explains this
         """
-        n = Symbol("n")
+        n = Symbol('n')
         a = Poly(canonical_form[1], n).compose(Poly(n + 1))
         b = Poly(canonical_form[0], n) * a
         return PCF(a.all_coeffs(), b.all_coeffs())

@@ -28,7 +28,7 @@ class NamedConstant(Base):
     description = Column(String)
     artificial = Column(Integer, nullable=False, server_default=text("0"))
     
-    base = relationship('Constant')
+    base = relationship('Constant', lazy='subquery')
 
 
 class PcfConvergence(Enum):
@@ -52,7 +52,7 @@ class PcfCanonicalConstant(Base):
     depth = Column(Integer)
     convergence = Column(Integer)
     
-    base = relationship('Constant')
+    base = relationship('Constant', lazy='subquery')
 
 
 class ScanHistory(Base):

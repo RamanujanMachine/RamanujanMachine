@@ -21,6 +21,7 @@ from time import time
 from sqlalchemy import Integer, or_, Float
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql.expression import func
+from sys import set_int_max_str_digits
 from logging import getLogger
 from logging.config import fileConfig
 from os import getpid
@@ -34,6 +35,7 @@ from db.lib import models, ramanujan_db
 mp.mp.dps = 2000
 
 EXECUTE_NEEDS_ARGS = True
+DEBUG_PRINT_PRECISION_RATIOS = True
 
 ALGORITHM_NAME = 'POLYNOMIAL_PSLQ'
 LOGGER_NAME = 'job_logger'
@@ -42,14 +44,17 @@ BULK_TYPES = {'PcfCanonical'}
 SUPPORTED_TYPES = ['Named', 'PcfCanonical']
 DEFAULT_CONST_COUNT = 1
 DEFAULT_DEGREE = (2, 1)
+MIN_PRECISION_RATIO = 0.8
+MAX_STR_DIGITS = 16333
+MAX_PREC = 9999
 
 FILTERS = [
-        models.Constant.precision > 100
+        models.Constant.precision.isnot(None)
         #or_(models.Cf.scanned_algo == None, ~models.Cf.scanned_algo.has_key(ALGORITHM_NAME)) # TODO USE scan_history TABLE!!!
         ]
 
 def get_filters(subdivide, const_type):
-    filters = FILTERS
+    filters = list(FILTERS) # copy!
     if const_type == 'PcfCanonical':
         filters += [models.PcfCanonicalConstant.convergence != models.PcfConvergence.RATIONAL.value]
         if subdivide['PcfCanonical'].get('balanced_only', False):
@@ -57,30 +62,25 @@ def get_filters(subdivide, const_type):
 
     return filters 
 
-def poly_check(consts, exponents, debug_pslq=False):
+def poly_check(consts, exponents):
     mp.mp.dps = min(c.base.precision for c in consts)
     values = [mp.mpf(str(c.base.value)) for c in consts]
-    if 1 in values:
-        return None # solely for backwards-compatibility. We don't need 1 in the DB!
+    if 1 in values: # solely for backwards-compatibility. We don't need 1 in the DB!
+        return None, None, None
     poly = [reduce(mul, (values[i] ** exp[i] for i in range(len(values))), mp.mpf(1)) for exp in exponents]
     try:
-        mp.mp.dps = 15 if debug_pslq else min([c.base.precision for c in consts]) * 9 // 10
+        mp.mp.dps = 15 # intentionally low-resolution to quickly try something basic...
         res = mp.pslq(poly)
-        if res:
-            if debug_pslq:
-                mp.mp.dps = max(c.base.precision for c in consts)
-                prec = mp.fdot(poly, res)
-                return res, (mp.floor(-mp.log10(abs(prec))) / min(c.base.precision for c in consts) if prec else mp.inf)
-            if mp.almosteq(mp.fdot(poly, res), 0):
-                getLogger(LOGGER_NAME).info('Found relation')
-                return res, mp.inf
-            print("False positive")
+        if res: # then calculating the substance in what we just found!
+            mp.mp.dps = max(c.base.precision for c in consts) + 10
+            prec = mp.fdot(poly, res)
+            return res, mp.floor(-mp.log10(abs(prec))) if prec else mp.inf, min(c.base.precision for c in consts)
     except ValueError:
         # one of the constants has too small precision, or one constant
         # is small enough that another constant is smaller than its precision.
-        # eitherway there's no relation to be found here
+        # eitherway there's no relation to be found here!
         pass 
-    return None, None
+    return None, None, None
 
 def compress_relation(result, consts, exponents, degree):
     # will need to use later, so evaluating into lists
@@ -127,15 +127,18 @@ def relation_is_new(consts, degree, other_relations):
     return not any(r for r in other_relations
                    if {c.const_id for c in r.constants} <= {c.const_id for c in consts} and r.details[0] <= degree[0] and r.details[1] <= degree[1])
 
-def check_consts(consts, exponents, degree, debug_pslq=False):
-    result, precision_ratio = poly_check(consts, exponents, debug_pslq)
+def check_consts(consts, exponents, degree):
+    result, true_prec, min_prec = poly_check(consts, exponents)
     if not result:
         return []
-    if debug_pslq:
-        print(f'Found relation with precision ratio {precision_ratio}')
-        if precision_ratio < 0.8:
+    with mp.workdps(5):
+        r = str(true_prec / min_prec)
+    if DEBUG_PRINT_PRECISION_RATIOS:
+        print(f'Found relation with precision ratio {r}')
+    if true_prec / min_prec < MIN_PRECISION_RATIO:
+        if DEBUG_PRINT_PRECISION_RATIOS:
             print(f'Too low! Ignoring...')
-            return []
+        return []
     result, new_consts, new_degree = compress_relation(result, consts, exponents, degree)
     # now must check subrelations! PSLQ is only guaranteed to return a small norm,
     # but not guaranteed to return a 1-dimensional relation, see for example pslq([1,2,3])
@@ -143,12 +146,14 @@ def check_consts(consts, exponents, degree, debug_pslq=False):
     for i in range(1, len(consts)):
         exponents = get_exponents(degree, i)
         for subset in combinations(consts, i):
-            subresult, precision_ratio = poly_check(subset, exponents, debug_pslq)
+            subresult, true_prec2, min_prec2 = poly_check(subset, exponents)
             if subresult:
                 subresult, subconsts, subdegree = compress_relation(subresult, subset, exponents, degree)
-                if relation_is_new(subconsts, subdegree, subrelations): # no need to check against new_relations + old_relations here btw
-                    subrelations += [models.Relation(relation_type=ALGORITHM_NAME, details=subdegree+subresult, constants=[c.base for c in subconsts])]
-    return subrelations if subrelations else [models.Relation(relation_type=ALGORITHM_NAME, details=new_degree+result, constants=[c.base for c in new_consts])]
+                if relation_is_new(subconsts, subdegree, subrelations) and true_prec2 / min_prec2 >= MIN_PRECISION_RATIO: # no need to check against new_relations + old_relations here btw
+                    true_prec2 = min(true_prec2, MAX_PREC)
+                    subrelations += [models.Relation(relation_type=ALGORITHM_NAME, details=subdegree+subresult, precision=int(true_prec2), constants=[c.base for c in subconsts])]
+    true_prec = min(true_prec, MAX_PREC)
+    return subrelations if subrelations else [models.Relation(relation_type=ALGORITHM_NAME, details=new_degree+result, precision=int(true_prec), constants=[c.base for c in new_consts])]
 
 def transpose(l):
     return [[l[j][i] for j in range(len(l))] for i in range(len(l[0]))] if l else [[]]
@@ -160,8 +165,8 @@ def get_consts(const_type, db_handle, subdivide):
     if const_type == 'Named':
         return db_handle.constants.join(models.Constant).filter(models.Constant.value.isnot(None))
 
-def run_query(subdivide=None, degree=None, bulk=None, debug_pslq=False):
-    fileConfig('logging.config', defaults={'log_filename': 'pslq_const_manager'})
+def run_query(subdivide=None, degree=None, bulk=None):
+    fileConfig('db/logging.config', defaults={'log_filename': 'pslq_const_manager'})
     if not subdivide:
         return []
     bulk_types = set(subdivide.keys()) & BULK_TYPES
@@ -170,19 +175,21 @@ def run_query(subdivide=None, degree=None, bulk=None, debug_pslq=False):
     bulk = bulk if bulk else BULK_SIZE
     getLogger(LOGGER_NAME).debug(f'Starting to check relations, using bulk size {bulk}')
     db_handle = ramanujan_db.RamanujanDB()
-    results = [db_handle.session.query(eval(f'models.{const_type}Constant')).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
+    results = [db_handle.session.query(eval(f'models.{const_type}Constant')).join(models.Constant).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
     # apparently postgresql is really slow with the order_by(random) part,
     # but on 1000 CFs it only takes 1 second, which imo is worth it since
-    # that allows us more variety in testing the CFs
+    # that allows us more variety in testing the CFs...
+    # TODO what to do if results is unintentionally empty?
     db_handle.session.close()
     getLogger(LOGGER_NAME).info(f'size of batch is {len(results) * bulk}')
     return transpose(results) # so pool_handler can correctly divide among the sub-processes
 
-def execute_job(query_data, subdivide=None, degree=None, bulk=None, debug_pslq=False, manual=False):
-    fileConfig('logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
+def execute_job(query_data, subdivide=None, degree=None, bulk=None, manual=False):
+    fileConfig('db/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
     if not subdivide:
         getLogger(LOGGER_NAME).error('Nothing to do! Aborting...')
         return 0 # this shouldn't happen unless pool_handler changes, so just in case...
+    set_int_max_str_digits(MAX_STR_DIGITS) # preparation for the big numbers that may be...
     keys = subdivide.keys()
     for const_type in keys:
         if const_type not in SUPPORTED_TYPES:
@@ -214,7 +221,7 @@ def execute_job(query_data, subdivide=None, degree=None, bulk=None, debug_pslq=F
             consts = [c for t in consts for c in t] # need to flatten...
             if relation_is_new(consts, degree, old_relations):
                 getLogger(LOGGER_NAME).info(f'checking consts: {[c.const_id for c in consts]}')
-                new_relations = check_consts(consts, exponents, degree, debug_pslq)
+                new_relations = check_consts(consts, exponents, degree)
                 if new_relations:
                     getLogger(LOGGER_NAME).info(f'Found relation(s)!')
                     old_relations += new_relations

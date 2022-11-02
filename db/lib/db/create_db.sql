@@ -4,8 +4,8 @@ CREATE DATABASE test -- Set the name of your new database here
     OWNER = superuser -- Add in your own superuser here
 ;
 
--- Use DB
-\c test -- This must match the name you used in line 2!
+-- Use DB, name here must match the name you used in line 2!
+\c test 
 
 -- Add module for uuid
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -27,13 +27,13 @@ CREATE TABLE named_constant (
 
 CREATE TABLE pcf_canonical_constant (
     const_id UUID NOT NULL PRIMARY KEY REFERENCES constant (const_id),
-	P INT[] NOT NULL,
-	Q INT[] NOT NULL,
+	"P" INT[] NOT NULL, -- must be in quotes otherwise it becomes lowercase...
+	"Q" INT[] NOT NULL,
 	last_matrix TEXT, -- solely because of the absurdly huge numbers that can go here... not even NUMERIC is enough...
 	depth INT,
 	convergence INT,
 	
-	UNIQUE(P, Q)
+	UNIQUE("P", "Q")
 );
 
 CREATE TABLE scan_history (
@@ -67,11 +67,11 @@ CREATE TABLE relation_audit (
 -- based on https://www.postgresql.org/docs/current/plpgsql-trigger.html
 CREATE OR REPLACE FUNCTION process_relation_audit() RETURNS TRIGGER AS $relation_audit$
 	BEGIN
-		IF (TP_OG = 'INSERT') THEN
+		IF (TG_OP = 'INSERT') THEN
 			INSERT INTO relation_audit SELECT NEW.relation_id, 'I', now(), user;
-		ELSIF (TP_OG = 'UPDATE') THEN
+		ELSIF (TG_OP = 'UPDATE') THEN
 			INSERT INTO relation_audit SELECT NEW.relation_id, 'U', now(), user;
-		ELSIF (TP_OG = 'DELETE') THEN
+		ELSIF (TG_OP = 'DELETE') THEN
 			INSERT INTO relation_audit SELECT OLD.relation_id, 'D', now(), user;
 		END IF;
 		RETURN NULL;
@@ -113,8 +113,21 @@ GRANT REFERENCES ON pcf_canonical_constant TO scout;
 GRANT INSERT ON constant_in_relation TO scout;
 GRANT INSERT ON relation TO scout;
 
+
+DROP ROLE IF EXISTS pioneer;
+CREATE ROLE pioneer WITH
+	NOLOGIN
+	NOSUPERUSER
+	INHERIT
+	NOCREATEDB
+	NOCREATEROLE
+	NOREPLICATION;
+
+GRANT scout TO pioneer;
+GRANT INSERT ON pcf_canonical_constant TO pioneer;
+
 -- Then when someone new wants to contribute, run code similar to this:
 -- CREATE ROLE [username] LOGIN;
 -- ALTER USER [username] WITH PASSWORD '[password]'
--- GRANT scout to [username];
+-- GRANT [scout/pioneer] to [username];
 -- also just in case every password works, see https://stackoverflow.com/a/21054627
