@@ -1,25 +1,25 @@
 from functools import reduce
 from sympy.polys.polytools import poly_from_expr
 import os
-from db.config import configuration
-from db.jobs.job_poly_pslq import execute_job, transpose
-from db.lib.ramanujan_db import RamanujanDB
-from db.lib.models import PcfCanonicalConstant
-from db.lib.pcf import *
+from LIReC.config import configuration
+from LIReC.jobs.job_poly_pslq import execute_job, transpose
+from LIReC.lib.db_access import LIReC_DB
+from LIReC.lib.models import PcfCanonicalConstant
+from LIReC.lib.pcf import *
 
 PRECISION_LIMIT = 20
 
 def main():
     os.makedirs(os.path.join(os.getcwd(), 'logs'), exist_ok=True)
     config = configuration['analyze_pcfs']
-    db_handle = RamanujanDB()
+    db = LIReC_DB()
     pcfs = (PCF(*(poly_from_expr(poly)[0].all_coeffs() for poly in pcf)) for pcf in config['pcfs'])
-    successful, unsuccessful = db_handle.add_pcfs(pcfs)
+    successful, unsuccessful = db.add_pcfs(pcfs)
     unsuccessful['Too imprecise'] = []
     for key in unsuccessful:
         if key == 'Already exist': # still want to test these...
             canonical_forms = [[poly.all_coeffs() for poly in pcf.get_canonical_form()] for pcf in unsuccessful[key]]
-            for pcf in db_handle.session.query(PcfCanonicalConstant):
+            for pcf in db.session.query(PcfCanonicalConstant):
                 if [pcf.P, pcf.Q] in canonical_forms: # TODO theoretically this can be implemented as a filter but i can't figure it out right now...
                     if pcf.base.precision > PRECISION_LIMIT:
                         successful += [pcf]
@@ -29,7 +29,7 @@ def main():
             polys = [[[int(c) for c in poly.all_coeffs()] for poly in pcf.get_canonical_form()] for pcf in unsuccessful[key]]
             pcfs_string = reduce(lambda a,b: a+'\n\t'+str(b), polys[1:], str(polys[0]))
             print(f'Could not add {len(unsuccessful[key])} pcfs with reason "{key}":\n\t{pcfs_string}\n')
-    db_handle.session.close()
+    db.session.close()
     if 'PcfCanonical' in config['subdivide'] and not successful:
         print('None of the configued PCFs can be tested! Aborting...')
     else: # bulk doesn't matter, it just exists due to the limitation of how EXECUTE_NEEDS_ARGS works

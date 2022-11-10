@@ -13,12 +13,12 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import sessionmaker
 from psycopg2.errors import UniqueViolation
 from typing import Tuple, List, Dict, Generator
-from db.config import get_connection_string
-from db.lib import models
-from db.lib.pcf import *
+from LIReC.config import get_connection_string
+from LIReC.lib import models
+from LIReC.lib.pcf import *
 
 MAX_ITERATOR_STEPS = 1402
-DEPTH = 1200
+DEFAULT_DEPTH = 1200
 CALC_JUMP = 200
 REDUCE_JUMP = 100
 FR_THRESHOLD = 0.1
@@ -61,7 +61,7 @@ class PcfCalc:
     def precision(self: PcfCalc):
         return mp.floor(-mp.log10(abs(self.value - self.mat[1,0] / self.mat[1,1]))) if all(self.mat[:,1]) else -mp.inf
 
-class RamanujanDB(object):
+class LIReC_DB:
     def __init__(self):
         logging.debug("Trying to connect to database")
         self._engine = create_engine(get_connection_string(), echo=False)
@@ -126,19 +126,19 @@ class RamanujanDB(object):
             return models.PcfConvergence.FR
         
         if any(abs(fr_list[i + 1] - fr_list[i + 2]) > abs(fr_list[i] - fr_list[i + 1]) for i in range(len(fr_list) - 2)):
-            raise RamanujanDB.NoFRException()
+            raise LIReC_DB.NoFRException()
         
         return models.PcfConvergence.INDETERMINATE_FR
     
     @staticmethod
-    def calc_pcf(pcf):
+    def calc_pcf(pcf, depth=DEFAULT_DEPTH):
         # P.S.: The code here is in fact similar to enumerators.FREnumerator.check_for_fr, but
         # the analysis we're doing here is both more delicate (as we allow numerically-indeterminate PCFs),
         # and also less redundant (since we also want the value of the PCF instead of just discarding it for instance)
         calc = PcfCalc(pcf.a, pcf.b)
         
         fr_list = []
-        for n in range(1, DEPTH):
+        for n in range(1, depth):
             calc.refine()
             if n % CALC_JUMP == 0:
                 # yes this calculation converges as i -> inf if there's factorial
@@ -149,33 +149,33 @@ class RamanujanDB(object):
         calc.reduce()
         prec = calc.precision
         if prec == -mp.inf:
-            raise RamanujanDB.IllegalPCFException('continuant denominator zero')
+            raise LIReC_DB.IllegalPCFException('continuant denominator zero')
         
         value = calc.value
         if value and mp.almosteq(0, value):
             logging.debug('Rounding to 0')
             value = 0
-        return PcfCalculation(Decimal(str(value)), 2000 if prec == mp.inf else int(prec), [int(x) for x in calc.mat], DEPTH, RamanujanDB.check_convergence(*calc.mat[0,:], fr_list).value)
+        return PcfCalculation(Decimal(str(value)), 2000 if prec == mp.inf else int(prec), [int(x) for x in calc.mat], DEPTH, LIReC_DB.check_convergence(*calc.mat[0,:], fr_list).value)
 
-    def add_pcf(self, pcf: PCF, calculate: bool = True) -> None:
+    def add_pcf(self, pcf: PCF, depth=DEFAULT_DEPTH) -> None:
         """
         Expect PCF object.
-        raises IntegrityError if pcf already exists in the db.
+        raises IntegrityError if pcf already exists in LIReC.
         raises NoFRException if calculate is True and the pcf doesn't converge
         raises IllegalPCFException if the pcf has natural roots or if its b_n has irrational roots.
         """
         if any(r for r in pcf.a.real_roots() if isinstance(r, Integer) and r > 0):
-            raise RamanujanDB.IllegalPCFException('Natural root in partial denominator ensures divergence.')
+            raise LIReC_DB.IllegalPCFException('Natural root in partial denominator ensures divergence.')
         if any(r for r in pcf.b.real_roots() if isinstance(r, Integer) and r > 0):
-            raise RamanujanDB.IllegalPCFException('Natural root in partial numerator ensures trivial convergence to a rational number.')
+            raise LIReC_DB.IllegalPCFException('Natural root in partial numerator ensures trivial convergence to a rational number.')
         if any(r for r in pcf.b.all_roots() if not isinstance(r, Rational)):
-            raise RamanujanDB.IllegalPCFException('Irrational or Complex roots in partial numerator are not allowed.')
+            raise LIReC_DB.IllegalPCFException('Irrational or Complex roots in partial numerator are not allowed.')
         top, bot = pcf.get_canonical_form()
-        calculation = RamanujanDB.calc_pcf(pcf) if calculate else None
+        calculation = LIReC_DB.calc_pcf(pcf, depth) if depth else None
         # By default the coefs are sympy.core.numbers.Integer but sql need them to be integers
         return self.add_pcf_canonical([int(coef) for coef in top.all_coeffs()], [int(coef) for coef in bot.all_coeffs()], calculation)
     
-    def add_pcfs(self, pcfs: Generator[PCF, None, None]) -> Tuple[List[models.PcfCanonicalConstant], Dict[str, List[PCF]]]:
+    def add_pcfs(self, pcfs: Generator[PCF, None, None], depth=DEFAULT_DEPTH) -> Tuple[List[models.PcfCanonicalConstant], Dict[str, List[PCF]]]:
         """
         Expects a list of PCF objects.
         """
@@ -183,14 +183,14 @@ class RamanujanDB(object):
         unsuccessful = {'Already exist': [], 'No FR': [], 'Illegal': []}
         for pcf in pcfs:
             try:
-                successful.append(self.add_pcf(pcf))
+                successful.append(self.add_pcf(pcf, depth))
             except IntegrityError as e:
                 if not isinstance(e.orig, UniqueViolation):
-                    raise e # otherwise already in the DB
+                    raise e # otherwise already in LIReC
                 unsuccessful['Already exist'] += [pcf]
-            except RamanujanDB.NoFRException:
+            except LIReC_DB.NoFRException:
                 unsuccessful['No FR'] += [pcf]
-            except RamanujanDB.IllegalPCFException:
+            except LIReC_DB.IllegalPCFException:
                 unsuccessful['Illegal'] += [pcf]
         return successful, unsuccessful
     
@@ -203,10 +203,10 @@ class RamanujanDB(object):
                 self.add_pcf(pcf)
             except IntegrityError as e:
                 if not isinstance(e.orig, UniqueViolation):
-                    raise e # otherwise already in the DB
-            except RamanujanDB.NoFRException:
+                    raise e # otherwise already in LIReC
+            except LIReC_DB.NoFRException:
                 pass
-            except RamanujanDB.IllegalPCFException:
+            except LIReC_DB.IllegalPCFException:
                 pass
     
     @staticmethod
@@ -214,7 +214,7 @@ class RamanujanDB(object):
         return [int(coef) for coef in cf.P], [int(coef) for coef in cf.Q]
     
     def get_canonical_forms(self) -> List[CanonicalForm]:
-        return [RamanujanDB.parse_cf_to_lists(pcf) for pcf in self.cfs.all()]
+        return [LIReC_DB.parse_cf_to_lists(pcf) for pcf in self.cfs.all()]
     
     def get_actual_pcfs(self) -> List[PCF]:
         """

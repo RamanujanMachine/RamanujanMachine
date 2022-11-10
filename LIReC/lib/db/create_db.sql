@@ -124,6 +124,7 @@ CREATE ROLE pioneer WITH
 	NOREPLICATION;
 
 GRANT scout TO pioneer;
+GRANT INSERT ON constant TO pioneer;
 GRANT INSERT ON pcf_canonical_constant TO pioneer;
 
 -- Then when someone new wants to contribute, run code similar to this:

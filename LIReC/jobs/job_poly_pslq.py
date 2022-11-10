@@ -1,5 +1,5 @@
 '''
-Finds polynomial relations between constants in the DB, using PSLQ.
+Finds polynomial relations between constants in LIReC, using PSLQ.
 
 Configured as such:
 'degree': Tuple of the form (polydegree: int, innerdegree: int). All relations are structured like
@@ -10,7 +10,7 @@ Configured as such:
               a + bx+cy+dz+ew + fxy+gxz+hxw+iyz+jyw+kzw + lxyz+mxyw+nxzw+oyzw
           Note here the lack of any single variable with an exponent greater than 1, and also the lack of xyzw.
 'bulk': How many of each "bulk type" to scan. A class of constants is
-        considered a bulk type iff we expect to have a lot of it in the DB
+        considered a bulk type iff we expect to have a lot of it in LIReC
         (specified by whether or not it's in the BULK_TYPES array).
 'subdivide': A dictionary that specifies which kinds of constants to use to look for relations. Currently supported:
     'PcfCanonical': 'count' specifies how many pcf's at a time, 'balanced_only' filters to only PCFs of balanced degrees if set to True.
@@ -30,7 +30,7 @@ from collections import Counter
 from functools import reduce
 from operator import mul
 from traceback import format_exc
-from db.lib import models, ramanujan_db
+from LIReC.lib import models, db_access
 
 mp.mp.dps = 2000
 
@@ -73,8 +73,8 @@ def poly_check(consts, exponents):
         res = mp.pslq(poly)
         if res: # then calculating the substance in what we just found!
             mp.mp.dps = max(c.base.precision for c in consts) + 10
-            prec = mp.fdot(poly, res)
-            return res, mp.floor(-mp.log10(abs(prec))) if prec else mp.inf, min(c.base.precision for c in consts)
+            min_prec = min(c.base.precision for c in consts)
+            return res, min(mp.floor(-mp.log10(abs(mp.fdot(poly, res)))), min_prec), min_prec
     except ValueError:
         # one of the constants has too small precision, or one constant
         # is small enough that another constant is smaller than its precision.
@@ -161,9 +161,9 @@ def transpose(l):
 def get_consts_from_query(const_type, query_data):
     return query_data[[i for i in range(len(query_data)) if isinstance(query_data[i][0], eval(f'models.{const_type}Constant'))][0]]
 
-def get_consts(const_type, db_handle, subdivide):
+def get_consts(const_type, db, subdivide):
     if const_type == 'Named':
-        return db_handle.constants.join(models.Constant).filter(models.Constant.value.isnot(None))
+        return db.constants.join(models.Constant).filter(models.Constant.value.isnot(None))
 
 def run_query(subdivide=None, degree=None, bulk=None):
     fileConfig('db/logging.config', defaults={'log_filename': 'pslq_const_manager'})
@@ -174,18 +174,18 @@ def run_query(subdivide=None, degree=None, bulk=None):
         return []
     bulk = bulk if bulk else BULK_SIZE
     getLogger(LOGGER_NAME).debug(f'Starting to check relations, using bulk size {bulk}')
-    db_handle = ramanujan_db.RamanujanDB()
-    results = [db_handle.session.query(eval(f'models.{const_type}Constant')).join(models.Constant).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
+    db= db_access.LIReC_DB()
+    results = [db.session.query(eval(f'models.{const_type}Constant')).join(models.Constant).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
     # apparently postgresql is really slow with the order_by(random) part,
     # but on 1000 CFs it only takes 1 second, which imo is worth it since
     # that allows us more variety in testing the CFs...
     # TODO what to do if results is unintentionally empty?
-    db_handle.session.close()
+    db.session.close()
     getLogger(LOGGER_NAME).info(f'size of batch is {len(results) * bulk}')
     return transpose(results) # so pool_handler can correctly divide among the sub-processes
 
 def execute_job(query_data, subdivide=None, degree=None, bulk=None, manual=False):
-    fileConfig('db/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
+    fileConfig('LIReC/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
     if not subdivide:
         getLogger(LOGGER_NAME).error('Nothing to do! Aborting...')
         return 0 # this shouldn't happen unless pool_handler changes, so just in case...
@@ -208,11 +208,11 @@ def execute_job(query_data, subdivide=None, degree=None, bulk=None, manual=False
     
     query_data = transpose(query_data)
     try:
-        db_handle = ramanujan_db.RamanujanDB()
-        subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db_handle, subdivide), subdivide[const_type]['count']) for const_type in subdivide]
+        db = db_access.LIReC_DB()
+        subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db, subdivide), subdivide[const_type]['count']) for const_type in subdivide]
         exponents = get_exponents(degree, total_consts)
         
-        old_relations = db_handle.session.query(models.Relation).all()
+        old_relations = db.session.query(models.Relation).all()
         orig_size = len(old_relations)
         # even if the commented code were to be uncommented and implemented for
         # the scan_history table, this loop still can't be turned into list comprehension
@@ -225,16 +225,16 @@ def execute_job(query_data, subdivide=None, degree=None, bulk=None, manual=False
                 if new_relations:
                     getLogger(LOGGER_NAME).info(f'Found relation(s)!')
                     old_relations += new_relations
-                    db_handle.session.add_all(new_relations)
-                    db_handle.session.commit()
+                    db.session.add_all(new_relations)
+                    db.session.commit()
                     
             #for cf in consts:
             #    if not cf.scanned_algo:
             #        cf.scanned_algo = dict()
             #    cf.scanned_algo[ALGORITHM_NAME] = int(time())
-            #db_handle.session.add_all(consts)
+            #db.session.add_all(consts)
         getLogger(LOGGER_NAME).info(f'finished - found {len(old_relations) - orig_size} results')
-        db_handle.session.close()
+        db.session.close()
         
         getLogger(LOGGER_NAME).info('Commit done')
         

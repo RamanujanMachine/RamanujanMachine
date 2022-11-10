@@ -14,13 +14,13 @@ pip install -e .
 ```
 under the same folder as `setup.py`. That's it, you are now ready to discover new conjectures.
 
-## The Database
-(TODO) After you obtain your scout user, you may connect to the main database so you can start adding relations.
+## LIReC - The Database
+(TODO) After you obtain your scout user, you may connect to ***LIReC*** *(Library of Integer RElations and Constants)* so you can start adding relations.
 The way by which the code can add relations on its own is by using an algorithm called PSLQ to check whether certain subsets of constants from the database have an integer relation between them. This is done by calling
 ```
-python db/ramanujan.py start
+python db/lirec.py start
 ```
-under the same folder as `setup.py` and waiting for results. You may also call `python db/ramanujan.py stop` at any time to stop searching (in addition to just closing the window).
+under the same folder as `setup.py` and waiting for results. You may also call `python db/lirec.py stop` at any time to stop searching (in addition to just closing the window).
 
 ### Configuring the Search
 The configuration is in `db/config.py`, where there's both the login credentials and details for running "jobs" that search for relations.

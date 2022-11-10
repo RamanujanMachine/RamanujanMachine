@@ -16,11 +16,11 @@ configuration = {
 
 # If you make your own database, 'name' must match the name in 'create_db.sql' in the line 'CREATE DATABASE <name>'
 db_configuration = {
-    'host': '',
+    'host': 'database-1.c1keieal025m.us-east-2.rds.amazonaws.com',
     'port': 5432,
     'user': '',
     'passwd': '',
-    'name': ''
+    'name': 'lirec-main'
 }
 
 def get_connection_string(db_name=None):

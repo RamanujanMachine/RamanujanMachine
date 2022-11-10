@@ -1,9 +1,9 @@
 import re
-from db.lib import models, ramanujan_db
 from decimal import Decimal
 from config import get_connection_string
 import os
-from db.lib.constants_generator import Constants
+from LIReC.lib import models, db_access
+from LIReC.lib.calculator import Constants
 
 COMMAND = 'psql {connection_string} < db/lib/db/create_db.sql'
 MIN_PRECISION = 20
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     precision = 4000
     print(f'Using {precision} digits of precision')
     Constants.set_precision(precision)
-    db_handle = ramanujan_db.RamanujanDB()
+    db = db_access.LIReC_DB()
     for x in Constants.__dict__.keys():
         if x[0] == '_' or x == 'set_precision':
             continue
@@ -63,7 +63,7 @@ if __name__ == '__main__':
                 
         named_const.name = x
         named_const.description = const_func.__doc__[:const_func.__doc__.index('.\n')]
-        db_handle.session.add_all([named_const])
+        db.session.add(named_const)
     
     from mpmath import zeta
     
@@ -74,7 +74,7 @@ if __name__ == '__main__':
         named_const.base.value = Decimal(str(zeta(x)))
         named_const.name = f'Zeta{x}'
         named_const.description = f'zeta({x})'
-        db_handle.session.add_all([named_const])
+        db_handle.session.add(named_const)
     
-    db_handle.session.commit()
-    db_handle.session.close()
+    db.session.commit()
+    db.session.close()

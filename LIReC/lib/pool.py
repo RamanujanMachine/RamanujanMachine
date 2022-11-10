@@ -53,7 +53,7 @@ class WorkerPool:
     main_jobs: int
 
     def __init__(self: WorkerPool, pool_size: int = 0) -> None:
-        fileConfig('db/logging.config', defaults={'log_filename': 'pool'})
+        fileConfig('LIReC/logging.config', defaults={'log_filename': 'pool'})
         self.manager = Manager()
         self.running = self.manager.Value('i', 0)
         self.job_queue = self.manager.Queue()

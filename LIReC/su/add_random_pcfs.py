@@ -5,9 +5,9 @@ from functools import reduce
 from operator import mul
 from sympy import Poly, Symbol
 from sympy.core.numbers import Integer, Rational
-from db.lib.pcf import PCF
-from db.lib.ramanujan_db import RamanujanDB
-from db.config import configuration
+from LIReC.lib.pcf import PCF
+from LIReC.lib.db_access import LIReC_DB
+from LIReC.config import configuration
 
 fileConfig('logging.config', defaults={'log_filename': 'generate_random'})
 
@@ -65,11 +65,11 @@ def execute_job(bulk=0, max_deg=-1, max_coeff=-1, max_abs_root=-1, num_denom_fac
     max_abs_root = max_abs_root if max_abs_root > 0 else POLY_MAX_ABS_ROOT
 
     getLogger(LOGGER_NAME).info(f'starting to generate cfs randomly: {bulk}, {max_deg}, {max_coeff}, {num_denom_factor}')
-    db_handle = RamanujanDB()
-    _, unsuccessful = db_handle.add_pcfs(generate_pcf(max_deg, max_coeff, max_abs_root, num_denom_factor) for i in range(bulk))
+    db = LIReC_DB()
+    _, unsuccessful = db.add_pcfs(generate_pcf(max_deg, max_coeff, max_abs_root, num_denom_factor) for i in range(bulk))
     print({k : len(unsuccessful[k]) for k in unsuccessful}) # should never get illegal pcf's here
     getLogger(LOGGER_NAME).info('finished generating')
-    db_handle.session.close()
+    db.session.close()
 
 def main():
     '''
