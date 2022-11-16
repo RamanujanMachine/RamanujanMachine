@@ -8,7 +8,7 @@ For more information, please go to [RamanujanMachine.com](https://www.RamanujanM
 
 ## Installation
 
-As of now, [Python3.10.8](https://www.python.org/downloads/release/python-3108/) (and no later) is required. Clone the repo, install the package, and run
+As of now, [Python3.8.10](https://www.python.org/downloads/release/python-3810/) (and no later) is required. Clone the repo, install the package, and run
 ```
 pip install -e .
 ```
@@ -18,18 +18,18 @@ under the same folder as `setup.py`. That's it, you are now ready to discover ne
 (TODO) After you obtain your scout user, you may connect to ***LIReC*** *(Library of Integer RElations and Constants)* so you can start adding relations.
 The way by which the code can add relations on its own is by using an algorithm called PSLQ to check whether certain subsets of constants from the database have an integer relation between them. This is done by calling
 ```
-python db/lirec.py start
+python LIReC/lirec.py start
 ```
-under the same folder as `setup.py` and waiting for results. You may also call `python db/lirec.py stop` at any time to stop searching (in addition to just closing the window).
+under the same folder as `setup.py` and waiting for results. You may also call `python LIReC/lirec.py stop` at any time to stop searching (in addition to just closing the window).
 
 ### Configuring the Search
-The configuration is in `db/config.py`, where there's both the login credentials and details for running "jobs" that search for relations.
+The configuration is in `LIReC/config.py`, where there's both the login credentials and details for running "jobs" that search for relations.
 By default, all cores on your CPU will be utilized to search for Möbius-like relations between a named constant and a PCF.
 If you want, you may change this under `configuration['jobs_to_run']['poly_pslq']`, more details on its functionality are in that file.
 
 ### New Database
-Should you need to create a new database (for local testing, for instance), first install [PostgreSQL](https://www.postgresql.org/download/) on the machine intended to host the database, then create a new PostgreSQL server on that machine (pgAdmin, a builtin application in PostgreSQL, can do this). Then, go to `db/config.py` and edit `db_configuration` so you can connect to your new database instead, and finally call `python db/create_db.py` to create a new database. (TODO write a better postgres installation tutorial here?)
-Once you have created your own database, you may even run code from `db/su` on it (your scout user cannot run it on the main database). More information can be found in each `.py` file there.
+Should you need to create a new database (for local testing, for instance), first install [PostgreSQL](https://www.postgresql.org/download/) on the machine intended to host the database, then create a new PostgreSQL server on that machine (pgAdmin, a builtin application in PostgreSQL, can do this). Then, go to `LIReC/config.py` and edit `db_configuration` so you can connect to your new database instead, and finally call `python LIReC/create_db.py` to create a new database. (TODO write a better postgres installation tutorial here?)
+Once you have created your own database, you may even run code from `LIReC/su` on it (your scout user cannot run it on the main database). More information can be found in each `.py` file there.
 
 ## The MITM_RF algorithm: 
 Alternatively, the MITM algorithm will "mine" new Continued Fraction conjectures of the type:

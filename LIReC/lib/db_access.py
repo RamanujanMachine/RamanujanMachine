@@ -18,7 +18,7 @@ from LIReC.lib import models
 from LIReC.lib.pcf import *
 
 MAX_ITERATOR_STEPS = 1402
-DEFAULT_DEPTH = 1200
+DEFAULT_DEPTH = 10000 # at this depth, calculation of one PCF is expected to take about 3 seconds, depending on your machine
 CALC_JUMP = 200
 REDUCE_JUMP = 100
 FR_THRESHOLD = 0.1
@@ -155,7 +155,7 @@ class LIReC_DB:
         if value and mp.almosteq(0, value):
             logging.debug('Rounding to 0')
             value = 0
-        return PcfCalculation(Decimal(str(value)), 2000 if prec == mp.inf else int(prec), [int(x) for x in calc.mat], DEPTH, LIReC_DB.check_convergence(*calc.mat[0,:], fr_list).value)
+        return PcfCalculation(Decimal(str(value)), 2000 if prec == mp.inf else int(prec), [int(x) for x in calc.mat], depth, LIReC_DB.check_convergence(*calc.mat[0,:], fr_list).value)
 
     def add_pcf(self, pcf: PCF, depth=DEFAULT_DEPTH) -> None:
         """

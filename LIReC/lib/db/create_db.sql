@@ -65,7 +65,7 @@ CREATE TABLE relation_audit (
 );
 
 -- based on https://www.postgresql.org/docs/current/plpgsql-trigger.html
-CREATE OR REPLACE FUNCTION process_relation_audit() RETURNS TRIGGER AS $relation_audit$
+CREATE OR REPLACE FUNCTION process_relation_audit2() RETURNS TRIGGER AS $relation_audit$
 	BEGIN
 		IF (TG_OP = 'INSERT') THEN
 			INSERT INTO relation_audit SELECT NEW.relation_id, 'I', now(), user;
@@ -76,7 +76,7 @@ CREATE OR REPLACE FUNCTION process_relation_audit() RETURNS TRIGGER AS $relation
 		END IF;
 		RETURN NULL;
 	END;
-$relation_audit$ LANGUAGE plpgsql;
+$relation_audit$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE TRIGGER relation_audit
 AFTER INSERT OR UPDATE OR DELETE ON relation

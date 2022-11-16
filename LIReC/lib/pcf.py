@@ -1,10 +1,9 @@
 from __future__ import annotations
-import sympy
 from sympy import Poly, Symbol, gcd as sgcd, cancel
 from typing import List, Tuple
 CanonicalForm = Tuple[List[int], List[int]]
 
-n = sympy.Symbol('n')
+n = Symbol('n')
 
 
 class PCF:
@@ -21,8 +20,8 @@ class PCF:
         """
         a_coeffs, b_coeffs: lists of integers from the largest power to the smallest power.
         """
-        self.a = Poly(a_coeffs, n, domain='RR')
-        self.b = Poly(b_coeffs, n, domain='RR')
+        self.a = Poly(a_coeffs, n)
+        self.b = Poly(b_coeffs, n)
         if auto_deflate:
             self.deflate()
 

@@ -21,7 +21,6 @@ from time import time
 from sqlalchemy import Integer, or_, Float
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.sql.expression import func
-from sys import set_int_max_str_digits
 from logging import getLogger
 from logging.config import fileConfig
 from os import getpid
@@ -45,7 +44,6 @@ SUPPORTED_TYPES = ['Named', 'PcfCanonical']
 DEFAULT_CONST_COUNT = 1
 DEFAULT_DEGREE = (2, 1)
 MIN_PRECISION_RATIO = 0.8
-MAX_STR_DIGITS = 16333
 MAX_PREC = 9999
 
 FILTERS = [
@@ -166,7 +164,7 @@ def get_consts(const_type, db, subdivide):
         return db.constants.join(models.Constant).filter(models.Constant.value.isnot(None))
 
 def run_query(subdivide=None, degree=None, bulk=None):
-    fileConfig('db/logging.config', defaults={'log_filename': 'pslq_const_manager'})
+    fileConfig('LIReC/logging.config', defaults={'log_filename': 'pslq_const_manager'})
     if not subdivide:
         return []
     bulk_types = set(subdivide.keys()) & BULK_TYPES
@@ -189,7 +187,6 @@ def execute_job(query_data, subdivide=None, degree=None, bulk=None, manual=False
     if not subdivide:
         getLogger(LOGGER_NAME).error('Nothing to do! Aborting...')
         return 0 # this shouldn't happen unless pool_handler changes, so just in case...
-    set_int_max_str_digits(MAX_STR_DIGITS) # preparation for the big numbers that may be...
     keys = subdivide.keys()
     for const_type in keys:
         if const_type not in SUPPORTED_TYPES:
