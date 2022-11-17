@@ -14,6 +14,9 @@ class Constants:
     This class aims to contain most of https://en.wikipedia.org/wiki/List_of_mathematical_constants, 
     excluding rationals, non-reals, and redundant constants (which are connected
     via (2,2)-degree relations to other constants already in here).
+    
+    PLEASE NOTE: the comments here are formatted in a very specific way,
+    meant to serve `create_db.py`! Do not tamper with the comments!
     '''
     
     # If there's a WARNING or a CAUTION, it's a constant that takes a long (or somewhat long)
@@ -32,6 +35,7 @@ class Constants:
     def pi() -> mpf:
         '''
         pi, fundamental circle constant.
+        OEIS link: https://oeis.org/A000796
         '''
         return mp.pi()
     
@@ -39,6 +43,7 @@ class Constants:
     def sqrt2() -> mpf:
         '''
         square root of 2, also called pythagoras constant.
+        OEIS link: https://oeis.org/A002193
         '''
         return mp.sqrt(2)
     
@@ -46,6 +51,7 @@ class Constants:
     def sqrt3() -> mpf:
         '''
         square root of 3, also called theodorus constant.
+        OEIS link: https://oeis.org/A002194
         '''
         return mp.sqrt(3)
     
@@ -53,6 +59,7 @@ class Constants:
     def phi() -> mpf:
         '''
         golden ratio, positive root of phi^2 - phi - 1.
+        OEIS link: https://oeis.org/A001622
         '''
         return mp.phi()
     
@@ -60,6 +67,7 @@ class Constants:
     def cbrt2() -> mpf:
         '''
         cube root of 2, related to doubling cubes.
+        OEIS link: https://oeis.org/A002580
         '''
         return mp.cbrt(2)
     
@@ -67,6 +75,7 @@ class Constants:
     def cbrt3() -> mpf:
         '''
         cube root of 3.
+        OEIS link: https://oeis.org/A002581
         '''
         return mp.cbrt(3)
     
@@ -74,6 +83,7 @@ class Constants:
     def root12of2() -> mpf:
         '''
         12th root of 2, basis of modern western music theory.
+        OEIS link: https://oeis.org/A010774
         '''
         return mp.root(2, 12)
     
@@ -81,6 +91,7 @@ class Constants:
     def psi() -> mpf:
         '''
         supergolden ratio, real root of psi^3 - psi^2 - 1.
+        OEIS link: https://oeis.org/A092526
         '''
         r = 3 * mp.sqrt(93)
         p1 = mp.cbrt((29 + r) / 2)
@@ -91,6 +102,7 @@ class Constants:
     def mu() -> mpf:
         '''
         hexagonal lattice connective constant, largest root of mu^4 - 4mu^2 + 2.
+        OEIS link: https://oeis.org/A179260
         '''
         return mp.sqrt(2 + mp.sqrt(2))
     
@@ -98,6 +110,7 @@ class Constants:
     def Kprime() -> mpf:
         '''
         kepler bouwkamp constant, also called the polygon inscribing constant.
+        OEIS link: https://oeis.org/A085365
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         def iteration(k):
@@ -110,6 +123,7 @@ class Constants:
     def W() -> mpf:
         '''
         wallis constant, real root of w^3 - 2w - 5.
+        OEIS link: https://oeis.org/A007493
         '''
         r = mp.sqrt(1929)
         p1 = mp.cbrt((45 + r) / 18)
@@ -120,6 +134,7 @@ class Constants:
     def e() -> mpf:
         '''
         euler number, base of the natural logarithm.
+        OEIS link: https://oeis.org/A001113
         '''
         return mp.e()
     
@@ -127,13 +142,15 @@ class Constants:
     def ln2() -> mpf:
         '''
         natural log of 2, has many series representations, and appears often in other constants.
+        OEIS link: https://oeis.org/A002162
         '''
         return mp.ln(2)
     
     @staticmethod
-    def G025() -> mpf:
+    def G_025() -> mpf:
         '''
         gamma(0.25), appears often in other constants.
+        OEIS link: https://oeis.org/A068466
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.gamma(0.25)
@@ -142,6 +159,7 @@ class Constants:
     def gamma() -> mpf:
         '''
         euler mascheroni constant, relating the harmonic series and the natural log.
+        OEIS link: https://oeis.org/A001620
         '''
         return mp.euler()
     
@@ -149,6 +167,7 @@ class Constants:
     def E() -> mpf:
         '''
         erdos borwein constant, related to mersenne numbers.
+        OEIS link: https://oeis.org/A065442
         '''
         def iteration(n):
             pow2 = mp.power(2, n)
@@ -159,6 +178,7 @@ class Constants:
     def Omega() -> mpf:
         '''
         omega constant, real root of omega * e^omega - 1.
+        OEIS link: https://oeis.org/A030178
         '''
         return mp.lambertw(1)
     
@@ -166,6 +186,7 @@ class Constants:
     def Zeta3() -> mpf:
         '''
         apery constant, appears often in physics.
+        OEIS link: https://oeis.org/A002117
         '''
         return mp.apery()
     
@@ -173,6 +194,7 @@ class Constants:
     def L_lim() -> mpf:
         '''
         laplace limit, important to kepler's equation.
+        OEIS link: https://oeis.org/A033259
         '''
         def equation(x):
             s = mp.hypot(x, 1)
@@ -183,6 +205,7 @@ class Constants:
     def R_S() -> mpf:
         '''
         ramanujan soldner constant, central to the logarithmic integral.
+        OEIS link: https://oeis.org/A070769
         '''
         return mp.findroot(mp.li, 1.5)
     
@@ -190,20 +213,23 @@ class Constants:
     def G() -> mpf:
         '''
         gauss constant, related to bernoulli's lemniscate.
+        OEIS link: https://oeis.org/A014549
         '''
         return 1 / mp.agm(1, mp.sqrt(2))
     
     @staticmethod
-    def L1() -> mpf:
+    def L_1() -> mpf:
         '''
         first lemniscate constant, related to bernoulli's lemniscate.
+        OEIS link: http://oeis.org/A085565
         '''
         return Constants.G() * mp.pi / 2
     
     @staticmethod
-    def L2() -> mpf:
+    def L_2() -> mpf:
         '''
         second lemniscate constant, related to bernoulli's lemniscate.
+        OEIS link: http://oeis.org/A076390
         '''
         return 0.5 / Constants.G()
     
@@ -211,6 +237,7 @@ class Constants:
     def L() -> mpf:
         '''
         liouville constant, a special case of liouville numbers.
+        OEIS link: https://oeis.org/A012245
         '''
         return mp.nsum(lambda n: mp.power(10, -mp.fac(n)), [1, mp.inf], method='d')
     
@@ -218,6 +245,7 @@ class Constants:
     def C_1() -> mpf:
         '''
         first continued fraction constant.
+        OEIS link: https://oeis.org/A052119
         '''
         return mp.besseli(1, 2) / mp.besseli(0, 2)
     
@@ -225,6 +253,7 @@ class Constants:
     def R() -> mpf:
         '''
         ramanujan constant, infamous almost-integer.
+        OEIS link: https://oeis.org/A060295
         '''
         return mp.exp(mp.pi * mp.sqrt(163))
     
@@ -232,6 +261,7 @@ class Constants:
     def A() -> mpf:
         '''
         glaisher kinkelin constant, related to gamma functions and zeta functions.
+        OEIS link: https://oeis.org/A074962
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.glaisher()
@@ -240,6 +270,7 @@ class Constants:
     def C() -> mpf:
         '''
         catalan constant, important to combinatorics, topology, and more.
+        OEIS link: https://oeis.org/A006752
         '''
         return mp.catalan()
     
@@ -247,6 +278,7 @@ class Constants:
     def D() -> mpf:
         '''
         dottie number, real root of cos(d) - d (in radians).
+        OEIS link: https://oeis.org/A003957
         '''
         return mp.findroot(lambda x: mp.cos(x) - x, 0.74)
     
@@ -254,6 +286,7 @@ class Constants:
     def M() -> mpf:
         '''
         meissel mertens constant, one of many constants relating prime numbers.
+        OEIS link: https://oeis.org/A077761
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.mertens()
@@ -262,6 +295,7 @@ class Constants:
     def P() -> mpf:
         '''
         universal parabolic constant, a fundamental ratio of parabolas.
+        OEIS link: https://oeis.org/A103710
         '''
         sqrt2 = mp.sqrt(2)
         return mp.ln(1 + sqrt2) + sqrt2
@@ -270,6 +304,7 @@ class Constants:
     def C_Cahen() -> mpf:
         '''
         cahen constant, related to the sylvester sequence.
+        OEIS link: https://oeis.org/A118227
         '''
         sylvester_dict = dict() # caching the sylvester sequence makes this way faster
         def sylvester(k):
@@ -284,6 +319,7 @@ class Constants:
     def epi() -> mpf:
         '''
         gelfond constant, a result of the gelfond-schneider theorem.
+        OEIS link: https://oeis.org/A039661
         '''
         return mp.exp(mp.pi)
     
@@ -291,6 +327,7 @@ class Constants:
     def G_S() -> mpf:
         '''
         gelfond schneider constant, also called the hilbert number.
+        OEIS link: https://oeis.org/A007507
         '''
         return mp.power(2, mp.sqrt(2))
     
@@ -298,6 +335,7 @@ class Constants:
     def g() -> mpf:
         '''
         golden angle, related to the golden ratio.
+        OEIS link: https://oeis.org/A131988
         '''
         return 2 * mp.pi / (1 + mp.phi)
     
@@ -305,6 +343,7 @@ class Constants:
     def S() -> mpf:
         '''
         sierpinski constant, related to gauss constant and euler-mascheroni constant.
+        OEIS link: https://oeis.org/A062089
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.pi * (2 * mp.ln(2) + 3 * mp.ln(mp.pi) + 2 * mp.euler - 4 * mp.ln(mp.gamma(0.25)))
@@ -313,6 +352,7 @@ class Constants:
     def L_R() -> mpf:
         '''
         landau ramanujan constant, central to a theorem by edmund landau.
+        OEIS link: https://oeis.org/A064533
         WARNING: This is not a calculation!
         ''' # TODO implement prime sieve, then iterate over primes congruent 1 mod 4...
         return mp.mpf('0.76422365358922066299')
@@ -321,6 +361,7 @@ class Constants:
     def G_L() -> mpf:
         '''
         gieseking constant, also called lobachevsky constant.
+        OEIS link: https://oeis.org/A143298
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.clsin(2 , mp.pi / 3)
@@ -329,6 +370,7 @@ class Constants:
     def beta() -> mpf:
         '''
         bernstein constant, describing errors of best uniform approximations.
+        OEIS link: https://oeis.org/A073001
         WARNING: This is not a calculation!
         ''' # TODO implement Varga&Carpenter algorithm?
         return mp.mpf('0.28016949902386913303')
@@ -337,6 +379,7 @@ class Constants:
     def T() -> mpf:
         '''
         tribonacci constant, real root of t^3 - t^2 - t - 1.
+        OEIS link: https://oeis.org/A058265
         '''
         r = 3 * mp.sqrt(33)
         p1 = mp.cbrt(19 + r)
@@ -347,14 +390,16 @@ class Constants:
     def B_2() -> mpf:
         '''
         brun constant, follows from brun's theorem.
+        OEIS link: https://oeis.org/A065421
         WARNING: This is not a calculation!
         ''' # TODO need primes again... might not include this after all, since to get 13 significant digits you need all twin primes up to 10^16!
         return mp.mpf('1.902160583104')
     
     @staticmethod
-    def Pi2() -> mpf:
+    def Pi_2() -> mpf:
         '''
         twin primes constant, central to the twin primes conjecture.
+        OEIS link: https://oeis.org/A005597
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.twinprime()
@@ -363,6 +408,7 @@ class Constants:
     def rho() -> mpf:
         '''
         plastic number, real root of rho^3 - rho - 1.
+        OEIS link: https://oeis.org/A060006
         '''
         r = mp.sqrt(69) / 18
         p1 = mp.cbrt(0.5 + r)
@@ -370,9 +416,10 @@ class Constants:
         return p1 + p2
     
     @staticmethod
-    def z975() -> mpf:
+    def z_975() -> mpf:
         '''
         z score for 97.5 percentile point, commonly used alongside normal distributions.
+        OEIS link: https://oeis.org/A220510
         '''
         return mp.sqrt(2) * mp.erfinv(0.95)
     
@@ -380,6 +427,7 @@ class Constants:
     def tau() -> mpf:
         '''
         prouhet thue morse constant, appears in probability.
+        OEIS link: https://oeis.org/A014571
         '''
         return 0.25 * (2 - mp.nprod(lambda n: 1 - mp.power(2, -mp.power(2, n)), [0, mp.inf]))
     
@@ -387,6 +435,7 @@ class Constants:
     def lambda_GD() -> mpf:
         '''
         golomb dickman constant, appears in random permutation theory and number theory.
+        OEIS link: https://oeis.org/A084945
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.quad(lambda x: mp.exp(mp.li(x)), [0, 1])
@@ -395,6 +444,7 @@ class Constants:
     def c() -> mpf:
         '''
         asymptotic lebesgue constant.
+        OEIS link: https://oeis.org/A243277
         WARNING: This is not a calculation!
         '''
         ## TODO this code seems right but gives wrong result???
@@ -406,6 +456,7 @@ class Constants:
     def C_FT() -> mpf:
         '''
         feller tornier constant, describing certain prime factorizations.
+        OEIS link: https://oeis.org/A065493
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.66131704946962233528')
@@ -414,6 +465,7 @@ class Constants:
     def C_10() -> mpf:
         '''
         base10 champernowne constant.
+        OEIS link: https://oeis.org/A033307
         '''
         res = '0.'
         i = 1
@@ -426,13 +478,15 @@ class Constants:
     def sigma_10() -> mpf:
         '''
         salem constant, smallest known salem number.
+        OEIS link: https://oeis.org/A073011
         '''
         return mp.findroot(lambda x: mp.polyval([1, 1, 0, -1, -1, -1, -1, -1, 0, 1, 1], x), 1.2)
     
     @staticmethod
-    def K0() -> mpf:
+    def K_0() -> mpf:
         '''
         khinchin constant, a surprising fundamental constant in continued fractions.
+        OEIS link: https://oeis.org/A002210
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.khinchin()
@@ -441,6 +495,7 @@ class Constants:
     def beta_Levy() -> mpf:
         '''
         first levy constant, related to asymptotic behavior in continued fractions.
+        OEIS link: https://oeis.org/A100199
         '''
         return mp.pi ** 2 / (12 * mp.ln(2))
     
@@ -448,6 +503,7 @@ class Constants:
     def eLevy() -> mpf:
         '''
         second levy constant, related to asymptotic behavior in continued fractions.
+        OEIS link: https://oeis.org/A086702
         '''
         return mp.exp(Constants.beta_Levy())
     
@@ -455,6 +511,7 @@ class Constants:
     def C_CE() -> mpf:
         '''
         copeland erdos constant.
+        OEIS link: https://oeis.org/A033308
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.23571113171923293137')
@@ -463,6 +520,7 @@ class Constants:
     def A_Pi() -> mpf:
         '''
         mills constant, "smallest" real that generates prime numbers via exponents.
+        OEIS link: https://oeis.org/A051021
         WARNING: This is not a calculation!
         ''' # TODO how the hell is this calculated
         return mp.mpf('1.30637788386308069046')
@@ -471,6 +529,7 @@ class Constants:
     def delta_G() -> mpf:
         '''
         gompertz constant, appears in some special integrals.
+        OEIS link: https://oeis.org/A073003
         '''
         return -mp.e * mp.ei(-1)
     
@@ -478,6 +537,7 @@ class Constants:
     def V_dp() -> mpf:
         '''
         van der pauw constant, involved in the van der pauw method.
+        OEIS link: https://oeis.org/A163973
         '''
         return mp.pi / mp.ln(2)
     
@@ -485,6 +545,7 @@ class Constants:
     def theta_m() -> mpf:
         '''
         magic angle, important to magnetic resonance imaging.
+        OEIS link: https://oeis.org/A195696
         '''
         return mp.atan(mp.sqrt(2))
     
@@ -492,6 +553,7 @@ class Constants:
     def C_Artin() -> mpf:
         '''
         artin constant, related to artin's conjecture on primitive roots.
+        OEIS link: https://oeis.org/A005596
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.37395581361920228805')
@@ -500,6 +562,7 @@ class Constants:
     def C_P() -> mpf:
         '''
         porter constant, related to the efficiency of euclid algorithm.
+        OEIS link: https://oeis.org/A086237
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         ln2 = mp.ln(2)
@@ -510,6 +573,7 @@ class Constants:
     def L_Lochs() -> mpf:
         '''
         lochs constant, involved in lochs' theorem regarding continued fractions.
+        OEIS link: https://oeis.org/A086819
         '''
         return 6 * mp.ln(2) * mp.ln(10) / mp.pi ** 2
     
@@ -517,6 +581,7 @@ class Constants:
     def D_V() -> mpf:
         '''
         devicci tesseract constant, describing the largest cube that can pass through a 4d hypercube.
+        OEIS link: https://oeis.org/A243309
         '''
         return mp.findroot(lambda x: mp.polyval([4, 0, -28, 0, -7, 0, 16, 0, 16], x), 1)
     
@@ -524,6 +589,7 @@ class Constants:
     def C_N() -> mpf:
         '''
         niven constant, largest exponent in prime factorizations "on average".
+        OEIS link: https://oeis.org/A033150
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return 1 + mp.nsum(lambda n: 1 - 1 / mp.zeta(n), [2, mp.inf], method='d')
@@ -532,6 +598,7 @@ class Constants:
     def S_Pi() -> mpf:
         '''
         stephens constant, density of some subsets of primes.
+        OEIS link: https://oeis.org/A065478
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.57595996889294543964')
@@ -540,6 +607,7 @@ class Constants:
     def P_Dragon() -> mpf:
         '''
         paperfolding constant, related to the dragon curve.
+        OEIS link: https://oeis.org/A143347
         '''
         def iteration(n):
             two_n = mp.power(2, n)
@@ -550,6 +618,7 @@ class Constants:
     def psi_Fib() -> mpf:
         '''
         reciprocal fibonacci constant, sum of reciprocals of fibonacci numbers.
+        OEIS link: https://oeis.org/A079586
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.nsum(lambda n: 1 / mp.fib(n), [1, mp.inf], method='d')
@@ -558,14 +627,16 @@ class Constants:
     def delta() -> mpf:
         '''
         first feigenbaum constant, important to bifurcation theory.
+        OEIS link: https://oeis.org/A006890
         WARNING: This is not a calculation!
         ''' # TODO how the hell is this calculated? maybe https://rosettacode.org/wiki/Feigenbaum_constant_calculation#Python
         return mp.mpf('4.66920160910299067185')
     
     @staticmethod
-    def Delta3() -> mpf:
+    def Delta_3() -> mpf:
         '''
         robbins constant, mean length of random line segments in a unit cube.
+        OEIS link: https://oeis.org/A073012
         '''
         sqrt2 = mp.sqrt(2)
         sqrt3 = mp.sqrt(3)
@@ -578,6 +649,7 @@ class Constants:
     def W_S() -> mpf:
         '''
         weierstrass constant.
+        OEIS link: https://oeis.org/A094692
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.power(2, 1.25) * mp.sqrt(mp.pi) * mp.exp(mp.pi / 8) / mp.gamma(0.25) ** 2
@@ -586,6 +658,7 @@ class Constants:
     def F() -> mpf:
         '''
         fransen robinson constant, related to the reciprocal gamma function.
+        OEIS link: https://oeis.org/A058655
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.quad(mp.rgamma, [0, mp.inf])
@@ -594,6 +667,7 @@ class Constants:
     def alpha() -> mpf:
         '''
         second feigenbaum contsant, important to bifurcation theory.
+        OEIS link: https://oeis.org/A006891
         WARNING: This is not a calculation!
         ''' # TODO how the hell is this calculated? maybe https://github.com/brorson/FeigenbaumConstants
         return mp.mpf('2.50290787509589282228')
@@ -602,6 +676,7 @@ class Constants:
     def C_2() -> mpf:
         '''
         second du bois reymond constant.
+        OEIS link: https://oeis.org/A062546
         '''
         return (mp.exp(2) - 7) / 2
     
@@ -609,6 +684,7 @@ class Constants:
     def delta_ETF() -> mpf:
         '''
         erdos tenenbaum ford constant, appears in number theory.
+        OEIS link: https://oeis.org/A074738
         '''
         ln2 = mp.ln(2)
         return 1 - (1 + mp.ln(ln2)) / ln2
@@ -617,6 +693,7 @@ class Constants:
     def lambda_C() -> mpf:
         '''
         conway constant, related to the look-and-say sequence.
+        OEIS link: https://oeis.org/A014715
         '''
         return mp.findroot(lambda x: mp.polyval([1, 0, -1, -2, -1, 2, 2, 1, -1, -1, -1, -1, -1, 2, 5, 3, -2, -10, -3, -2, 6, 6, 1, 9, -3, -7, -8, -8, 10, 6, 8, -5, -12, 7, -7, 7, 1, -3, 10, 1, -6, -2, -10, -3, 2, 9, -3, 14, -8, 0, -7, 9, 3, -4, -10, -7, 12, 7, 2, -12, -4, -2, 5, 0, 1, -7, 7, -4, 12, -6, 3, -6], x) , 1.3)
     
@@ -624,6 +701,7 @@ class Constants:
     def sigma() -> mpf:
         '''
         hafner sarnak mccurley constant, related to coprime determinants of integer matrices.
+        OEIS link: https://oeis.org/A085849
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.35323637185499598454')
@@ -632,6 +710,7 @@ class Constants:
     def B_H() -> mpf:
         '''
         backhouse constant, constructed using power series with prime coefficients.
+        OEIS link: https://oeis.org/A072508
         WARNING: This is not a calculation!
         ''' # TODO how the hell is this calculated
         return mp.mpf('1.45607494858268967139')
@@ -640,6 +719,7 @@ class Constants:
     def V() -> mpf:
         '''
         viswanath constant, related to random fibonacci sequences.
+        OEIS link: https://oeis.org/A078416
         WARNING: This is not a calculation!
         ''' # TODO how the hell is this calculated
         return mp.mpf('1.1319882487943')
@@ -648,6 +728,7 @@ class Constants:
     def q() -> mpf:
         '''
         komornik loreti constant, related to non-integer representations.
+        OEIS link: https://oeis.org/A055060
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.findroot(lambda q: mp.nprod(lambda n: 1 - mp.power(q, -mp.power(2, n)), [0, mp.inf]) + (q - 2) / (q - 1), 2)
@@ -656,6 +737,7 @@ class Constants:
     def C_HBM() -> mpf:
         '''
         heath brown moroz constant, related to the cubic surface w^3 = xyz.
+        OEIS link: https://oeis.org/A118228
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.00131764115485317810')
@@ -664,6 +746,7 @@ class Constants:
     def S_MRB() -> mpf:
         '''
         mrb constant, named after marvin ray burns.
+        OEIS link: https://oeis.org/A037077
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.nsum(lambda n: mp.power(-1, n) * (mp.root(n, n) - 1), [1, mp.inf])
@@ -672,6 +755,7 @@ class Constants:
     def rho_Pi() -> mpf:
         '''
         prime constant, constructed from indicators of prime numbers.
+        OEIS link: https://oeis.org/A051006
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.41468250985111166024')
@@ -680,6 +764,7 @@ class Constants:
     def sigma_S() -> mpf:
         '''
         somos quadratic recurrence constant, related to the lerch transcendent.
+        OEIS link: https://oeis.org/A112302
         WARNING: Very inefficient to calculate! Handle with care!
         '''
         return mp.nprod(lambda n: mp.power(n, mp.power(2, -n)), [1, mp.inf], method='d')
@@ -688,6 +773,7 @@ class Constants:
     def alpha_F() -> mpf:
         '''
         foias constant, only number for which a certain recurrence diverges.
+        OEIS link: https://oeis.org/A085848
         WARNING: This is not a calculation!
         ''' # TODO how the hell is this calculated (maybe findroot???)
         return mp.mpf('1.18745235112650105459')
@@ -696,6 +782,7 @@ class Constants:
     def L_D() -> mpf:
         '''
         unit disk logarithmic capacity.
+        OEIS link: https://oeis.org/A249205
         CAUTION: Inefficient to calculate, but not as much as the others.
         '''
         return mp.power(mp.gamma(0.25), 2) / (4 * mp.power(mp.pi, 1.5))
@@ -704,6 +791,7 @@ class Constants:
     def T_Pi() -> mpf:
         '''
         taniguchi constant, a kind of euler product.
+        OEIS link: https://oeis.org/A175639
         WARNING: This is not a calculation!
         ''' # TODO need primes again...
         return mp.mpf('0.67823449191739197803')

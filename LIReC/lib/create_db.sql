@@ -5,7 +5,7 @@ CREATE DATABASE test -- Set the name of your new database here
 ;
 
 -- Use DB, name here must match the name you used in line 2!
-\c test 
+\c test
 
 -- Add module for uuid
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -65,7 +65,7 @@ CREATE TABLE relation_audit (
 );
 
 -- based on https://www.postgresql.org/docs/current/plpgsql-trigger.html
-CREATE OR REPLACE FUNCTION process_relation_audit2() RETURNS TRIGGER AS $relation_audit$
+CREATE OR REPLACE FUNCTION process_relation_audit() RETURNS TRIGGER AS $relation_audit$
 	BEGIN
 		IF (TG_OP = 'INSERT') THEN
 			INSERT INTO relation_audit SELECT NEW.relation_id, 'I', now(), user;
