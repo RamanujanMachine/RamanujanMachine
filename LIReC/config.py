@@ -1,5 +1,13 @@
 configuration = {
     'pool_size': 10,
+    'auto_pcf': {
+        'depth': 10000,
+        'precision': 50,
+        'force_fr': True,
+        'timeout_sec': 60,
+        'timeout_check_freq': 1000,
+        'no_exception': False
+    },
     'jobs_to_run': {
         'poly_pslq': {
             'args': { 'degree': (2, 1), 'bulk': 1000, 'subdivide': {
