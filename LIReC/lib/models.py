@@ -37,6 +37,8 @@ class PcfCanonicalConstant(Base):
     )
 
     const_id = Column(ForeignKey('constant.const_id'), primary_key=True)
+    original_a = Column(ARRAY(Numeric()))
+    original_b = Column(ARRAY(Numeric()))
     P = Column(ARRAY(Numeric()), nullable=False)
     Q = Column(ARRAY(Numeric()), nullable=False)
     last_matrix = Column(Text())
