@@ -33,20 +33,22 @@ class LIReC_DB:
     def cfs(self):
         return self.session.query(models.PcfCanonicalConstant).order_by(models.PcfCanonicalConstant.const_id)
 
-    def add_pcf_canonical(self, canonical_form_numerator: List[int], canonical_form_denominator: List[int],
-                                calculation : PCFCalc or None = None) -> models.PcfCanonicalConstant:
+    def add_pcf_canonical(self, pcf: PCF, calculation : PCFCalc or None = None) -> models.PcfCanonicalConstant:
         # TODO implement add_pcf_canonicals that uploads multiple at a time
-        pcf = models.PcfCanonicalConstant()
-        pcf.base = models.Constant()
-        pcf.P = canonical_form_numerator
-        pcf.Q = canonical_form_denominator
+        const = models.PcfCanonicalConstant()
+        const.base = models.Constant()
+        const.original_a = [int(coef) for coef in pcf.a.all_coeffs()]
+        const.original_b = [int(coef) for coef in pcf.b.all_coeffs()]
+        top, bot = pcf.get_canonical_form()
+        const.P = [int(coef) for coef in top.all_coeffs()]
+        const.Q = [int(coef) for coef in bot.all_coeffs()]
         if calculation:
-            pcf.base.value = calculation.value
-            pcf.base.precision = calculation.precision
-            pcf.last_matrix = reduce(lambda a,b: a+','+str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
-            pcf.depth = calculation.depth
-            pcf.convergence = calculation.convergence
-        self.session.add(pcf)
+            const.base.value = calculation.value
+            const.base.precision = calculation.precision
+            const.last_matrix = reduce(lambda a,b: a+','+str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
+            const.depth = calculation.depth
+            const.convergence = calculation.convergence
+        self.session.add(const)
         
         # yes, commit and check error is better than preemptively checking if unique and then adding,
         # since the latter is two SQL commands instead of one, which breaks on "multithreading" for example
@@ -75,10 +77,9 @@ class LIReC_DB:
             raise PCFCalc.IllegalPCFException('Natural root in partial numerator ensures trivial convergence to a rational number.')
         if any(r for r in pcf.b.all_roots() if not isinstance(r, Rational)):
             raise PCFCalc.IllegalPCFException('Irrational or Complex roots in partial numerator are not allowed.')
-        top, bot = pcf.get_canonical_form()
         #calculation = LIReC_DB.calc_pcf(pcf, depth) if depth else None
         # By default the coefs are sympy.core.numbers.Integer but sql need them to be integers
-        return self.add_pcf_canonical([int(coef) for coef in top.all_coeffs()], [int(coef) for coef in bot.all_coeffs()], PCFCalc(pcf).run(**configuration['auto_pcf']))
+        return self.add_pcf_canonical(pcf, PCFCalc(pcf).run(**configuration['auto_pcf']))
     
     def add_pcfs(self, pcfs: Generator[PCF, None, None]) -> Tuple[List[models.PcfCanonicalConstant], Dict[str, List[PCF]]]:
         """
