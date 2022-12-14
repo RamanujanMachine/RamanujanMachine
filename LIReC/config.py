@@ -26,8 +26,8 @@ configuration = {
 db_configuration = {
     'host': 'database-1.c1keieal025m.us-east-2.rds.amazonaws.com',
     'port': 5432,
-    'user': '',
-    'passwd': '',
+    'user': 'spectator_public',
+    'passwd': 'helloworld123',
     'name': 'lirec-main'
 }
 

@@ -172,7 +172,7 @@ def run_query(subdivide=None, degree=None, bulk=None):
         return []
     bulk = bulk if bulk else BULK_SIZE
     getLogger(LOGGER_NAME).debug(f'Starting to check relations, using bulk size {bulk}')
-    db= db_access.LIReC_DB()
+    db = db_access.LIReC_DB()
     results = [db.session.query(eval(f'models.{const_type}Constant')).join(models.Constant).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
     # apparently postgresql is really slow with the order_by(random) part,
     # but on 1000 CFs it only takes 1 second, which imo is worth it since

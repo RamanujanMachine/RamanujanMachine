@@ -36,6 +36,20 @@ CREATE TABLE pcf_canonical_constant (
 	UNIQUE("P", "Q")
 );
 
+CREATE TABLE derived_constant (
+    const_id UUID NOT NULL PRIMARY KEY REFERENCES constant (const_id),
+	family VARCHAR NOT NULL,
+	args JSONB NOT NULL
+);
+
+CREATE TABLE pcf_family (
+    family_id UUID NOT NULL DEFAULT uuid_generate_v1() PRIMARY KEY,
+	a VARCHAR NOT NULL,
+	b VARCHAR NOT NULL,
+	
+	UNIQUE(a, b)
+);
+
 CREATE TABLE scan_history (
     const_id UUID NOT NULL PRIMARY KEY REFERENCES constant (const_id),
 	algorithm VARCHAR NOT NULL,
@@ -53,34 +67,44 @@ CREATE TABLE relation (
 
 CREATE TABLE constant_in_relation (
 	const_id UUID NOT NULL REFERENCES constant (const_id) ON UPDATE CASCADE ON DELETE CASCADE,
-	relation_id UUID NOT NULL REFERENCES relation (relation_id) ON UPDATE CASCADE,
+	relation_id UUID NOT NULL REFERENCES relation (relation_id) ON UPDATE CASCADE ON DELETE CASCADE,
 	CONSTRAINT const_relation_pkey PRIMARY KEY (const_id, relation_id)
 );
 
-CREATE TABLE relation_audit (
-	relation_id UUID NOT NULL REFERENCES relation (relation_id),
-	operation CHAR(1) NOT NULL,
-	stamp timestamp NOT NULL DEFAULT current_timestamp,
-	userid TEXT NOT NULL
-);
+REVOKE ALL ON SCHEMA public FROM PUBLIC; -- public is overprivileged yo
 
--- based on https://www.postgresql.org/docs/current/plpgsql-trigger.html
-CREATE OR REPLACE FUNCTION process_relation_audit() RETURNS TRIGGER AS $relation_audit$
-	BEGIN
-		IF (TG_OP = 'INSERT') THEN
-			INSERT INTO relation_audit SELECT NEW.relation_id, 'I', now(), user;
-		ELSIF (TG_OP = 'UPDATE') THEN
-			INSERT INTO relation_audit SELECT NEW.relation_id, 'U', now(), user;
-		ELSIF (TG_OP = 'DELETE') THEN
-			INSERT INTO relation_audit SELECT OLD.relation_id, 'D', now(), user;
-		END IF;
-		RETURN NULL;
-	END;
-$relation_audit$ LANGUAGE plpgsql SECURITY DEFINER;
+DROP ROLE IF EXISTS spectator;
+CREATE ROLE spectator WITH
+	NOLOGIN
+	NOSUPERUSER
+	INHERIT
+	NOCREATEDB
+	NOCREATEROLE
+	NOREPLICATION;
 
-CREATE TRIGGER relation_audit
-AFTER INSERT OR UPDATE OR DELETE ON relation
-	FOR EACH ROW EXECUTE FUNCTION process_relation_audit();
+GRANT SELECT ON constant TO spectator;
+GRANT SELECT ON constant_in_relation TO spectator;
+GRANT SELECT ON named_constant TO spectator;
+GRANT SELECT ON pcf_canonical_constant TO spectator;
+GRANT SELECT ON relation TO spectator;
+GRANT SELECT ON scan_history TO spectator;
+
+GRANT REFERENCES ON named_constant TO spectator;
+GRANT REFERENCES ON pcf_canonical_constant TO spectator;
+
+
+DROP ROLE IF EXISTS spectator_public;
+CREATE ROLE spectator_public WITH
+	LOGIN
+	NOSUPERUSER
+	INHERIT
+	NOCREATEDB
+	NOCREATEROLE
+	NOREPLICATION;
+
+GRANT spectator to spectator_public;
+ALTER USER spectator_public WITH PASSWORD 'helloworld123'; -- exploit amazon RDS forbidding changing passwords, using rds.restrict_password_commands parameter
+
 
 DROP ROLE IF EXISTS scout;
 CREATE ROLE scout WITH
@@ -91,25 +115,7 @@ CREATE ROLE scout WITH
 	NOCREATEROLE
 	NOREPLICATION;
 
-REVOKE ALL ON constant FROM scout;
-REVOKE ALL ON constant_in_relation FROM scout;
-REVOKE ALL ON named_constant FROM scout;
-REVOKE ALL ON pcf_canonical_constant FROM scout;
-REVOKE ALL ON relation FROM scout;
-REVOKE ALL ON relation_audit FROM scout;
-REVOKE ALL ON scan_history FROM scout;
-
-GRANT SELECT ON constant TO scout;
-GRANT SELECT ON constant_in_relation TO scout;
-GRANT SELECT ON named_constant TO scout;
-GRANT SELECT ON pcf_canonical_constant TO scout;
-GRANT SELECT ON relation TO scout;
--- no, you're not allowed to see the audits table >:|
-GRANT SELECT ON scan_history TO scout;
-
-GRANT REFERENCES ON named_constant TO scout;
-GRANT REFERENCES ON pcf_canonical_constant TO scout;
-
+GRANT spectator TO scout;
 GRANT INSERT ON constant_in_relation TO scout;
 GRANT INSERT ON relation TO scout;
 
@@ -126,6 +132,25 @@ CREATE ROLE pioneer WITH
 GRANT scout TO pioneer;
 GRANT INSERT ON constant TO pioneer;
 GRANT INSERT ON pcf_canonical_constant TO pioneer;
+GRANT INSERT ON derived_constant TO pioneer;
+GRANT INSERT ON pcf_family TO pioneer;
+
+
+DROP ROLE IF EXISTS janitor;
+CREATE ROLE janitor WITH
+	NOLOGIN
+	NOSUPERUSER
+	INHERIT
+	NOCREATEDB
+	NOCREATEROLE
+	NOREPLICATION;
+
+GRANT scout TO janitor;
+GRANT UPDATE ON constant TO janitor;
+GRANT UPDATE ON pcf_canonical_constant TO pioneer;
+GRANT UPDATE ON derived_constant TO pioneer;
+GRANT UPDATE ON relation TO janitor;
+GRANT DELETE ON relation TO janitor;]
 
 -- Then when someone new wants to contribute, run code similar to this:
 -- CREATE ROLE [username] LOGIN;

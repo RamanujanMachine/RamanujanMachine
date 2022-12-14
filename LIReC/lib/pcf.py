@@ -22,12 +22,12 @@ class PCF:
     a: Poly
     b: Poly
 
-    def __init__(self: PCF, a_coeffs: List[int], b_coeffs: List[int], auto_deflate: bool = True) -> None:
+    def __init__(self: PCF, a: Poly or List[int], b: Poly or List[int], auto_deflate: bool = True) -> None:
         '''
         a_coeffs, b_coeffs: lists of integers from the largest power to the smallest power.
         '''
-        self.a = Poly(a_coeffs, n)
-        self.b = Poly(b_coeffs, n)
+        self.a = a if isinstance(a, Poly) else Poly(a, n)
+        self.b = b if isinstance(b, Poly) else Poly(b, n)
         if auto_deflate:
             self.deflate()
 

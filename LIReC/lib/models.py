@@ -46,6 +46,27 @@ class PcfCanonicalConstant(Base):
     base = relationship('Constant', lazy='subquery')
 
 
+class DerivedConstant(Base):
+    __tablename__ = 'derived_constant'
+
+    const_id = Column(ForeignKey('constant.const_id'), primary_key=True)
+    family = Column(String, nullable=False)
+    args = Column(JSONB(astext_type=Text()), nullable=False)
+    
+    base = relationship('Constant', lazy='subquery')
+
+
+class PcfFamily(Base):
+    __tablename__ = 'pcf_family'
+    __table_args__ = (
+        UniqueConstraint('a', 'b'),
+    )
+
+    family_id = Column(UUID, primary_key=True, server_default=text("uuid_generate_v1()"))
+    a = Column(String, nullable=False)
+    b = Column(String, nullable=False)
+
+
 class ScanHistory(Base):
     __tablename__ = 'scan_history'
 
@@ -60,8 +81,8 @@ class ScanHistory(Base):
 constant_in_relation_table = Table(
     "constant_in_relation",
     Base.metadata,
-    Column('const_id', ForeignKey('constant.const_id'), primary_key=True),
-    Column('relation_id', ForeignKey('relation.relation_id'), primary_key=True),
+    Column('const_id', ForeignKey('constant.const_id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
+    Column('relation_id', ForeignKey('relation.relation_id', onupdate='CASCADE', ondelete='CASCADE'), primary_key=True),
 )
 
 
@@ -77,12 +98,3 @@ class Relation(Base):
     time_added = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
     constants = relationship('Constant', secondary=constant_in_relation_table)
-
-
-class RelationAudit(Base):
-    __tablename__ = 'relation_audit'
-
-    relation_id = Column(ForeignKey('relation.relation_id'), primary_key=True)
-    operation = Column(CHAR(1), nullable=False)
-    stamp = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"), nullable=False)
-    userid = Column(Text(), nullable=False)

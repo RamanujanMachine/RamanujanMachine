@@ -1,8 +1,95 @@
+from functools import reduce
 import numpy as np
 import mpmath as mp
 from mpmath import mpf
-from decimal import Decimal, getcontext
+from operator import mul
+from sympy import Poly, Symbol, compose
 from typing import List
+from LIReC.lib.models import Constant, PcfFamily
+from LIReC.lib.pcf import *
+
+class DerivedConstants:
+
+    @staticmethod
+    def set_precision(prec: int = 4000) -> None:
+        '''
+        set the precision (in significant digits in base 10). shared with Constants
+        '''
+        mp.mp.dps = prec
+    
+    @staticmethod
+    def lerch(db, z, s, a):
+        '''
+        computes the lerch transcendent phi(z,s,a), see https://en.wikipedia.org/wiki/Lerch_zeta_function
+        '''
+        return mp.lerchphi(z, s, a)
+    
+    @staticmethod
+    def euler_pcf(db, base_roots, diffs, timeout_sec=0):
+        '''
+        computes the euler PCF defined by base_roots and diffs, with an optional timeout.
+        returns a PCFCalc.Result instead of an mp.mpf
+        p.s.: zigzagzeta is a special case of this
+        '''
+        if len(base_roots) != len(diffs):
+            raise Exception('base_roots and diffs must have same length')
+        n = Symbol('n')
+        h1 = reduce(mul, [n - r for r in base_roots])
+        h2 = reduce(mul, [n - r - d for r, d in zip(base_roots, diffs)])
+        return PCFCalc(PCF(Poly(h1 + compose(h2, n + 1)), Poly(-h1 * h2))).run(precision = mp.mp.dps, timeout_sec = timeout_sec)
+
+    @staticmethod
+    def pcf_family_instance(db, family_id, args, timeout_sec=0):
+        '''
+        evaluates the PCF from the given family, using the given arguments.
+        the string representation of the family's polynomials is expected to have its arguments as c0,c1,c2,c3,...
+        also not all arguments have to be present in both polynomials in the family.
+        returns a PCFCalc.Result instead of an mp.mpf
+        '''
+        family = db.session.query(PcfFamily).filter(PcfFamily.family_id == family_id).all()
+        if not any(family):
+            raise Exception(f'pcf family with id {family_id} not found')
+        family = family[0]
+        a = Poly(family.a).eval({f'c{i}': v for i, v in enumerate(args) if f'c{i}' in family.a})
+        b = Poly(family.b).eval({f'c{i}': v for i, v in enumerate(args) if f'c{i}' in family.b})
+        return PCFCalc(PCF(a, b)).run(precision = mp.mp.dps, timeout_sec = timeout_sec)
+
+    @staticmethod
+    def lwt1(db, aux, poly, start):
+        '''
+        computes the lindemann-weierstrass transcendental using the given auxillary function,
+        string representation of a bivariate polynomial poly(x,a), and initial guess for the root of poly(x,aux(x)).
+        the result is guaranteed to be transcendental iff the auxillary function is transcendental, and the result is nonzero.
+        see https://en.wikipedia.org/wiki/Lindemann%E2%80%93Weierstrass_theorem
+        '''
+        if aux not in mp.__dict__:
+            raise Exception(f'unrecognized auxillary function {aux}, must be implemented in mpmath')
+        poly = Poly(poly)
+        aux = mp.__dict__[aux]
+        return mp.findroot(lambda x : poly.eval({'x' : x, 'a' : aux(x)}), start)
+
+    @staticmethod
+    def gst(db, base: float or str, power: float or str):
+        '''
+        computes the gelfond-schneider transcendental base ** power. here, base and power can each
+        either be numeric values, or can be strings which represent const_ids in the database, which will be automatically queried
+        the result is guaranteed to be transcendental iff base is neither 0 nor 1, and power is irrational.
+        see https://en.wikipedia.org/wiki/Gelfond%E2%80%93Schneider_theorem
+        '''
+        if isinstance(base, str):
+            base_const = db.session.query(Constant).filter(Constant.const_id == base).all()
+            if not any(base_const):
+                raise Exception(f'constant with id {base} not found')
+            base = mp.mpf(str(base_const[0].value))
+        if isinstance(power, str):
+            power_const = db.session.query(Constant).filter(Constant.const_id == power).all()
+            if not any(power_const):
+                raise Exception(f'constant with id {power} not found')
+            power = mp.mpf(str(power_const[0].value))
+        return mp.mpf(base) ** power
+
+
+        
 
 # TODO use sympy for primes!
 # TODO consider using gosper's acceleration of series?
@@ -26,9 +113,8 @@ class Constants:
     @staticmethod
     def set_precision(prec: int = 4000) -> None:
         '''
-        set the precision (in significant digits in base 10).
+        set the precision (in significant digits in base 10). shared with DerivedConstants
         '''
-        getcontext().prec = prec # might be redundant...
         mp.mp.dps = prec
 
     @staticmethod

@@ -70,15 +70,15 @@ class LIReC_DB:
         raises IllegalPCFException if the pcf has natural roots or if its b_n has irrational roots.
         """
         if any(r for r in pcf.a.real_roots() if isinstance(r, Integer) and r > 0):
-            raise PcfCalc.IllegalPCFException('Natural root in partial denominator ensures divergence.')
+            raise PCFCalc.IllegalPCFException('Natural root in partial denominator ensures divergence.')
         if any(r for r in pcf.b.real_roots() if isinstance(r, Integer) and r > 0):
-            raise PcfCalc.IllegalPCFException('Natural root in partial numerator ensures trivial convergence to a rational number.')
+            raise PCFCalc.IllegalPCFException('Natural root in partial numerator ensures trivial convergence to a rational number.')
         if any(r for r in pcf.b.all_roots() if not isinstance(r, Rational)):
-            raise PcfCalc.IllegalPCFException('Irrational or Complex roots in partial numerator are not allowed.')
+            raise PCFCalc.IllegalPCFException('Irrational or Complex roots in partial numerator are not allowed.')
         top, bot = pcf.get_canonical_form()
         #calculation = LIReC_DB.calc_pcf(pcf, depth) if depth else None
         # By default the coefs are sympy.core.numbers.Integer but sql need them to be integers
-        return self.add_pcf_canonical([int(coef) for coef in top.all_coeffs()], [int(coef) for coef in bot.all_coeffs()], PcfCalc(pcf).run(**configuration['auto_pcf']))
+        return self.add_pcf_canonical([int(coef) for coef in top.all_coeffs()], [int(coef) for coef in bot.all_coeffs()], PCFCalc(pcf).run(**configuration['auto_pcf']))
     
     def add_pcfs(self, pcfs: Generator[PCF, None, None]) -> Tuple[List[models.PcfCanonicalConstant], Dict[str, List[PCF]]]:
         """
@@ -93,9 +93,9 @@ class LIReC_DB:
                 if not isinstance(e.orig, UniqueViolation):
                     raise e # otherwise already in LIReC
                 unsuccessful['Already exist'] += [pcf]
-            except PcfCalc.NoFRException:
+            except PCFCalc.NoFRException:
                 unsuccessful['No FR'] += [pcf]
-            except PcfCalc.IllegalPCFException:
+            except PCFCalc.IllegalPCFException:
                 unsuccessful['Illegal'] += [pcf]
         return successful, unsuccessful
     
@@ -109,9 +109,9 @@ class LIReC_DB:
             except IntegrityError as e:
                 if not isinstance(e.orig, UniqueViolation):
                     raise e # otherwise already in LIReC
-            except PcfCalc.NoFRException:
+            except PCFCalc.NoFRException:
                 pass
-            except PcfCalc.IllegalPCFException:
+            except PCFCalc.IllegalPCFException:
                 pass
     
     @staticmethod
