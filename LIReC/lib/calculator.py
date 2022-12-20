@@ -61,6 +61,8 @@ class DerivedConstants:
         string representation of a bivariate polynomial poly(x,a), and initial guess for the root of poly(x,aux(x)).
         the result is guaranteed to be transcendental iff the auxillary function is transcendental, and the result is nonzero.
         see https://en.wikipedia.org/wiki/Lindemann%E2%80%93Weierstrass_theorem
+        
+        raises an exception if aux is not a recognized function
         '''
         if aux not in mp.__dict__:
             raise Exception(f'unrecognized auxillary function {aux}, must be implemented in mpmath')
@@ -75,6 +77,8 @@ class DerivedConstants:
         either be numeric values, or can be strings which represent const_ids in the database, which will be automatically queried
         the result is guaranteed to be transcendental iff base is neither 0 nor 1, and power is irrational.
         see https://en.wikipedia.org/wiki/Gelfond%E2%80%93Schneider_theorem
+        
+        raises an exception if either base or power are strings which aren't valid const_ids in the database
         '''
         if isinstance(base, str):
             base_const = db.session.query(Constant).filter(Constant.const_id == base).all()

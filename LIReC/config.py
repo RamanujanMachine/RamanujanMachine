@@ -10,7 +10,8 @@ configuration = {
     },
     'jobs_to_run': {
         'poly_pslq': {
-            'args': { 'degree': (2, 1), 'bulk': 1000, 'subdivide': {
+            'args': { 'degree': (2, 1), 'bulk': 1000, 'filters': {
+                'min_precision': 50,
                 'PcfCanonical': { 'count': 1, 'balanced_only': True },
                 'Named': { 'count': 2 }
                 }

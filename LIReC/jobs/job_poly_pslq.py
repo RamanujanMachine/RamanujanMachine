@@ -12,11 +12,13 @@ Configured as such:
 'bulk': How many of each "bulk type" to scan. A class of constants is
         considered a bulk type iff we expect to have a lot of it in LIReC
         (specified by whether or not it's in the BULK_TYPES array).
-'subdivide': A dictionary that specifies which kinds of constants to use to look for relations. Currently supported:
+'filters': A dictionary that specifies which kinds of constants to use to look for relations. Currently supported:
+    global filters: 'min_precision' specifies the minimal precision value of constants that will be used.
     'PcfCanonical': 'count' specifies how many pcf's at a time, 'balanced_only' filters to only PCFs of balanced degrees if set to True.
     'Named': 'count' specifies how many named constants at a time.
 '''
 import mpmath as mp
+from numpy import transpose
 from time import time
 from sqlalchemy import Integer, or_, Float
 from sqlalchemy.orm.attributes import flag_modified
@@ -34,7 +36,7 @@ from LIReC.lib import models, db_access
 mp.mp.dps = 2000
 
 EXECUTE_NEEDS_ARGS = True
-DEBUG_PRINT_PRECISION_RATIOS = True
+DEBUG_PRINT_PRECISION_RATIOS = False
 
 ALGORITHM_NAME = 'POLYNOMIAL_PSLQ'
 LOGGER_NAME = 'job_logger'
@@ -51,11 +53,13 @@ FILTERS = [
         #or_(models.Cf.scanned_algo == None, ~models.Cf.scanned_algo.has_key(ALGORITHM_NAME)) # TODO USE scan_history TABLE!!!
         ]
 
-def get_filters(subdivide, const_type):
+def get_filters(filters, const_type):
     filters = list(FILTERS) # copy!
+    if 'min_precision' in filters:
+        filters += [models.Constant.precision >= filters['min_precision']]
     if const_type == 'PcfCanonical':
         filters += [models.PcfCanonicalConstant.convergence != models.PcfConvergence.RATIONAL.value]
-        if subdivide['PcfCanonical'].get('balanced_only', False):
+        if filters['PcfCanonical'].get('balanced_only', False):
             filters += [func.cardinality(models.PcfCanonicalConstant.P) == func.cardinality(models.PcfCanonicalConstant.Q)]
 
     return filters 
@@ -82,37 +86,37 @@ def poly_check(consts, exponents):
 
 def compress_relation(result, consts, exponents, degree):
     # will need to use later, so evaluating into lists
-    getLogger(LOGGER_NAME).info(f'Original relation is {result}')
+    getLogger(LOGGER_NAME).debug(f'Original relation is {result}')
     
-    indices_per_var = list(list(i[0] for i in enumerate(exponents) if i[1][j]) for j in range(len(consts)))
-    redundant_vars = list(i[0] for i in enumerate(indices_per_var) if not any(result[j] for j in i[1]))
+    indices_per_var = list(list(i for i, e in enumerate(exponents) if e[j]) for j in range(len(consts)))
+    redundant_vars = list(i for i, e in enumerate(indices_per_var) if not any(result[j] for j in e))
     redundant_coeffs = set()
-    for redundant_var in redundant_vars: # remove redundant variables
-        getLogger(LOGGER_NAME).info(f'Removing redundant variable #{redundant_var}')
+    for redundant_var in sorted(redundant_vars, reverse=True): # remove redundant variables
+        getLogger(LOGGER_NAME).debug(f'Removing redundant variable #{redundant_var}')
         redundant_coeffs |= set(indices_per_var[redundant_var])
-        consts = consts[:redundant_var] + consts[redundant_var + 1:]
+        del consts[redundant_var]
     
     polydegree, innerdegree = degree # remove redundant degrees
-    indices_per_polydegree = list(list(i[0] for i in enumerate(exponents) if sum(i[1].values())==j) for j in range(polydegree+1))
-    redundant_polydegrees = list(i[0] for i in enumerate(indices_per_polydegree) if not any(result[j] for j in i[1]))
+    indices_per_polydegree = list(list(i for i, e in enumerate(exponents) if sum(e.values()) == j) for j in range(polydegree+1))
+    redundant_polydegrees = list(i for i, e in enumerate(indices_per_polydegree) if not any(result[j] for j in e))
     redundant_polydegrees = list(takewhile(lambda x: sum(x) == polydegree, enumerate(sorted(redundant_polydegrees, reverse=True))))
     if redundant_polydegrees:
         polydegree = redundant_polydegrees[-1][1] - 1
     redundant_coeffs.update(*indices_per_polydegree[polydegree+1:])
     
-    indices_per_innerdegree = list(list(i[0] for i in enumerate(exponents) if max(i[1].values(), default=0)==j) for j in range(innerdegree+1))
-    redundant_innerdegrees = list(i[0] for i in enumerate(indices_per_innerdegree) if not any(result[j] for j in i[1]))
+    indices_per_innerdegree = list(list(i for i, e in enumerate(exponents) if max(e.values(), default=0) == j) for j in range(innerdegree+1))
+    redundant_innerdegrees = list(i for i, e in enumerate(indices_per_innerdegree) if not any(result[j] for j in e))
     redundant_innerdegrees = list(takewhile(lambda x: sum(x) == innerdegree, enumerate(sorted(redundant_innerdegrees, reverse=True))))
     if redundant_innerdegrees:
         innerdegree = redundant_innerdegrees[-1][1] - 1
     redundant_coeffs.update(*indices_per_innerdegree[innerdegree+1:])
     
     degree = [polydegree, innerdegree]
-    getLogger(LOGGER_NAME).info(f'True degree is {degree}')
+    getLogger(LOGGER_NAME).debug(f'True degree is {degree}')
     for i in sorted(redundant_coeffs, reverse=True):
         del result[i]
     
-    getLogger(LOGGER_NAME).info(f'Compressed relation is {result}')
+    getLogger(LOGGER_NAME).debug(f'Compressed relation is {result}')
 
     return result, consts, degree
 
@@ -153,60 +157,64 @@ def check_consts(consts, exponents, degree):
     true_prec = min(true_prec, MAX_PREC)
     return subrelations if subrelations else [models.Relation(relation_type=ALGORITHM_NAME, details=new_degree+result, precision=int(true_prec), constants=[c.base for c in new_consts])]
 
-def transpose(l):
-    return [[l[j][i] for j in range(len(l))] for i in range(len(l[0]))] if l else [[]]
+def get_const_class(const_type):
+    name = const_type + 'Constant'
+    if name not in models.__dict__:
+        raise ValueError(f'Unknown constant type {const_type}')
+    return models.__dict__[name]
 
 def get_consts_from_query(const_type, query_data):
-    return query_data[[i for i in range(len(query_data)) if isinstance(query_data[i][0], eval(f'models.{const_type}Constant'))][0]]
+    const_type = get_const_class(const_type)
+    return query_data[[i for i in range(len(query_data)) if isinstance(query_data[i][0], const_type)][0]]
 
-def get_consts(const_type, db, subdivide):
+def get_consts(const_type, db, filters):
     if const_type == 'Named':
-        return db.constants.join(models.Constant).filter(models.Constant.value.isnot(None))
+        return db.constants.join(models.Constant).filter(*get_filters(filters, const_type))
 
-def run_query(subdivide=None, degree=None, bulk=None):
+def run_query(filters=None, degree=None, bulk=None):
     fileConfig('LIReC/logging.config', defaults={'log_filename': 'pslq_const_manager'})
-    if not subdivide:
+    if not filters:
         return []
-    bulk_types = set(subdivide.keys()) & BULK_TYPES
+    bulk_types = set(filters.keys()) & BULK_TYPES
     if not bulk_types:
         return []
     bulk = bulk if bulk else BULK_SIZE
     getLogger(LOGGER_NAME).debug(f'Starting to check relations, using bulk size {bulk}')
     db = db_access.LIReC_DB()
-    results = [db.session.query(eval(f'models.{const_type}Constant')).join(models.Constant).filter(*get_filters(subdivide, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
+    results = [db.session.query(get_const_class(const_type)).join(models.Constant).filter(*get_filters(filters, const_type)).order_by(func.random()).limit(bulk).all() for const_type in bulk_types]
     # apparently postgresql is really slow with the order_by(random) part,
     # but on 1000 CFs it only takes 1 second, which imo is worth it since
     # that allows us more variety in testing the CFs...
     # TODO what to do if results is unintentionally empty?
     db.session.close()
     getLogger(LOGGER_NAME).info(f'size of batch is {len(results) * bulk}')
-    return transpose(results) # so pool_handler can correctly divide among the sub-processes
+    return transpose(results).tolist() # so pool_handler can correctly divide among the sub-processes
 
-def execute_job(query_data, subdivide=None, degree=None, bulk=None, manual=False):
+def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
     fileConfig('LIReC/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
-    if not subdivide:
-        getLogger(LOGGER_NAME).error('Nothing to do! Aborting...')
+    if not filters:
+        getLogger(LOGGER_NAME).error('No filters found! Aborting...')
         return 0 # this shouldn't happen unless pool_handler changes, so just in case...
-    keys = subdivide.keys()
+    keys = filters.keys()
     for const_type in keys:
         if const_type not in SUPPORTED_TYPES:
             msg = f'Unsupported constant type {const_type} will be ignored! Must be one of {SUPPORTED_TYPES}.'
             print(msg)
             getLogger(LOGGER_NAME).warn(msg)
-            del subdivide[const_type]
-        elif 'count' not in subdivide[const_type]:
-            subdivide[const_type]['count'] = DEFAULT_CONST_COUNT
-    total_consts = sum(c['count'] for c in subdivide.values())
+            del filters[const_type]
+        elif 'count' not in filters[const_type]:
+            filters[const_type]['count'] = DEFAULT_CONST_COUNT
+    total_consts = sum(c['count'] for c in filters.values())
     degree = degree if degree else DEFAULT_DEGREE
-    getLogger(LOGGER_NAME).info(f'checking against {total_consts} constants at a time, subdivided into {({k : subdivide[k]["count"] for k in subdivide})}, using degree-{degree} relations')
+    getLogger(LOGGER_NAME).info(f'checking against {total_consts} constants at a time, subdivided into {({k : filters[k]["count"] for k in filters})}, using degree-{degree} relations')
     if degree[0] > total_consts * degree[1]:
         degree = (total_consts * degree[1], degree[1])
         getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
     
-    query_data = transpose(query_data)
+    query_data = transpose(query_data).tolist()
     try:
         db = db_access.LIReC_DB()
-        subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db, subdivide), subdivide[const_type]['count']) for const_type in subdivide]
+        subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db, filters), filters[const_type]['count']) for const_type in filters]
         exponents = get_exponents(degree, total_consts)
         
         old_relations = db.session.query(models.Relation).all()
