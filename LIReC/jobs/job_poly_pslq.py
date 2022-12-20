@@ -54,15 +54,17 @@ FILTERS = [
         ]
 
 def get_filters(filters, const_type):
-    filters = list(FILTERS) # copy!
-    if 'min_precision' in filters:
-        filters += [models.Constant.precision >= filters['min_precision']]
+    filter_list = list(FILTERS) # copy!
+    if 'global' in filters:
+        global_filters = filters['global']
+        if 'min_precision' in global_filters:
+            filter_list += [models.Constant.precision >= global_filters['min_precision']]
     if const_type == 'PcfCanonical':
-        filters += [models.PcfCanonicalConstant.convergence != models.PcfConvergence.RATIONAL.value]
+        filter_list += [models.PcfCanonicalConstant.convergence != models.PcfConvergence.RATIONAL.value]
         if filters['PcfCanonical'].get('balanced_only', False):
-            filters += [func.cardinality(models.PcfCanonicalConstant.P) == func.cardinality(models.PcfCanonicalConstant.Q)]
+            filter_list += [func.cardinality(models.PcfCanonicalConstant.P) == func.cardinality(models.PcfCanonicalConstant.Q)]
 
-    return filters 
+    return filter_list 
 
 def poly_check(consts, exponents):
     mp.mp.dps = min(c.base.precision for c in consts)
@@ -191,30 +193,32 @@ def run_query(filters=None, degree=None, bulk=None):
     return transpose(results).tolist() # so pool_handler can correctly divide among the sub-processes
 
 def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
-    fileConfig('LIReC/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
-    if not filters:
-        getLogger(LOGGER_NAME).error('No filters found! Aborting...')
-        return 0 # this shouldn't happen unless pool_handler changes, so just in case...
-    keys = filters.keys()
-    for const_type in keys:
-        if const_type not in SUPPORTED_TYPES:
-            msg = f'Unsupported constant type {const_type} will be ignored! Must be one of {SUPPORTED_TYPES}.'
-            print(msg)
-            getLogger(LOGGER_NAME).warn(msg)
-            del filters[const_type]
-        elif 'count' not in filters[const_type]:
-            filters[const_type]['count'] = DEFAULT_CONST_COUNT
-    total_consts = sum(c['count'] for c in filters.values())
-    degree = degree if degree else DEFAULT_DEGREE
-    getLogger(LOGGER_NAME).info(f'checking against {total_consts} constants at a time, subdivided into {({k : filters[k]["count"] for k in filters})}, using degree-{degree} relations')
-    if degree[0] > total_consts * degree[1]:
-        degree = (total_consts * degree[1], degree[1])
-        getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
-    
-    query_data = transpose(query_data).tolist()
-    try:
+    try: # whole thing must be wrapped so it gets logged
+        global_filters = filters.get('global', {})
+        filters.pop('global', 0) # instead of del so we can silently dispose of global even if it doesn't exist
+        fileConfig('LIReC/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
+        if not filters:
+            getLogger(LOGGER_NAME).error('No filters found! Aborting...')
+            return 0 # this shouldn't happen unless pool_handler changes, so just in case...
+        keys = filters.keys()
+        for const_type in keys:
+            if const_type not in SUPPORTED_TYPES:
+                msg = f'Unsupported filter type {const_type} will be ignored! Must be one of {SUPPORTED_TYPES}.'
+                print(msg)
+                getLogger(LOGGER_NAME).warn(msg)
+                del filters[const_type]
+            elif 'count' not in filters[const_type]:
+                filters[const_type]['count'] = DEFAULT_CONST_COUNT
+        total_consts = sum(c['count'] for c in filters.values())
+        degree = degree if degree else DEFAULT_DEGREE
+        getLogger(LOGGER_NAME).info(f'checking against {total_consts} constants at a time, subdivided into {({k : filters[k]["count"] for k in filters})}, using degree-{degree} relations')
+        if degree[0] > total_consts * degree[1]:
+            degree = (total_consts * degree[1], degree[1])
+            getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
+        
+        query_data = transpose(query_data).tolist()
         db = db_access.LIReC_DB()
-        subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db, filters), filters[const_type]['count']) for const_type in filters]
+        subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db, {**filters, 'global':global_filters}), filters[const_type]['count']) for const_type in filters]
         exponents = get_exponents(degree, total_consts)
         
         old_relations = db.session.query(models.Relation).all()

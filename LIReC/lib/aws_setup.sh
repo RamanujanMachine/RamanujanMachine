@@ -9,3 +9,4 @@ sudo make altinstall
 python3.8 -V
 cd ..
 #sudo rm -r -f Python-* # up to you if you want cleanup or not
+#then need to run pip3.8 install -e . and then you're good to go!

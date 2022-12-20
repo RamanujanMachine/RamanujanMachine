@@ -1,4 +1,5 @@
 # coding: utf-8
+from enum import Enum
 from sqlalchemy import ARRAY, CHAR, Column, DateTime, Float, ForeignKey, Integer, Numeric, String, UniqueConstraint, text, Table
 from sqlalchemy.sql.sqltypes import BigInteger
 from sqlalchemy.types import Text
@@ -28,6 +29,14 @@ class NamedConstant(Base):
     artificial = Column(Integer, nullable=False, server_default=text("0"))
     
     base = relationship('Constant', lazy='subquery')
+
+
+class PcfConvergence(Enum):
+    ZERO_DENOM = 0 # now considered an illegal PCF
+    NO_FR = 1 # now considered an illegal PCF
+    INDETERMINATE_FR = 2
+    FR = 3
+    RATIONAL = 4
 
 
 class PcfCanonicalConstant(Base):

@@ -86,13 +86,10 @@ CREATE ROLE spectator WITH
 
 GRANT SELECT ON constant TO spectator;
 GRANT SELECT ON constant_in_relation TO spectator;
-GRANT SELECT ON named_constant TO spectator;
-GRANT SELECT ON pcf_canonical_constant TO spectator;
+GRANT SELECT, REFERENCES ON named_constant TO spectator;
+GRANT SELECT, REFERENCES ON pcf_canonical_constant TO spectator;
 GRANT SELECT ON relation TO spectator;
 GRANT SELECT ON scan_history TO spectator;
-
-GRANT REFERENCES ON named_constant TO spectator;
-GRANT REFERENCES ON pcf_canonical_constant TO spectator;
 
 
 DROP ROLE IF EXISTS spectator_public;
@@ -149,9 +146,9 @@ CREATE ROLE janitor WITH
 
 GRANT scout TO janitor;
 GRANT UPDATE ON constant TO janitor;
-GRANT UPDATE ON pcf_canonical_constant TO pioneer;
-GRANT UPDATE ON derived_constant TO pioneer;
-GRANT UPDATE ON relation TO janitor;
+GRANT UPDATE ON pcf_canonical_constant TO janitor;
+GRANT UPDATE ON derived_constant TO janitor;
+GRANT UPDATE, DELETE ON relation TO janitor;
 
 -- Then when someone new wants to contribute, run code similar to this:
 -- CREATE ROLE [username] LOGIN;
