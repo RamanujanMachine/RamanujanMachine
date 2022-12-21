@@ -74,7 +74,7 @@ if __name__ == '__main__':
                     print(f'Exception while fetching {const} from OEIS: {format_exc()}')
                 
         named_const.name = const
-        named_const.description = const_func.__doc__[:const_func.__doc__.index('.\n')]
+        named_const.description = const_func.__doc__[:const_func.__doc__.index('.\n')].lstrip()
         db.session.add(named_const)
     
     from mpmath import zeta

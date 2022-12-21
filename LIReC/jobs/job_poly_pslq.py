@@ -229,7 +229,7 @@ def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
         for consts in product(*subsets):
             consts = [c for t in consts for c in t] # need to flatten...
             if relation_is_new(consts, degree, old_relations):
-                getLogger(LOGGER_NAME).info(f'checking consts: {[c.const_id for c in consts]}')
+                getLogger(LOGGER_NAME).debug(f'checking consts: {[c.const_id for c in consts]}')
                 new_relations = check_consts(consts, exponents, degree)
                 if new_relations:
                     getLogger(LOGGER_NAME).info(f'Found relation(s)!')
