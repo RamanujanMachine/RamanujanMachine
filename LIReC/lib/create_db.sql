@@ -16,13 +16,14 @@ CREATE TABLE constant (
 	value NUMERIC,
 	precision INT,
 	time_added timestamp DEFAULT current_timestamp
+	priority INT NOT NULL DEFAULT 1
+	tweeted INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE named_constant (
     const_id UUID NOT NULL PRIMARY KEY REFERENCES constant (const_id),
 	name VARCHAR NOT NULL UNIQUE,
 	description VARCHAR,
-	artificial INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE pcf_canonical_constant (
@@ -65,6 +66,8 @@ CREATE TABLE relation (
 	details INT[] NOT NULL,
 	precision INT,
 	time_added timestamp DEFAULT current_timestamp
+	priority INT NOT NULL DEFAULT 1
+	tweeted INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE constant_in_relation (
@@ -88,6 +91,8 @@ GRANT SELECT ON constant TO spectator;
 GRANT SELECT ON constant_in_relation TO spectator;
 GRANT SELECT, REFERENCES ON named_constant TO spectator;
 GRANT SELECT, REFERENCES ON pcf_canonical_constant TO spectator;
+GRANT SELECT, REFERENCES ON derived_constant TO spectator;
+GRANT SELECT ON pcf_family TO spectator;
 GRANT SELECT ON relation TO spectator;
 GRANT SELECT ON scan_history TO spectator;
 
@@ -149,6 +154,21 @@ GRANT UPDATE ON constant TO janitor;
 GRANT UPDATE ON pcf_canonical_constant TO janitor;
 GRANT UPDATE ON derived_constant TO janitor;
 GRANT UPDATE, DELETE ON relation TO janitor;
+GRANT UPDATE, DELETE ON constant_in_relation TO janitor;
+
+
+DROP ROLE IF EXISTS twitterbot;
+CREATE ROLE twitterbot WITH
+	NOLOGIN
+	NOSUPERUSER
+	INHERIT
+	NOCREATEDB
+	NOCREATEROLE
+	NOREPLICATION;
+
+GRANT scout TO twitterbot;
+GRANT UPDATE (tweeted) ON constant TO twitterbot;
+GRANT UPDATE (tweeted) ON relation TO twitterbot;
 
 -- Then when someone new wants to contribute, run code similar to this:
 -- CREATE ROLE [username] LOGIN;

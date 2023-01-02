@@ -46,10 +46,9 @@ class DerivedConstants:
         also not all arguments have to be present in both polynomials in the family.
         returns a PCFCalc.Result instead of an mp.mpf
         '''
-        family = db.session.query(PcfFamily).filter(PcfFamily.family_id == family_id).all()
-        if not any(family):
+        family = db.session.query(PcfFamily).filter(PcfFamily.family_id == family_id).first()
+        if not family:
             raise Exception(f'pcf family with id {family_id} not found')
-        family = family[0]
         a = Poly(family.a).eval({f'c{i}': v for i, v in enumerate(args) if f'c{i}' in family.a})
         b = Poly(family.b).eval({f'c{i}': v for i, v in enumerate(args) if f'c{i}' in family.b})
         return PCFCalc(PCF(a, b)).run(precision = mp.mp.dps, timeout_sec = timeout_sec)
@@ -74,23 +73,32 @@ class DerivedConstants:
     def gst(db, base: float or str, power: float or str):
         '''
         computes the gelfond-schneider transcendental base ** power. here, base and power can each
-        either be numeric values, or can be strings which represent const_ids in the database, which will be automatically queried
+        either be numeric values, or can be strings which represent const_ids in the database, which will be automatically queried.
         the result is guaranteed to be transcendental iff base is neither 0 nor 1, and power is irrational.
         see https://en.wikipedia.org/wiki/Gelfond%E2%80%93Schneider_theorem
         
         raises an exception if either base or power are strings which aren't valid const_ids in the database
         '''
         if isinstance(base, str):
-            base_const = db.session.query(Constant).filter(Constant.const_id == base).all()
-            if not any(base_const):
+            base_const = db.session.query(Constant).filter(Constant.const_id == base).first()
+            if not base_const:
                 raise Exception(f'constant with id {base} not found')
-            base = mp.mpf(str(base_const[0].value))
+            base = mp.mpf(str(base_const.value))
         if isinstance(power, str):
-            power_const = db.session.query(Constant).filter(Constant.const_id == power).all()
-            if not any(power_const):
+            power_const = db.session.query(Constant).filter(Constant.const_id == power).first()
+            if not power_const:
                 raise Exception(f'constant with id {power} not found')
-            power = mp.mpf(str(power_const[0].value))
+            power = mp.mpf(str(power_const.value))
         return mp.mpf(base) ** power
+
+    @staticmethod
+    def func_value(db, func: str, args: List):
+        '''
+        computes func(*args), where func is a function implemented in mpmath.
+        '''
+        if funx not in mp.__dict__:
+            raise Exception(f'unrecognized function {func}, must be implemented in mpmath')
+        return func(*args)
 
 
         
