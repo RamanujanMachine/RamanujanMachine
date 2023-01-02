@@ -35,8 +35,16 @@ def set_tweeted(obj: Constant or Relation, auto_commit : bool = True) -> None:
     '''
     obj.tweeted = 1
     if auto_commit:
-        try:
-            _db.session.commit()
-        except Exception as e:
-            _db.session.rollback()
-            raise e
+        commit()
+
+def commit() -> None:
+    '''
+    Commits all changes to LIReC. Useful if you plan on calling set_tweeted with auto_commit = False.
+    
+    Since committing can take a while, calling set_tweeted() many times with auto_commit = True will probably take longer than calling with auto_commit = False, and then calling commit(). In any case, commit() must be called at some point to update LIReC.
+    '''
+    try:
+        _db.session.commit()
+    except Exception as e:
+        _db.session.rollback()
+        raise e
