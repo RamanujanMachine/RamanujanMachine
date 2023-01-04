@@ -43,9 +43,10 @@ class LIReC_DB:
         const.P = [int(coef) for coef in top.all_coeffs()]
         const.Q = [int(coef) for coef in bot.all_coeffs()]
         if calculation:
-            const.base.value = calculation.value
+            getcontext().prec = min(calculation.precision + 10, 16000)
+            const.base.value = Decimal(str(calculation.value.evalf(getcontext().prec)))
             const.base.precision = calculation.precision
-            const.last_matrix = reduce(lambda a,b: a+','+str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
+            const.last_matrix = reduce(lambda a, b: a + ',' + str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
             const.depth = calculation.depth
             const.convergence = calculation.convergence
         self.session.add(const)
@@ -127,12 +128,3 @@ class LIReC_DB:
         return a list of PCFs from the DB
         """
         return [PCF.from_canonical_form(c) for c in self.get_canonical_forms()]
-
-
-def main():
-    [print(pcf) for pcf in get_actual_pcfs_from_db()]
-    print("aa")
-
-
-if __name__ == "__main__":
-    main()

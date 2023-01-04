@@ -134,10 +134,10 @@ CREATE ROLE pioneer WITH
 	NOREPLICATION;
 
 GRANT scout TO pioneer;
-GRANT INSERT ON constant TO pioneer;
-GRANT INSERT ON pcf_canonical_constant TO pioneer;
-GRANT INSERT ON derived_constant TO pioneer;
-GRANT INSERT ON pcf_family TO pioneer;
+GRANT INSERT, UPDATE ON constant TO pioneer;
+GRANT INSERT, UPDATE ON pcf_canonical_constant TO pioneer;
+GRANT INSERT, UPDATE ON derived_constant TO pioneer;
+GRANT INSERT, UPDATE ON pcf_family TO pioneer;
 
 
 DROP ROLE IF EXISTS janitor;

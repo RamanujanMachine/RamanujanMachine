@@ -4,7 +4,7 @@ from decimal import Decimal, getcontext
 from enum import Enum
 import mpmath as mp
 import numpy as np
-from sympy import Poly, Symbol, gcd as sgcd, cancel
+from sympy import Poly, Symbol, Matrix, gcd as sgcd, cancel
 from time import time
 from typing import List, Tuple
 CanonicalForm = Tuple[List[int], List[int]]
@@ -119,20 +119,20 @@ class PCFCalc:
 
     a: Poly
     b: Poly
-    mat: mp.matrix
+    mat: Matrix
     depth: int
     
     def __init__(self: PCFCalc, pcf: PCF, prev: List[int] or None = None, depth: int = 0):
         self.a = pcf.a
         self.b = pcf.b
         #self.reduction = 1 # used to exist in the old code, not sure what use we have for this
-        self.mat = mp.matrix([prev[0:2], prev[2:4]] if prev else [[self.a(0), 1], [1, 0]])
+        self.mat = Matrix([prev[0:2], prev[2:4]] if prev else [[self.a(0), 1], [1, 0]])
         self.depth = depth
     
     def reduce(self: PCFCalc):
-        gcd = np.gcd.reduce(self.mat)
+        gcd = sgcd(*self.mat)
         #self.reduction *= gcd
-        self.mat /= mp.mpf(gcd)
+        self.mat /= gcd
     
     @property
     def value(self: PCFCalc):
@@ -162,11 +162,11 @@ class PCFCalc:
         and then will procedurally double the depth until the desired precision is obtained.
         
         Accepted kwargs: (others will be ignored)
-            'depth': Minimal depth to calculate to, defaults to 10000
+            'depth': Minimal depth to calculate to, defaults to 8192
             'precision': Minimal precision to obtain, defaults to 50
             'force_fr': Ensure the result has FR if possible (AKA keep going if INDETERMINATE_FR), defaults to True
             'timeout_sec': If nonzero, halt calculation after this many seconds and return whatever you got, no matter what. Defaults to 0
-            'timeout_check_freq': Only check for timeout every this many iterations. Defaults to 1000
+            'timeout_check_freq': Only check for timeout every this many iterations. Defaults to 1024
             'no_exception': Return exceptions (or PCFCalc.Result if possible) instead of raising them (see below). Defaults to False
         
         Exceptions:
@@ -183,10 +183,10 @@ class PCFCalc:
                 mat2 = mats.pop()
                 mats += [(mat1[0] * mat2[0], mat1[1] + mat2[1])]
             if force or orig - len(mats) > LOG_REDUCE_JUMP:
-                gcd = np.gcd.reduce(mats[-1][0])
-                mats[-1] = (mats[-1][0] / mp.mpf(gcd), mats[-1][1])
+                gcd = sgcd(*mats[-1][0])
+                mats[-1] = (mats[-1][0] / gcd, mats[-1][1])
             if force or orig - len(mats) > LOG_CALC_JUMP:
-                return mats, mp.log(mp.mpf(np.gcd(*mats[-1][0][0,:]))) / mp.mpf(self.depth) + self.a.degree() * (1 - mp.log(self.depth))
+                return mats, mp.log(sgcd(*mats[-1][0][0,:])) / self.depth + self.a.degree() * (1 - mp.log(self.depth))
             return mats, # this comma is not a typo! this becomes a 1-tuple
         
         DEFAULTS = {
@@ -194,18 +194,17 @@ class PCFCalc:
             'precision': 50,
             'force_fr': True,
             'timeout_sec': 0,
-            'timeout_check_freq': 1000,
+            'timeout_check_freq': 1024,
             'no_exception': False
         }
         kwargs = {**DEFAULTS, **kwargs}
-        getcontext().prec = 2000
         mp.mp.dps = 2000
         fr_list = []
         start = time()
         mats = [(self.mat, self.depth)]
         while self.depth < kwargs['depth']:
             self.depth += 1
-            res = combine(self, mats + [(mp.matrix([[self.a(self.depth), self.b(self.depth)], [1, 0]]), 1)])
+            res = combine(self, mats + [(Matrix([[self.a(self.depth), self.b(self.depth)], [1, 0]]), 1)])
             if len(res) > 1:
                 fr_list += [res[1]]
             mats = res[0]
@@ -255,12 +254,4 @@ class PCFCalc:
             if not kwargs['no_exception']:
                 raise ex
         
-        return PCFCalc.Result(Decimal(str(value)), 2000 if prec == mp.inf else int(prec), [int(x) for x in self.mat], self.depth, convergence.value)
-
-
-if __name__ == "__main__":
-    b = Poly([-1, 14, -84, 280, -560, 672, -448, 128, 0], n)
-    a = Poly([4, -56, 360, -1384, 3476, -5844, 6414, -4170, 1215], n)
-    mypcf = PCF(a.all_coeffs(), (b * a.compose(Poly(n + 1))).all_coeffs())
-    mypcf.deflate()
-    mypcf.moving_canonical_form()
+        return PCFCalc.Result(value, 99999 if prec == mp.inf else int(prec), [*self.mat], self.depth, convergence.value)
