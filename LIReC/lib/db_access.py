@@ -1,7 +1,5 @@
 from __future__ import annotations
 import logging
-import mpmath as mp
-import numpy as np
 from collections import namedtuple
 from decimal import Decimal, getcontext
 from functools import reduce

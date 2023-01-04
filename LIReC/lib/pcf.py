@@ -3,7 +3,6 @@ from collections import namedtuple
 from decimal import Decimal, getcontext
 from enum import Enum
 import mpmath as mp
-import numpy as np
 from sympy import Poly, Symbol, Matrix, gcd as sgcd, cancel
 from time import time
 from typing import List, Tuple
