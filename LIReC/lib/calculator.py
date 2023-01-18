@@ -90,17 +90,6 @@ class DerivedConstants:
                 raise Exception(f'constant with id {power} not found')
             power = mp.mpf(str(power_const.value))
         return mp.mpf(base) ** power
-
-    @staticmethod
-    def func_value(db, func: str, args: List):
-        '''
-        computes func(*args), where func is a function implemented in mpmath.
-        '''
-        if funx not in mp.__dict__:
-            raise Exception(f'unrecognized function {func}, must be implemented in mpmath')
-        return func(*args)
-
-
         
 
 # TODO use sympy for primes!

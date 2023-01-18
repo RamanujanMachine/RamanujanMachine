@@ -31,7 +31,7 @@ class LIReC_DB:
     def cfs(self):
         return self.session.query(models.PcfCanonicalConstant).order_by(models.PcfCanonicalConstant.const_id)
 
-    def add_pcf_canonical(self, pcf: PCF, calculation : PCFCalc or None = None) -> models.PcfCanonicalConstant:
+    def add_pcf_canonical(self, pcf: PCF, calculation: PCFCalc or None = None) -> models.PcfCanonicalConstant:
         # TODO implement add_pcf_canonicals that uploads multiple at a time
         const = models.PcfCanonicalConstant()
         const.base = models.Constant()
@@ -42,7 +42,7 @@ class LIReC_DB:
         const.Q = [int(coef) for coef in bot.all_coeffs()]
         if calculation:
             getcontext().prec = min(calculation.precision + 10, 16000)
-            const.base.value = Decimal(str(calculation.value.evalf(getcontext().prec)))
+            const.base.value = Decimal(str(calculation.value)))
             const.base.precision = calculation.precision
             const.last_matrix = reduce(lambda a, b: a + ',' + str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
             const.depth = calculation.depth
