@@ -16,6 +16,7 @@ setup(
     packages=['ramanujan'],
     install_requires=[
         'cycler>=0.10.0',
+        'gmpy2>=2.1.5',
         'kiwisolver>=1.1.0',
         'matplotlib>=3.3.3',
         'mpmath>=1.2.1',

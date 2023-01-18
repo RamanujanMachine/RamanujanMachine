@@ -1,9 +1,10 @@
 from __future__ import annotations
 from collections import namedtuple
-from decimal import Decimal, getcontext
 from enum import Enum
+import gmpy2
+from gmpy2 import mpz, xmpz, mpq
 import mpmath as mp
-from sympy import Poly, Symbol, Matrix, gcd as sgcd, cancel
+from sympy import Poly, Symbol, gcd as sgcd, cancel
 from time import time
 from typing import List, Tuple
 CanonicalForm = Tuple[List[int], List[int]]
@@ -113,37 +114,83 @@ class PCFCalc:
 
     class NoFRException(Exception):
         pass
+
+    class Util:
+    
+        @staticmethod
+        def mult(A: List[List], B: List[List]):
+            # yes it's faster to manually multiply than use numpy for instance!
+            return [[mpz(A[0][0] * B[0][0] + A[0][1] * B[1][0]), mpz(A[0][0] * B[0][1] + A[0][1] * B[1][1])],
+                    [mpz(A[1][0] * B[0][0] + A[1][1] * B[1][0]), mpz(A[1][0] * B[0][1] + A[1][1] * B[1][1])]]
+        
+        @staticmethod
+        def poly_eval(poly: List, n):
+            # current fastest method, poly must be coefficients in increasing order of exponent
+            # P.S.: if you're curious and don't feel like looking it up, the difference between
+            # mpz and xmpz is that xmpz is mutable, so in-place operations are faster
+            c = xmpz(1)
+            res = xmpz(0)
+            for coeff in poly:
+                res += coeff * c
+                c *= n
+            return mpz(res)
+        
+        @staticmethod
+        def div_mat(mat, x) -> List[List]:
+            return [[mat[0][0] // x, mat[0][1] // x],[mat[1][0] // x, mat[1][1] // x]]
+        
+        @staticmethod
+        def as_mpf(q: mpq) -> mp.mpf:
+            return mp.mpf(q.numerator) / mp.mpf(q.denominator)
+        
+        @staticmethod
+        def combine(self: PCFCalc, mats, force: bool = False):
+            # technically it's not necessary to return mats since everything is in-place
+            # operations, but just in case one day a non-in-place operation is added...
+            orig = len(mats)
+            while len(mats) > 1 and (force or mats[-1][1] >= mats[-2][1]):
+                mat1 = mats.pop()
+                mat2 = mats.pop()
+                mats += [(PCFCalc.Util.mult(mat1[0], mat2[0]), mat1[1] + mat2[1])]
+            if force or orig - len(mats) > LOG_REDUCE_JUMP:
+                gcd = gmpy2.gcd(*[x for row in mats[-1][0] for x in row])
+                mats[-1] = (PCFCalc.Util.div_mat(mats[-1][0], gcd), mats[-1][1])
+            if force or orig - len(mats) > LOG_CALC_JUMP:
+                return mats, gmpy2.log(gmpy2.gcd(*mats[-1][0][0])) / self.depth + (len(self.a) - 1) * (1 - gmpy2.log(self.depth))
+            return mats, # this comma is not a typo! this becomes a 1-tuple
     
     Result = namedtuple('Result', ['value', 'precision', 'last_matrix', 'depth', 'convergence'])
 
-    a: Poly
-    b: Poly
-    mat: Matrix
+    a: List[mpz]
+    b: List[mpz]
+    mat: List[List[mpz]]
     depth: int
     
     def __init__(self: PCFCalc, pcf: PCF, prev: List[int] or None = None, depth: int = 0):
-        self.a = pcf.a
-        self.b = pcf.b
-        #self.reduction = 1 # used to exist in the old code, not sure what use we have for this
-        self.mat = Matrix([prev[0:2], prev[2:4]] if prev else [[self.a(0), 1], [1, 0]])
+        # Util needs the coefficients in increasing order of exponent, not decreasing like all_coeffs gives    
+        self.a = [mpz(x) for x in reversed(pcf.a.all_coeffs())]
+        self.b = [mpz(x) for x in reversed(pcf.b.all_coeffs())]
+        #self.reduction = xmpz(1) # used to exist in the old code, not sure what use we have for this
+        self.mat = [prev[0:2], prev[2:4]] if prev else [[PCFCalc.Util.poly_eval(self.a, 0), 1], [1, 0]]
         self.depth = depth
     
-    def reduce(self: PCFCalc):
-        gcd = sgcd(*self.mat)
+    def reduce(self: PCFCalc) -> None:
+        gcd = gmpy2.gcd(*[x for row in self.mat for x in row])
         #self.reduction *= gcd
-        self.mat /= gcd
+        self.mat = PCFCalc.Util.div_mat(self.mat, gcd)
     
     @property
-    def value(self: PCFCalc):
-        return self.mat[0,0] / self.mat[0,1]
+    def value(self: PCFCalc) -> mpq:
+        return mpq(self.mat[0][0], self.mat[0][1])
     
     @property
-    def precision(self: PCFCalc):
-        return mp.floor(-mp.log10(abs(self.value - self.mat[1,0] / self.mat[1,1]))) if all(self.mat[:,1]) else -mp.inf
+    def precision(self: PCFCalc) -> gmpy2.mpfr:
+        return gmpy2.floor(-gmpy2.log10(abs(self.value - mpq(self.mat[1][0], self.mat[1][1])))) if all([self.mat[0][1], self.mat[1][1]]) else -gmpy2.inf()
     
     def check_convergence(self: PCFCalc, fr_list) -> PCFCalc.Convergence:
-        p, q = self.mat[0,:]
-        val = p / q
+        val = self.value
+        p = val.numerator
+        val = PCFCalc.Util.as_mpf(val)
         if mp.almosteq(p, 0) or mp.almosteq(val, 0) or mp.pslq([val, 1], tol=mp.power(10, -100)):
             return PCFCalc.Convergence.RATIONAL
         
@@ -175,18 +222,6 @@ class PCFCalc:
         # P.S.: The code here is in fact similar to enumerators.FREnumerator.check_for_fr, but
         # the analysis we're doing here is both more delicate (as we allow numerically-indeterminate PCFs),
         # and also less redundant (since we also want the value of the PCF instead of just discarding it for instance)
-        def combine(self: PCFCalc, mats, force: bool = False):
-            orig = len(mats)
-            while len(mats) > 1 and (force or mats[-1][1] >= mats[-2][1]):
-                mat1 = mats.pop()
-                mat2 = mats.pop()
-                mats += [(mat1[0] * mat2[0], mat1[1] + mat2[1])]
-            if force or orig - len(mats) > LOG_REDUCE_JUMP:
-                gcd = sgcd(*mats[-1][0])
-                mats[-1] = (mats[-1][0] / gcd, mats[-1][1])
-            if force or orig - len(mats) > LOG_CALC_JUMP:
-                return mats, mp.log(sgcd(*mats[-1][0][0,:])) / self.depth + self.a.degree() * (1 - mp.log(self.depth))
-            return mats, # this comma is not a typo! this becomes a 1-tuple
         
         DEFAULTS = {
             'depth': 8192, # at this depth, calculation of one PCF is expected to take about 3 seconds, depending on your machine
@@ -196,26 +231,26 @@ class PCFCalc:
             'timeout_check_freq': 1024,
             'no_exception': False
         }
+        mp.mp.dps = 100 # temporarily, to let the precision calculation work, will probably be increased later
         kwargs = {**DEFAULTS, **kwargs}
-        mp.mp.dps = 2000
         fr_list = []
         start = time()
         mats = [(self.mat, self.depth)]
         while self.depth < kwargs['depth']:
             self.depth += 1
-            res = combine(self, mats + [(Matrix([[self.a(self.depth), self.b(self.depth)], [1, 0]]), 1)])
+            res = PCFCalc.Util.combine(self, mats + [([[PCFCalc.Util.poly_eval(self.a, self.depth), PCFCalc.Util.poly_eval(self.b, self.depth)], [1, 0]], 1)])
             if len(res) > 1:
                 fr_list += [res[1]]
             mats = res[0]
             if kwargs['timeout_sec'] and self.depth % kwargs['timeout_check_freq'] == 0 and time() - start > kwargs['timeout_sec']:
                 break
             if self.depth == kwargs['depth']:
-                res = combine(self, mats, True)
+                res = PCFCalc.Util.combine(self, mats, True)
                 #fr_list += [res[1]]
                 self.mat = res[0][0][0]
                 
                 prec = self.precision # check precision
-                if prec == -mp.inf:
+                if prec.is_infinite():
                     ex = PCFCalc.IllegalPCFException('continuant denominator zero')
                     if kwargs['no_exception']:
                         return ex
@@ -234,15 +269,16 @@ class PCFCalc:
                     if convergence == PCFCalc.Convergence.INDETERMINATE_FR:
                         kwargs['depth'] *= 2
         
-        res = combine(self, mats, True)
+        res = PCFCalc.Util.combine(self, mats, True)
         #fr_list += [res[1]]
         self.mat = res[0][0][0]
-        value = self.value
+        mp.mp.dps = max(100, self.precision) * 1.1 + 10 # a little extra leeway to find errors
+        value = PCFCalc.Util.as_mpf(self.value)
         if value and mp.almosteq(0, value):
             value = 0
         
         prec = self.precision
-        if prec == -mp.inf:
+        if prec.is_infinite():
             ex = PCFCalc.IllegalPCFException('continuant denominator zero')
             if not kwargs['no_exception']:
                 raise ex
@@ -253,4 +289,4 @@ class PCFCalc:
             if not kwargs['no_exception']:
                 raise ex
         
-        return PCFCalc.Result(value, 99999 if prec == mp.inf else int(prec), [*self.mat], self.depth, convergence.value)
+        return PCFCalc.Result(value, 99999 if prec.is_infinite() else int(prec), [x for row in self.mat for x in row], self.depth, convergence.value)

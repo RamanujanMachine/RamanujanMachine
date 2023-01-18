@@ -194,9 +194,9 @@ def run_query(filters=None, degree=None, bulk=None):
 
 def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
     try: # whole thing must be wrapped so it gets logged
+        fileConfig('LIReC/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
         global_filters = filters.get('global', {})
         filters.pop('global', 0) # instead of del so we can silently dispose of global even if it doesn't exist
-        fileConfig('LIReC/logging.config', defaults={'log_filename': 'analyze_pcfs' if manual else f'pslq_const_worker_{getpid()}'})
         if not filters:
             getLogger(LOGGER_NAME).error('No filters found! Aborting...')
             return 0 # this shouldn't happen unless pool_handler changes, so just in case...
