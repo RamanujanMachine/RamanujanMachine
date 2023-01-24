@@ -28,6 +28,7 @@ from types import ModuleType
 LOGGER_NAME = 'job_logger'
 COOLDOWN = 'cooldown'
 DEFAULT_COOLDOWN = 1
+NO_CRASH = True
 
 @dataclass
 class Message:
@@ -88,7 +89,7 @@ class WorkerPool:
 
             if message.is_kill_message:
                 self.main_jobs -= 1
-                getLogger(LOGGER_NAME).info('Got kill message')
+                getLogger(LOGGER_NAME).info('Killed')
             else:
                 self.pool.apply_async(
                     WorkerPool.run_sub_job,
@@ -122,7 +123,7 @@ class WorkerPool:
             module.summarize_results(results)
             return True
         except:
-            getLogger(LOGGER_NAME).info(f'There was an error while running the module {module_path}: {format_exc()}')
+            getLogger(LOGGER_NAME).info(f'Error in module {module_path}: {format_exc()}')
             return False
 
     @staticmethod
@@ -141,7 +142,7 @@ class WorkerPool:
             while running.value and iteration < iterations:
                 start_time = time()
                 worked = WorkerPool.run_module(module, module_path, job_queue, result_queue, run_async, async_cores, split_async, args)
-                if not worked:
+                if not NO_CRASH and not worked:
                     break
                 if len(timings) < 30:
                     timings.append(time() - start_time)
@@ -155,7 +156,7 @@ class WorkerPool:
             job_queue.put(Message.get_kill_message())
             return module_path, timings
         except:
-            getLogger(LOGGER_NAME).info(f'There was an error while attempting to run the module {module_path}: {format_exc()}')
+            getLogger(LOGGER_NAME).info(f'Error in job {module_path}: {format_exc()}')
             return module_path, []
 
     @staticmethod

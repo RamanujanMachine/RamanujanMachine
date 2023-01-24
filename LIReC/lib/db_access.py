@@ -42,7 +42,7 @@ class LIReC_DB:
         const.Q = [int(coef) for coef in bot.all_coeffs()]
         if calculation:
             getcontext().prec = min(calculation.precision + 10, 16000)
-            const.base.value = Decimal(str(calculation.value)))
+            const.base.value = Decimal(str(calculation.value))
             const.base.precision = calculation.precision
             const.last_matrix = reduce(lambda a, b: a + ',' + str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
             const.depth = calculation.depth

@@ -37,6 +37,7 @@ mp.mp.dps = 2000
 
 EXECUTE_NEEDS_ARGS = True
 DEBUG_PRINT_PRECISION_RATIOS = False
+DEBUG_PRINT_CONSTANTS = False
 
 ALGORITHM_NAME = 'POLYNOMIAL_PSLQ'
 LOGGER_NAME = 'job_logger'
@@ -135,9 +136,9 @@ def check_consts(consts, exponents, degree):
     result, true_prec, min_prec = poly_check(consts, exponents)
     if not result:
         return []
-    with mp.workdps(5):
-        r = str(true_prec / min_prec)
     if DEBUG_PRINT_PRECISION_RATIOS:
+        with mp.workdps(5):
+            r = str(true_prec / min_prec)
         print(f'Found relation with precision ratio {r}')
     if true_prec / min_prec < MIN_PRECISION_RATIO:
         if DEBUG_PRINT_PRECISION_RATIOS:
@@ -229,14 +230,25 @@ def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
         for consts in product(*subsets):
             consts = [c for t in consts for c in t] # need to flatten...
             if relation_is_new(consts, degree, old_relations):
-                getLogger(LOGGER_NAME).debug(f'checking consts: {[c.const_id for c in consts]}')
+                if DEBUG_PRINT_CONSTANTS:
+                    getLogger(LOGGER_NAME).debug(f'checking consts: {[c.const_id for c in consts]}')
                 new_relations = check_consts(consts, exponents, degree)
                 if new_relations:
-                    getLogger(LOGGER_NAME).info(f'Found relation(s)!')
+                    getLogger(LOGGER_NAME).info(f'Found relation(s) on constants {[c.const_id for c in consts]}!')
                     old_relations += new_relations
-                    db.session.add_all(new_relations)
-                    db.session.commit()
-                    
+                    try_count = 1
+                    while try_count < 3:
+                        try:
+                            db.session.add_all(new_relations)
+                            db.session.commit()
+                        except:
+                            db.session.rollback()
+                            db.session.close()
+                            db = db_access.LIReC_DB()
+                            if try_count == 1:
+                                getLogger(LOGGER_NAME).warn('Failed to commit once, trying again.')
+                            else:
+                                getLogger(LOGGER_NAME).error(f'Could not commit relation(s): {format_exc()}')
             #for cf in consts:
             #    if not cf.scanned_algo:
             #        cf.scanned_algo = dict()
@@ -250,6 +262,9 @@ def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
         return len(new_relations)
     except:
         getLogger(LOGGER_NAME).error(f'Exception in execute job: {format_exc()}')
+        # not returning anything so summarize_results can see the error
 
 def summarize_results(results):
-    getLogger(LOGGER_NAME).info(f'In total found {sum(results)} relations')
+    if not all(results):
+        getLogger(LOGGER_NAME).info(f'At least one of the workers had an exception! Check logs')
+    getLogger(LOGGER_NAME).info(f'In total found {sum(r for r in results if r)} relations')

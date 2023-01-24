@@ -35,7 +35,7 @@ def main():
                         toprint += f'    P: {Poly(pcf.P, n).expr}, Q: {Poly(pcf.Q, n).expr}'
                 else:
                     print(f'constant with uuid {const.const_id} has no known extension')
-            toprint += f', precision: {const.precision}, value: {str(const.value)[:100]}' + '\r\n'
+            toprint += f', precision: {const.precision}, value: {str(const.value)[:50]}...' + '\r\n'
         print(toprint + '}')
         if not keep_going:
             input()
