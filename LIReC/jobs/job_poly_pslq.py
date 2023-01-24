@@ -249,6 +249,7 @@ def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
                                 getLogger(LOGGER_NAME).warn('Failed to commit once, trying again.')
                             else:
                                 getLogger(LOGGER_NAME).error(f'Could not commit relation(s): {format_exc()}')
+                        try_count += 1
             #for cf in consts:
             #    if not cf.scanned_algo:
             #        cf.scanned_algo = dict()
