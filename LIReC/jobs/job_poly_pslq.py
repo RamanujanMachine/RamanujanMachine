@@ -37,7 +37,7 @@ mp.mp.dps = 2000
 
 EXECUTE_NEEDS_ARGS = True
 DEBUG_PRINT_PRECISION_RATIOS = False
-DEBUG_PRINT_CONSTANTS = False
+DEBUG_PRINT_CONSTANTS = True
 
 ALGORITHM_NAME = 'POLYNOMIAL_PSLQ'
 LOGGER_NAME = 'job_logger'
@@ -235,16 +235,16 @@ def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
                 new_relations = check_consts(consts, exponents, degree)
                 if new_relations:
                     getLogger(LOGGER_NAME).info(f'Found relation(s) on constants {[c.const_id for c in consts]}!')
-                    old_relations += new_relations
                     try_count = 1
                     while try_count < 3:
                         try:
                             db.session.add_all(new_relations)
                             db.session.commit()
+                            old_relations += new_relations
                         except:
                             db.session.rollback()
-                            db.session.close()
-                            db = db_access.LIReC_DB()
+                            #db.session.close()
+                            #db = db_access.LIReC_DB()
                             if try_count == 1:
                                 getLogger(LOGGER_NAME).warn('Failed to commit once, trying again.')
                             else:
