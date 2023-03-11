@@ -9,4 +9,5 @@ sudo make altinstall
 python3.8 -V
 cd ..
 #sudo rm -r -f Python-* # up to you if you want cleanup or not
-#then need to run pip3.8 install -e . and then you're good to go!
+#pip3.8 install git+https://github.com/RamanujanMachine/LIReC.git # to install this project and all of its dependencies!
+#python3.8 # now you're good to import LIReC and go nuts

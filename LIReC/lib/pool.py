@@ -113,13 +113,16 @@ class WorkerPool:
                 results = [module.execute_job(queried_data, **args) if extra_args else module.execute_job(queried_data)]
             else:
                 async_cores = async_cores if async_cores != 0 else cpu_count()
+                total = len(queried_data)
                 if split_async:
                     queried_data = WorkerPool.split_parameters(queried_data, async_cores)
                 for queried_chunk in queried_data:
                     job_queue.put(Message.get_execution_message(module_path, (queried_chunk, args) if extra_args else queried_chunk))
                 results = []
-                while len(results) != len(queried_data):
-                    results.append(result_queue.get())
+                while len(results) != total:
+                    if len(results) > total:
+                        raise Exception('too many results! check your code')
+                    results += result_queue.get()
             module.summarize_results(results)
             return True
         except:

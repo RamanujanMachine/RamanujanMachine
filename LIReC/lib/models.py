@@ -33,7 +33,6 @@ class NamedConstant(Base):
     const_id = Column(ForeignKey('constant.const_id'), primary_key=True)
     name = Column(String, nullable=False, unique=True)
     description = Column(String)
-    artificial = Column(Integer, nullable=False, server_default=text('0'))
     
     base = relationship('Constant', lazy='subquery')
 

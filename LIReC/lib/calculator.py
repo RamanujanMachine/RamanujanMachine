@@ -1,19 +1,173 @@
+from decimal import Decimal, getcontext
 from functools import reduce
 import numpy as np
 import mpmath as mp
 from mpmath import mpf
 from operator import mul
+from re import match
 from sympy import Poly, Symbol, compose
 from typing import List
-from LIReC.lib.models import Constant, PcfFamily
+from urllib.request import urlopen
+from LIReC.lib.models import *
 from LIReC.lib.pcf import *
+
+class Universal:
+    '''
+    central hub for calculating any constant from lib.models to arbitrary precision (if possible).
+    '''
+    
+    @staticmethod
+    def set_precision(prec: int = 4000) -> None:
+        '''
+        set the precision (in significant digits in base 10). shared with other classes in this file
+        '''
+        mp.mp.dps = prec
+    
+    @staticmethod
+    def read_oeis(file): # works with the OEIS format, credit where credit is due
+        value = ''
+        first_index = None
+        precision = None
+        while True:
+            line = file.readline().decode('utf-8')
+            if not line:
+                return value, int(precision)
+            res = match(r'\s*(\d+)\s*(\d+)\s*', line)
+            if not res:
+                continue
+            if not value:
+                first_index = int(res.group(1)) # this is the number of digits before the decimal point!
+            if first_index == 0:
+                if not value:
+                    value = '0'
+                value += '.'
+            value += res.group(2)
+            first_index -= 1
+            precision = res.group(1)
+    
+    @staticmethod
+    def calc_named(name: str or NamedConstant, base=None, verbose=False, force=False):
+        PREFIX_LINK = 'OEIS link: '
+        PREFIX_URL = 'org/A'
+        MIN_PRECISION = 20
+        
+        const = name if isinstance(name, str) else name.name
+        if const not in Constants.__dict__:
+            return None # who dis
+        named_const = name if isinstance(name, NamedConstant) else NamedConstant()
+        const_func = Constants.__dict__[const].__get__(0) # no idea why the 0 here is needed, but it's needed alright...
+        named_const.base = base if base else Constant()
+        if 'WARNING' not in const_func.__doc__: # too slow to calculate!!
+            if verbose and 'CAUTION' in const_func.__doc__:
+                print(f'    Calculation of {const} is expected to take somewhat longer...')
+            named_const.base.precision = mp.mp.dps
+            named_const.base.value = Decimal(str(const_func()))
+        elif force:
+            if verbose:
+                print(f'    Skipping calculation of {const}, too inefficient or no calculation available!')
+            if PREFIX_LINK not in const_func.__doc__:
+                if verbose:
+                    print(f'No backup value exists for {const}! Add one when possible (probably using OEIS)')
+            else:
+                i = const_func.__doc__.index(PREFIX_LINK)
+                url = const_func.__doc__[i + len(PREFIX_LINK) : i + const_func.__doc__[i:].index('\n')]
+                url = f'{url}/b{url[url.index(PREFIX_URL) + len(PREFIX_URL) : ]}.txt'
+                try:
+                    value, precision2 = Universal.read_oeis(urlopen(url))
+                    if precision2 < MIN_PRECISION:
+                        if verbose:
+                            print(f'    OEIS value has too low precision, check back if and when it has at least {MIN_PRECISION} digits.')
+                    else:
+                        if verbose:
+                            print('    OEIS value found, will be used instead')
+                        named_const.base.value = value[:16001] # the numeric type is limited to 16383 digits after the decimal point apparently, so for now this sits here
+                        named_const.base.precision = min(precision2, 16000)
+                except:
+                    if verbose:
+                        print(f'Exception while fetching {const} from OEIS: {format_exc()}')
+        
+        if isinstance(name, str):
+            named_const.name = const
+            named_const.description = const_func.__doc__[:const_func.__doc__.index('.\n')].lstrip()
+        if force or named_const.value:
+            return named_const
+    
+    @staticmethod
+    def calc_derived(db, ext: Tuple[str, dict] or DerivedConstant, base=None):
+        family, args = ext if isinstance(ext, tuple) else ext.family, ext.args
+        if family not in DerivedConstants.__dict__:
+            return None # who dis
+        
+        res = DerivedConstants.__dict__[family].__get__(0)(db, **args)
+        res = res if isinstance(res, mp.mpf) else res.value
+        
+        derived = ext if isinstance(ext, DerivedConstant) else DerivedConstant()
+        if not derived.base:
+            derived.base = base if base else Constant()
+        derived.base.value = Decimal(str(res))
+        if isinstance(ext, tuple):
+            derived.family, derived.args = ext
+        return derived
+    
+    @staticmethod
+    def fill_pcf_canonical(const: PcfCanonicalConstant, pcf: PCF, calculation: PCFCalc or None = None):
+        const.original_a = [int(coef) for coef in pcf.a.all_coeffs()]
+        const.original_b = [int(coef) for coef in pcf.b.all_coeffs()]
+        top, bot = pcf.get_canonical_form()
+        const.P = [int(coef) for coef in top.all_coeffs()]
+        const.Q = [int(coef) for coef in bot.all_coeffs()]
+        if calculation:
+            getcontext().prec = min(calculation.precision + 10, 16000)
+            const.base.value = Decimal(str(calculation.value))
+            const.base.precision = calculation.precision
+            const.last_matrix = reduce(lambda a, b: a + ',' + str(b), calculation.last_matrix[1:], str(calculation.last_matrix[0]))
+            const.depth = calculation.depth
+            const.convergence = calculation.convergence
+        return const
+    
+    @staticmethod
+    def calc_pcf(ext: Tuple[PCF, List[int] or None, int or None] or PcfCanonicalConstant, base=None, depth_multiplier=None):
+        pcf = None
+        if isinstance(ext, tuple):
+            pcf, prev, depth = ext
+            ext = PcfCanonicalConstant()
+            ext.base = Constant()
+            depth_multiplier = depth_multiplier if depth_multiplier else 1 # when given explicitly, the user will probably want the exact depth they're specifying
+        else:
+            pcf = PCF(ext.original_a, ext.original_b) if ext.original_a else PCF.from_canonical_form((ext.P, ext.Q))
+            prev = [int(x) for x in ext.last_matrix.split(',')]
+            depth = ext.depth
+            depth_multiplier = depth_multiplier if depth_multiplier else 2 # intended for use from calc or calc_silent, then the multiplier gives this meaning
+        
+        res = PCFCalc(pcf, prev, depth).run(depth=depth*depth_multiplier, precision=0)
+        return Universal.fill_pcf_canonical(ext, pcf, res)
+    
+    @staticmethod
+    def calc_silent(ext, db, const=None):
+        if const:
+            Universal.set_precision(const.precision)
+        
+        if isinstance(ext, NamedConstant):
+            return Universal.calc_named(ext, const)
+        if isinstance(ext, DerivedConstant):
+            return Universal.calc_derived(db, ext, const)
+        if isinstance(ext, PcfCanonicalConstant):
+            return Universal.calc_pcf(ext, const)
+        # returning nothing because unrecognized!
+    
+    @staticmethod
+    def calc(ext, db, const=None):
+        res = Universal.calc_silent(ext, db, const)
+        if not res:
+            raise Exception(f'Error while calculating constant with extension of type {type(ext)}: Unrecognized type or calculation failed')
+        return res
 
 class DerivedConstants:
 
     @staticmethod
     def set_precision(prec: int = 4000) -> None:
         '''
-        set the precision (in significant digits in base 10). shared with Constants
+        set the precision (in significant digits in base 10). shared with other classes in this file
         '''
         mp.mp.dps = prec
     
@@ -90,6 +244,12 @@ class DerivedConstants:
                 raise Exception(f'constant with id {power} not found')
             power = mp.mpf(str(power_const.value))
         return mp.mpf(base) ** power
+    
+    @staticmethod
+    def mpmath(db, func, **args):
+        if func not in mp.__dict__:
+            raise Exception(f'Function {func} is not part of the mpmath library')
+        return mp.__dict__[func](**args)
         
 
 # TODO use sympy for primes!
@@ -97,7 +257,7 @@ class DerivedConstants:
 # TODO in general, nprod and nsum seem to be faster when using direct method (and sometimes this is even the only correct way). investigate other methods sometime?
 class Constants:
     '''
-    arbitrary-precision calculations of constants.
+    arbitrary-precision calculations of named constants.
     
     This class aims to contain most of https://en.wikipedia.org/wiki/List_of_mathematical_constants, 
     excluding rationals, non-reals, and redundant constants (which are connected
@@ -114,7 +274,7 @@ class Constants:
     @staticmethod
     def set_precision(prec: int = 4000) -> None:
         '''
-        set the precision (in significant digits in base 10). shared with DerivedConstants
+        set the precision (in significant digits in base 10). shared with other classes in this file
         '''
         mp.mp.dps = prec
 

@@ -15,15 +15,15 @@ CREATE TABLE constant (
 	const_id UUID NOT NULL DEFAULT uuid_generate_v1() PRIMARY KEY,
 	value NUMERIC,
 	precision INT,
-	time_added timestamp DEFAULT current_timestamp
-	priority INT NOT NULL DEFAULT 1
+	time_added timestamp DEFAULT current_timestamp,
+	priority INT NOT NULL DEFAULT 1,
 	tweeted INT NOT NULL DEFAULT 0
 );
 
 CREATE TABLE named_constant (
     const_id UUID NOT NULL PRIMARY KEY REFERENCES constant (const_id),
 	name VARCHAR NOT NULL UNIQUE,
-	description VARCHAR,
+	description VARCHAR
 );
 
 CREATE TABLE pcf_canonical_constant (
@@ -65,8 +65,8 @@ CREATE TABLE relation (
 	relation_type VARCHAR NOT NULL,
 	details INT[] NOT NULL,
 	precision INT,
-	time_added timestamp DEFAULT current_timestamp
-	priority INT NOT NULL DEFAULT 1
+	time_added timestamp DEFAULT current_timestamp,
+	priority INT NOT NULL DEFAULT 1,
 	tweeted INT NOT NULL DEFAULT 0
 );
 

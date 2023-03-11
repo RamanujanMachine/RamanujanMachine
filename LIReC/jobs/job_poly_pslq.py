@@ -191,7 +191,7 @@ def run_query(filters=None, degree=None, bulk=None):
     # TODO what to do if results is unintentionally empty?
     db.session.close()
     getLogger(LOGGER_NAME).info(f'size of batch is {len(results) * bulk}')
-    return transpose(results).tolist() # so pool_handler can correctly divide among the sub-processes
+    return results # so pool_handler can correctly divide among the sub-processes
 
 def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
     try: # whole thing must be wrapped so it gets logged
@@ -217,7 +217,6 @@ def execute_job(query_data, filters=None, degree=None, bulk=None, manual=False):
             degree = (total_consts * degree[1], degree[1])
             getLogger(LOGGER_NAME).info(f'redundant degree detected! reducing to {degree}')
         
-        query_data = transpose(query_data).tolist()
         db = db_access.LIReC_DB()
         subsets = [combinations(get_consts_from_query(const_type, query_data) if const_type in BULK_TYPES else get_consts(const_type, db, {**filters, 'global':global_filters}), filters[const_type]['count']) for const_type in filters]
         exponents = get_exponents(degree, total_consts)
