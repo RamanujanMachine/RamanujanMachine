@@ -13,6 +13,7 @@ from functools import reduce
 from operator import add
 from os import cpu_count
 from traceback import format_exc
+from sqlalchemy import nullsfirst
 from LIReC.config import configuration
 from LIReC.lib import models, db_access
 from LIReC.lib.calculator import Universal
@@ -31,7 +32,7 @@ def run_query(consts_per_core=5, greedy_precision=0):
         if greedy_precision:
             query = query.filter(models.Constant.precision < greedy_precision).order_by(models.Constant.precision.desc())
         else:
-            query = query.order_by(models.Constant.precision)
+            query = query.order_by(nullsfirst(models.Constant.precision))
         results = query.limit(total_consts).all()
         if greedy_precision and len(results) < total_consts: # not enough!
             greedy_precision = 0
@@ -57,7 +58,7 @@ def execute_job(query_data):
         for const, exts in zip(query_data, extensions):
             if DEBUG_PRINT:
                 getLogger(LOGGER_NAME).debug(f'refining constant #{const.const_id}')
-            Universal.set_precision(const.precision * 2) # will be ignored for every ext in exts that doesn't rely on precision, like PcfCanonicalConstant which uses depth instead
+            Universal.set_precision(const.precision * 2 if const.precision else 50) # will be ignored for every ext in exts that doesn't rely on precision, like PcfCanonicalConstant which uses depth instead
             res = None
             for ext in exts:
                 res = Universal.calc_silent(ext, db, const)
