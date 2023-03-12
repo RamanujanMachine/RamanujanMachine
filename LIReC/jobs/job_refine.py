@@ -13,7 +13,7 @@ from functools import reduce
 from operator import add
 from os import cpu_count
 from traceback import format_exc
-from sqlalchemy import nullsfirst
+from sqlalchemy import or_, nullsfirst, nullslast
 from LIReC.config import configuration
 from LIReC.lib import models, db_access
 from LIReC.lib.calculator import Universal
@@ -30,7 +30,7 @@ def run_query(consts_per_core=5, greedy_precision=0):
     while len(results) < total_consts:
         query = db.session.query(models.Constant)
         if greedy_precision:
-            query = query.filter(models.Constant.precision < greedy_precision).order_by(models.Constant.precision.desc())
+            query = query.filter(or_(models.Constant.precision < greedy_precision, models.Constant.precision == None)).order_by(nullslast(models.Constant.precision.desc()))
         else:
             query = query.order_by(nullsfirst(models.Constant.precision))
         results = query.limit(total_consts).all()
