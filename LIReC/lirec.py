@@ -18,7 +18,7 @@ def main() -> None:
         pid_file.writelines([str(os.getpid()), os.linesep])
     worker_pool = WorkerPool(configuration['pool_size'])
     signal.signal(signal.SIGINT, lambda sig, frame: worker_pool.stop())
-    results = worker_pool.start({MOD_PATH % name : config for name, config in configuration['jobs_to_run'].items() })
+    results = worker_pool.start([(MOD_PATH % name, config) for name, config in configuration['jobs_to_run']])
     fileConfig('LIReC/logging.config', defaults={'log_filename': 'main'})
 
     for module_path, timings in results:

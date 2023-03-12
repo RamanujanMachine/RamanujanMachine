@@ -8,8 +8,8 @@ configuration = {
         'timeout_check_freq': 1000,
         'no_exception': False
     },
-    'jobs_to_run': {
-        'poly_pslq': {
+    'jobs_to_run': [
+        ('poly_pslq', {
             'args': { 'degree': (2, 1), 'bulk': 1000, 'filters': {
                 'global': { 'min_precision': 50 },
                 'PcfCanonical': { 'count': 2, 'balanced_only': True },
@@ -19,8 +19,8 @@ configuration = {
             'run_async': True,
             'cooldown': 30,
             'no_work_timeout': 60
-        }
-    }
+        })
+    ]
 }
 
 # If you make your own database, 'name' must match the name in 'create_db.sql' in the line 'CREATE DATABASE <name>'

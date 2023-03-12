@@ -6,16 +6,9 @@ Configured as such:
     'consts_per_core': Number of constants to refine per core (per iteration). Defaults to 5.
     'greedy_precision': If nonzero, will instead refine constants whose precision is just below greedy_precision (if there are enough). Defaults to 0.
 '''
-import mpmath as mp
-from time import time
-from sqlalchemy import Integer, or_, Float
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.sql.expression import func
 from logging import getLogger
 from logging.config import fileConfig
 from os import getpid
-from itertools import chain, combinations, combinations_with_replacement, takewhile, product
-from collections import Counter
 from functools import reduce
 from operator import add
 from os import cpu_count

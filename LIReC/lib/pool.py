@@ -70,7 +70,7 @@ class WorkerPool:
         self.running.value = 1
         results = []
 
-        for module_path, module_config in modules.items():
+        for module_path, module_config in modules:
             self.result_queues[module_path] = self.manager.Queue()
             results.append(self.pool.apply_async(
                 WorkerPool.run_job, 
